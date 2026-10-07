@@ -1,0 +1,4062 @@
+{
+ "mappings": [
+  {
+   "idx": 1,
+   "book": 1,
+   "chapter": 1,
+   "v1": 1,
+   "v2": 5,
+   "scene": "God speaks light into being, and radiance breaks across the dark, formless deep.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 1:1-5. Light created in v3, divided from darkness in vv4-5."
+  },
+  {
+   "idx": 2,
+   "book": 1,
+   "chapter": 2,
+   "v1": 21,
+   "v2": 22,
+   "scene": "While Adam lies in a deep sleep, the LORD God forms Eve and brings her to him.",
+   "confidence": "high",
+   "note": "Commons caption lists 1:26-27 and 2:15-25; Adam is shown asleep, so 2:21-22 is the moment. Adam's words follow in 2:23."
+  },
+  {
+   "idx": 3,
+   "book": 1,
+   "chapter": 3,
+   "v1": 23,
+   "v2": 24,
+   "scene": "Adam and Eve leave the garden while a cherub with a flaming sword guards the way behind them.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 3:1-6,13-24. The expulsion and the cherubim are in vv23-24."
+  },
+  {
+   "idx": 4,
+   "book": 1,
+   "chapter": 4,
+   "v1": 3,
+   "v2": 5,
+   "scene": "Cain and Abel offer their gifts on altars; the LORD accepts Abel's offering and not Cain's.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 4:1-7."
+  },
+  {
+   "idx": 5,
+   "book": 1,
+   "chapter": 4,
+   "v1": 8,
+   "v2": 10,
+   "scene": "In the field Cain rises against his brother Abel and kills him, and Abel's blood cries out from the ground.",
+   "confidence": "high",
+   "note": "The killing is in v8. vv9-10 (God questions Cain) are included for context."
+  },
+  {
+   "idx": 6,
+   "book": 1,
+   "chapter": 7,
+   "v1": 21,
+   "v2": 23,
+   "scene": "The ark rides the floodwaters while every living thing on the land perishes beneath them.",
+   "confidence": "medium",
+   "note": "Commons caption gives Gen. 7:1-10 (the facing reading passage), but the plate shows the ark and the drowned, which fits the destruction in 7:21-23. Commons categories: Noah's Ark, drowning. Plate 7 covers the rising waters (7:17-20), so the two flood plates do not overlap."
+  },
+  {
+   "idx": 7,
+   "book": 1,
+   "chapter": 7,
+   "v1": 17,
+   "v2": 20,
+   "scene": "The last survivors cling to a rocky height as the waters rise over the highest hills.",
+   "confidence": "medium",
+   "note": "Commons caption: Gen. 7:11-24. Categories (people with tigers, drowning) match the famous rock scene, which fits the waters prevailing over the hills in vv17-20."
+  },
+  {
+   "idx": 8,
+   "book": 1,
+   "chapter": 8,
+   "v1": 8,
+   "v2": 12,
+   "scene": "Noah sends a dove out from the ark over the waters to see whether they have gone down.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 8:1-13. The dove is sent out in vv8-12. The raven (v7) is left out."
+  },
+  {
+   "idx": 9,
+   "book": 1,
+   "chapter": 9,
+   "v1": 24,
+   "v2": 27,
+   "scene": "Noah wakes from his wine and pronounces a curse on Canaan and a blessing on Shem and Japheth.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 9:18-27. The background of the story (Ham's deed) is in vv20-23."
+  },
+  {
+   "idx": 10,
+   "book": 1,
+   "chapter": 11,
+   "v1": 1,
+   "v2": 9,
+   "scene": "Crowds of laborers in Shinar build a vast tower meant to reach toward heaven.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 11:1-9. The building is in vv3-5, and the range is kept as the whole short narrative."
+  },
+  {
+   "idx": 11,
+   "book": 1,
+   "chapter": 12,
+   "v1": 4,
+   "v2": 6,
+   "scene": "Abram sets out from Haran with Sarai, Lot, and his herds and camels toward the land of Canaan.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 12:1-6. God's call is in vv1-3, and the journey itself is in vv4-6."
+  },
+  {
+   "idx": 12,
+   "book": 1,
+   "chapter": 18,
+   "v1": 1,
+   "v2": 5,
+   "scene": "At Mamre, Abraham bows to the ground before three visitors and asks them to stay and rest.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 18:1-16. The meal continues in vv6-8."
+  },
+  {
+   "idx": 13,
+   "book": 1,
+   "chapter": 19,
+   "v1": 23,
+   "v2": 26,
+   "scene": "Lot and his daughters flee as fire falls on Sodom and Gomorrah, and his wife, looking back, becomes a pillar of salt.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 19:1-20,24-36. Categories include Sodom burning and Lot's wife as a pillar of salt. The angels lead them out in vv15-17."
+  },
+  {
+   "idx": 14,
+   "book": 1,
+   "chapter": 21,
+   "v1": 9,
+   "v2": 14,
+   "scene": "At Sarah's urging and with God's assurance, Abraham gives Hagar bread and water and sends her away with Ishmael.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 21:1-14. The departure itself is v14."
+  },
+  {
+   "idx": 15,
+   "book": 1,
+   "chapter": 21,
+   "v1": 15,
+   "v2": 16,
+   "scene": "Out of water in the desert, Hagar weeps near her dying son until God's angel calls to her and she sees a well.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 21:14-20.",
+   "resolved": "The checker is right: this plate shows Genesis 21:15-16. I viewed an 800px copy of the plate (saved at /Users/jkim/bible-study/.design/art/q15/p15.jpg). Hagar kneels against a large rock with both arms raised over her head in grief. The empty water bottle lies tipped over on the sand, and Ishmael lies motionless some distance away in the foreground. That matches KJV v15 (\"the water was spent in the bottle, and she cast the child under one of the shrubs\") and v16 (she sat \"a good way off... Let me not see the death of the child... and wept\"). No angel and no well appear, so vv17-19 (the angel calling from heaven, God opening her eyes to the well) are not shown. The Commons caption gives the wider story range, Gen. 21:14-20, but the engraving itself shows only the moment of despair. The mapper's scene text should be revised to something like: \"With the water gone, Hagar weeps in the wilderness of Beer-sheba, sitting apart so she need not watch her son Ishmael die.\"",
+   "_sugg": "With the water gone, Hagar weeps in the wilderness of Beer-sheba, sitting apart so she need not watch her son Ishmael die."
+  },
+  {
+   "idx": 16,
+   "book": 1,
+   "chapter": 22,
+   "v1": 6,
+   "v2": 8,
+   "scene": "On Moriah, Abraham raises the knife over the bound Isaac, but the angel of the LORD calls out and stops him.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 22:2-19. The altar, the angel's call and the ram are in vv9-13.",
+   "resolved": "The checker is right. I looked at the plate on its Commons file page. On the left, Isaac climbs a rocky, palm-lined slope with a large bundle of firewood on his shoulders. Abraham walks beside him in long robes, holding a staff. The plate shows no altar, no binding, no raised knife, no angel and no ram, so the mapper's Gen 22:9-13 is a later moment that is not in this engraving. The KJV at Gen 22:6-8 matches the plate: \"Abraham took the wood of the burnt offering, and laid it upon Isaac his son; and he took the fire in his hand, and a knife; and they went both of them together.\" Verse 7 is Isaac's question, \"where is the lamb for a burnt offering?\", and verse 8 is Abraham's answer, \"God will provide himself a lamb\". The Commons caption gives Gen. 22:2-19, a range covering the whole story, and 22:6-8 is the part this plate shows. Suggested scene text: \"Isaac carries the wood for the burnt offering up the mountain as Abraham walks beside him.\"",
+   "_sugg": "Isaac carries the wood for the burnt offering up the mountain as Abraham walks beside him."
+  },
+  {
+   "idx": 17,
+   "book": 1,
+   "chapter": 23,
+   "v1": 19,
+   "v2": 20,
+   "scene": "Abraham buries Sarah in the cave of Machpelah near Mamre, in Hebron.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 23:1-20. Sarah's death and Abraham's mourning are in vv1-2, and the burial is in v19."
+  },
+  {
+   "idx": 18,
+   "book": 1,
+   "chapter": 24,
+   "v1": 15,
+   "v2": 20,
+   "scene": "At the well, Rebekah lowers her jar to give Abraham's servant a drink and then draws water for his camels.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 24:10-26. The servant's prayer that leads up to it is in vv12-14."
+  },
+  {
+   "idx": 19,
+   "book": 1,
+   "chapter": 24,
+   "v1": 63,
+   "v2": 67,
+   "scene": "Isaac walks in the evening field as Rebekah's camels arrive, and she veils herself on seeing him.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 24:53-67."
+  },
+  {
+   "idx": 20,
+   "book": 1,
+   "chapter": 27,
+   "v1": 21,
+   "v2": 29,
+   "scene": "Blind and aged, Isaac feels Jacob's disguised hands and gives him the blessing meant for the firstborn.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 27:1-27. The touching is in vv21-23 and the blessing in vv27-29."
+  },
+  {
+   "idx": 21,
+   "book": 1,
+   "chapter": 28,
+   "v1": 11,
+   "v2": 15,
+   "scene": "Sleeping with a stone for a pillow, Jacob dreams of a stairway to heaven with angels going up and down it.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 28:10-15. Jacob wakes and responds in vv16-17."
+  },
+  {
+   "idx": 22,
+   "book": 1,
+   "chapter": 29,
+   "v1": 9,
+   "v2": 12,
+   "scene": "At the well near Haran, Jacob rolls away the stone, waters Laban's flock, and greets Rachel.",
+   "confidence": "medium",
+   "note": "Commons caption: Gen. 29:1-20. The title also mentions tending Laban's flocks, so vv18-20 (seven years' service for Rachel) may also apply."
+  },
+  {
+   "idx": 23,
+   "book": 1,
+   "chapter": 32,
+   "v1": 9,
+   "v2": 12,
+   "scene": "Afraid of meeting Esau, Jacob humbly prays to the God of Abraham and Isaac for deliverance.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 32:9-23. The title points to the prayer in vv9-12. Crossing the Jabbok (vv22-23) is also in that range."
+  },
+  {
+   "idx": 24,
+   "book": 1,
+   "chapter": 32,
+   "v1": 24,
+   "v2": 30,
+   "scene": "Left alone at night by the Jabbok, Jacob wrestles until daybreak and receives a blessing and the name Israel.",
+   "confidence": "high",
+   "also": [
+    [
+     28,
+     12,
+     3,
+     4
+    ]
+   ],
+   "note": "Commons caption: Gen. 32:24-32. Hosea 12:3-4 briefly retells the struggle."
+  },
+  {
+   "idx": 25,
+   "book": 1,
+   "chapter": 33,
+   "v1": 1,
+   "v2": 4,
+   "scene": "Jacob bows seven times as he approaches, and Esau runs to embrace and kiss him, and they weep together.",
+   "confidence": "high",
+   "note": "Commons caption: Gen. 33:1-20."
+  },
+  {
+   "idx": 26,
+   "book": 1,
+   "chapter": 37,
+   "v1": 25,
+   "v2": 28,
+   "scene": "Joseph's brothers draw him up from the pit and sell him to a passing caravan of merchants bound for Egypt.",
+   "confidence": "high",
+   "note": "Commons/Doré English Bible text: Gen 37:13-36; narrowed to the sale itself."
+  },
+  {
+   "idx": 27,
+   "book": 1,
+   "chapter": 41,
+   "v1": 25,
+   "v2": 32,
+   "scene": "Standing before the enthroned Pharaoh, Joseph explains that God has revealed seven years of plenty followed by seven years of famine.",
+   "confidence": "high",
+   "note": "Commons text: Gen 41:15-41; vv.25-32 are the interpretation proper."
+  },
+  {
+   "idx": 28,
+   "book": 1,
+   "chapter": 45,
+   "v1": 1,
+   "v2": 4,
+   "scene": "Joseph sends out his attendants and, weeping, makes himself known to his astonished and fearful brothers.",
+   "confidence": "high",
+   "note": "Commons text: Gen 45:1-24."
+  },
+  {
+   "idx": 29,
+   "book": 1,
+   "chapter": 46,
+   "v1": 5,
+   "v2": 7,
+   "scene": "Jacob and his whole household set out with their flocks and Pharaoh's wagons on the journey down into Egypt.",
+   "confidence": "medium",
+   "note": "Commons text: Gen 46:1-6, 26-34. Engraving shows the migrating caravan, so the departure verses were chosen."
+  },
+  {
+   "idx": 30,
+   "book": 2,
+   "chapter": 2,
+   "v1": 3,
+   "v2": 4,
+   "scene": "Moses' mother lays her infant son in a basket of bulrushes among the reeds of the Nile while his sister watches from a distance.",
+   "confidence": "high",
+   "note": "Commons text: Ex 1:8-22, 2:1-4."
+  },
+  {
+   "idx": 31,
+   "book": 2,
+   "chapter": 2,
+   "v1": 5,
+   "v2": 6,
+   "scene": "Pharaoh's daughter and her maidens find the Hebrew infant in his basket among the reeds and are moved with compassion.",
+   "confidence": "high",
+   "note": "Commons text: Ex 2:5-10."
+  },
+  {
+   "idx": 32,
+   "book": 2,
+   "chapter": 7,
+   "v1": 8,
+   "v2": 10,
+   "scene": "Moses and Aaron stand before Pharaoh's throne to deliver God's command, and Aaron casts down his rod as a sign.",
+   "confidence": "medium",
+   "note": "Commons text: Ex 6:26-30, 7:1-10. The audience scene ends at 7:10 in Doré's placement."
+  },
+  {
+   "idx": 33,
+   "book": 2,
+   "chapter": 9,
+   "v1": 3,
+   "v2": 6,
+   "scene": "A grievous pestilence strikes down the livestock of Egypt in the fields, while the cattle of Israel are spared.",
+   "confidence": "high",
+   "note": "Commons text: Ex 9:2-3; extended to v.6 where the cattle die."
+  },
+  {
+   "idx": 34,
+   "book": 2,
+   "chapter": 10,
+   "v1": 21,
+   "v2": 23,
+   "scene": "A thick darkness that can be felt covers Egypt for three days, though the Israelites have light in their dwellings.",
+   "confidence": "high",
+   "note": "Commons text: Ex 10:21-23."
+  },
+  {
+   "idx": 35,
+   "book": 2,
+   "chapter": 12,
+   "v1": 29,
+   "v2": 30,
+   "scene": "At midnight the firstborn of Egypt die, and a great cry of mourning rises from every Egyptian household.",
+   "confidence": "high",
+   "note": "Commons text: Ex 12:21-29; v.30 adds the mourning that the plate shows."
+  },
+  {
+   "idx": 36,
+   "book": 2,
+   "chapter": 12,
+   "v1": 31,
+   "v2": 33,
+   "scene": "After the death of the firstborn, Pharaoh and the Egyptians urge Moses and Aaron to lead Israel out of Egypt in haste.",
+   "confidence": "medium",
+   "note": "Commons text: Ex 12:30-32; v.33 records the Egyptians urging the people to leave."
+  },
+  {
+   "idx": 37,
+   "book": 2,
+   "chapter": 14,
+   "v1": 26,
+   "v2": 28,
+   "scene": "As Moses stretches his hand over the sea, the waters return and overwhelm Pharaoh's chariots and horsemen.",
+   "confidence": "high",
+   "note": "Commons text: Ex 14:5-8, 13-29."
+  },
+  {
+   "idx": 38,
+   "book": 2,
+   "chapter": 19,
+   "v1": 16,
+   "v2": 20,
+   "scene": "Amid thunder, lightning, thick cloud, and a trumpet blast, the LORD descends on Mount Sinai and calls Moses up to the summit.",
+   "confidence": "high",
+   "note": "Commons text: Ex 19:9-24."
+  },
+  {
+   "idx": 39,
+   "book": 2,
+   "chapter": 34,
+   "v1": 29,
+   "v2": 30,
+   "scene": "Moses comes down from Mount Sinai carrying the two tablets of the testimony, his face shining from having spoken with God.",
+   "confidence": "medium",
+   "note": "Doré's English Bible placed this plate beside Ex 19:25-20:17 (the Ten Commandments), but the engraving's details (the tablets in hand and the rays from Moses' face) match Ex 34:29-30. The orchestrator may also want to attach it to Ex 19:25-20:17."
+  },
+  {
+   "idx": 40,
+   "book": 4,
+   "chapter": 16,
+   "v1": 31,
+   "v2": 35,
+   "scene": "The ground splits open beneath Korah, Dathan, and Abiram and their households, and fire from the LORD consumes the 250 men offering incense.",
+   "confidence": "high",
+   "note": "Commons text: Num 16:20-35."
+  },
+  {
+   "idx": 41,
+   "book": 4,
+   "chapter": 20,
+   "v1": 7,
+   "v2": 11,
+   "also": [
+    [
+     2,
+     17,
+     5,
+     6
+    ]
+   ],
+   "scene": "Before the gathered congregation, Moses lifts his rod and strikes the rock, and water pours out abundantly for the people and their animals.",
+   "confidence": "medium",
+   "note": "Doré's English Bible placed this plate at Num 20:1-11 (Meribah in Kadesh), but its title names Horeb, which is the separate Ex 17:5-6 event. The Exodus passage is in 'also' because the image fits it just as well. Drop it if the app should keep the two events strictly apart."
+  },
+  {
+   "idx": 42,
+   "book": 2,
+   "chapter": 32,
+   "v1": 19,
+   "v2": 19,
+   "also": [
+    [
+     5,
+     9,
+     16,
+     17
+    ]
+   ],
+   "scene": "Seeing the golden calf and the dancing, Moses in anger casts down the tablets of the Law and breaks them at the foot of the mountain.",
+   "confidence": "high",
+   "note": "The source file lists this plate under Numbers, but the event is Ex 32:19 (Commons text: Ex 32:19). Deut 9:16-17 is Moses' own retelling."
+  },
+  {
+   "idx": 43,
+   "book": 4,
+   "chapter": 13,
+   "v1": 23,
+   "v2": 27,
+   "also": [
+    [
+     5,
+     1,
+     24,
+     25
+    ]
+   ],
+   "scene": "The spies return from Canaan with a great cluster of grapes carried on a pole between two men, showing the fruit of the land.",
+   "confidence": "high",
+   "note": "Commons text: Num 13:26-27; widened to v.23 to include the cluster of Eshcol carried on a staff. Deut 1:24-25 retells it."
+  },
+  {
+   "idx": 44,
+   "book": 4,
+   "chapter": 21,
+   "v1": 6,
+   "v2": 9,
+   "scene": "Afflicted by fiery serpents, the Israelites look to the bronze serpent Moses has set on a pole and are healed.",
+   "confidence": "high",
+   "note": "Commons text: Num 21:4-9."
+  },
+  {
+   "idx": 45,
+   "book": 4,
+   "chapter": 22,
+   "v1": 22,
+   "v2": 27,
+   "scene": "The angel of the LORD, sword drawn, stands in Balaam's path, and his donkey turns aside and falls down as Balaam strikes her.",
+   "confidence": "high",
+   "note": "Commons says 'Num 23:15-35', a typo for chapter 22. The angel-in-the-way episode is Num 22:22-35. Ending at v.31 would also cover Balaam seeing the angel."
+  },
+  {
+   "idx": 46,
+   "book": 6,
+   "chapter": 3,
+   "v1": 14,
+   "v2": 17,
+   "scene": "The priests bearing the Ark of the Covenant stand in the Jordan as its waters are held back and Israel crosses on dry ground.",
+   "confidence": "high",
+   "note": "Commons text: Josh 3:1-17."
+  },
+  {
+   "idx": 47,
+   "book": 6,
+   "chapter": 5,
+   "v1": 13,
+   "v2": 15,
+   "scene": "Near Jericho the captain of the LORD's host appears to Joshua with drawn sword, and Joshua falls on his face in worship.",
+   "confidence": "high",
+   "note": "Commons text: Josh 5:9-15. The Russian caption reads 'the angel appears to Joshua'."
+  },
+  {
+   "idx": 48,
+   "book": 6,
+   "chapter": 6,
+   "v1": 15,
+   "v2": 20,
+   "scene": "On the seventh day, at the priests' trumpet blast and the people's great shout, the walls of Jericho fall down flat.",
+   "confidence": "high",
+   "note": "Commons text: Josh 5:16, 6:1-10, 13-19. The collapse itself is 6:20."
+  },
+  {
+   "idx": 49,
+   "book": 6,
+   "chapter": 6,
+   "v1": 22,
+   "v2": 25,
+   "scene": "At Joshua's command the two spies bring Rahab and her family safely out of Jericho, keeping the oath made to her.",
+   "confidence": "high",
+   "note": "Commons text: Josh 6:20-24; v.25 records Joshua saving Rahab."
+  },
+  {
+   "idx": 50,
+   "book": 6,
+   "chapter": 7,
+   "v1": 24,
+   "v2": 26,
+   "scene": "In the valley of Achor, Achan, who took forbidden spoil from Jericho, is stoned by Israel and a heap of stones is raised over him.",
+   "confidence": "high",
+   "note": "Commons text: Josh 7:1, 10-26."
+  },
+  {
+   "idx": 51,
+   "book": 6,
+   "chapter": 8,
+   "v1": 19,
+   "v2": 28,
+   "scene": "Flames and smoke rise over the city of Ai as Joshua's forces take it and lay it waste.",
+   "confidence": "high",
+   "note": "Commons cites Josh 8:1-19. Range runs from the ambush setting the city on fire (v19-21) to Joshua burning Ai into a heap (v28)."
+  },
+  {
+   "idx": 52,
+   "book": 6,
+   "chapter": 10,
+   "v1": 10,
+   "v2": 11,
+   "scene": "The fleeing Amorite host is struck down on the descent of Beth-horon by great hailstones from heaven.",
+   "confidence": "high",
+   "note": "Commons cites Josh 10:1-11. The storm of hailstones in v11 is the dramatic focus."
+  },
+  {
+   "idx": 53,
+   "book": 6,
+   "chapter": 10,
+   "v1": 12,
+   "v2": 14,
+   "scene": "Joshua lifts his arm and calls on the sun to stand still over Gibeon and the moon over the valley of Ajalon.",
+   "confidence": "high"
+  },
+  {
+   "idx": 54,
+   "book": 7,
+   "chapter": 4,
+   "v1": 21,
+   "v2": 22,
+   "scene": "Jael stands with the hammer beside Sisera, whom she has killed with a tent peg as he slept in her tent.",
+   "confidence": "high",
+   "note": "Commons cites Judg 4:6-22. Deborah's song retells the deed in 5:24-27, which is assigned to plate 55 so the two plates do not overlap."
+  },
+  {
+   "idx": 55,
+   "book": 7,
+   "chapter": 5,
+   "v1": 24,
+   "v2": 27,
+   "scene": "Deborah raises her song of victory to the LORD, blessing Jael above women.",
+   "confidence": "medium",
+   "also": [
+    [
+     7,
+     5,
+     1,
+     3
+    ]
+   ],
+   "note": "The engraving shows Deborah singing (5:1-3). The title names her praise of Jael (5:24-27), used as the main range. Commons cites 5:1-3, 24-31."
+  },
+  {
+   "idx": 56,
+   "book": 7,
+   "chapter": 7,
+   "v1": 4,
+   "v2": 7,
+   "scene": "At the water of Harod, Gideon watches how his men drink and keeps the three hundred who lap from their hands.",
+   "confidence": "high"
+  },
+  {
+   "idx": 57,
+   "book": 7,
+   "chapter": 7,
+   "v1": 19,
+   "v2": 22,
+   "scene": "In the night the Midianite camp falls into panic and flight as Gideon's men sound trumpets and break their pitchers.",
+   "confidence": "high",
+   "note": "Commons cites Judg 7:9-25. The rout itself is v19-22, where the LORD turns every man's sword against his fellow."
+  },
+  {
+   "idx": 58,
+   "book": 7,
+   "chapter": 9,
+   "v1": 4,
+   "v2": 5,
+   "scene": "Abimelech's hired men slay the seventy sons of Gideon upon one stone at Ophrah.",
+   "confidence": "high",
+   "note": "Commons cites Judg 9:1-6. The killing is v5; Jotham alone escapes."
+  },
+  {
+   "idx": 59,
+   "book": 7,
+   "chapter": 9,
+   "v1": 52,
+   "v2": 54,
+   "scene": "From the tower of Thebez a woman drops a millstone on Abimelech's head as he tries to burn the door.",
+   "confidence": "high"
+  },
+  {
+   "idx": 60,
+   "book": 7,
+   "chapter": 11,
+   "v1": 34,
+   "v2": 35,
+   "scene": "Jephthah's only daughter comes out with timbrels and dancing to greet him, and he tears his clothes in grief over his vow.",
+   "confidence": "high"
+  },
+  {
+   "idx": 61,
+   "book": 7,
+   "chapter": 11,
+   "v1": 37,
+   "v2": 38,
+   "scene": "Jephthah's daughter and her companions go up into the mountains to mourn for two months.",
+   "confidence": "high",
+   "note": "Commons cites 11:37-40. v40 (the yearly lament by the daughters of Israel) could also be included."
+  },
+  {
+   "idx": 62,
+   "book": 7,
+   "chapter": 14,
+   "v1": 5,
+   "v2": 6,
+   "scene": "In the vineyards of Timnath, with the Spirit of the LORD upon him, Samson tears apart a roaring young lion with his bare hands.",
+   "confidence": "high"
+  },
+  {
+   "idx": 63,
+   "book": 7,
+   "chapter": 15,
+   "v1": 14,
+   "v2": 16,
+   "scene": "At Lehi, freed from his bonds, Samson strikes down the Philistines with the jawbone of an ass.",
+   "confidence": "high"
+  },
+  {
+   "idx": 64,
+   "book": 7,
+   "chapter": 16,
+   "v1": 2,
+   "v2": 3,
+   "scene": "At midnight Samson lifts the doors and posts of Gaza's city gate onto his shoulders and carries them toward the hill before Hebron.",
+   "confidence": "high"
+  },
+  {
+   "idx": 65,
+   "book": 7,
+   "chapter": 16,
+   "v1": 15,
+   "v2": 17,
+   "scene": "As Samson sleeps upon Delilah's knees, his seven locks are shorn while the Philistine lords wait nearby.",
+   "confidence": "high",
+   "note": "Commons cites 16:4-19. The shearing in v19 is the moment shown.",
+   "resolved": "I agree with the checker. I opened the plate (063.Samson_and_Delilah.jpg) myself. Samson is wide awake, sitting on a couch. He lifts a strand of his long, uncut hair with one hand and points to it with the other while he talks. Delilah stands apart beside him with her head turned down and away, looking cold and wounded. Nobody is asleep on anyone's knees, nothing is being shaved, and there are no Philistine lords in the room. That rules out 16:18-19, where the lords are called in and the seven locks are shaved. The scene matches 16:15-17. In v15 she asks how he can say he loves her when his heart is not with her, which fits her turned-away pose. In v16 she presses him day after day. In v17 he 'told her all his heart': no razor has touched his head and he is a Nazarite, which is why he is holding up his hair. Suggested caption: 'Pressed daily by Delilah, Samson opens his heart and tells her the secret of his uncut hair.'",
+   "_sugg": null
+  },
+  {
+   "idx": 66,
+   "book": 7,
+   "chapter": 16,
+   "v1": 28,
+   "v2": 30,
+   "scene": "Blind Samson prays for strength one last time, then bows between the pillars and brings the house down on the Philistine lords.",
+   "confidence": "high"
+  },
+  {
+   "idx": 67,
+   "book": 7,
+   "chapter": 19,
+   "v1": 26,
+   "v2": 27,
+   "scene": "At dawn the Levite opens the door and finds his concubine fallen at the threshold after the night's violence.",
+   "confidence": "high",
+   "note": "A grievous passage; the description stays restrained on purpose."
+  },
+  {
+   "idx": 68,
+   "book": 7,
+   "chapter": 19,
+   "v1": 28,
+   "v2": 28,
+   "scene": "Getting no answer, the Levite lays the woman's body on his donkey and sets out for home.",
+   "confidence": "high",
+   "note": "Commons cites 19:28-30. Only v28 matches what is pictured; v29-30 describe what he did afterward."
+  },
+  {
+   "idx": 69,
+   "book": 7,
+   "chapter": 21,
+   "v1": 20,
+   "v2": 23,
+   "scene": "Benjaminite men rush out of the vineyards to seize wives from the maidens dancing at the feast in Shiloh.",
+   "confidence": "medium",
+   "note": "The title names Jabesh-gilead (21:12-14), but Commons cites 21:15-25, and seizing women who were dancing fits the daughters of Shiloh (21:20-23). The Jabesh-gilead women were brought to the camp and given, not seized."
+  },
+  {
+   "idx": 70,
+   "book": 8,
+   "chapter": 1,
+   "v1": 14,
+   "v2": 17,
+   "scene": "On the road from Moab, Orpah kisses Naomi and turns back while Ruth clings to her and vows to go with her.",
+   "confidence": "high",
+   "note": "Commons cites Ruth 1:3-22. Naomi's pleading in 1:8-13 leads directly into this moment."
+  },
+  {
+   "idx": 71,
+   "book": 8,
+   "chapter": 2,
+   "v1": 5,
+   "v2": 10,
+   "scene": "In the harvest field Boaz notices Ruth gleaning among the reapers and speaks kindly to her.",
+   "confidence": "high",
+   "note": "Commons cites Ruth 2:2-20."
+  },
+  {
+   "idx": 72,
+   "book": 9,
+   "chapter": 6,
+   "v1": 12,
+   "v2": 14,
+   "scene": "Two lowing cows draw the cart carrying the ark toward Beth-shemesh, and the reapers in the wheat harvest look up and rejoice.",
+   "confidence": "high",
+   "note": "Commons cites 1 Sam 6:1-16."
+  },
+  {
+   "idx": 73,
+   "book": 9,
+   "chapter": 10,
+   "v1": 1,
+   "v2": 1,
+   "scene": "Samuel pours oil on Saul's head and kisses him, anointing him as captain over the LORD's inheritance.",
+   "confidence": "medium",
+   "also": [
+    [
+     9,
+     9,
+     26,
+     27
+    ]
+   ],
+   "note": "The Commons description cites 1 Sam 9:17, where Samuel first sees Saul. A blessing best matches the private anointing at the edge of the city (9:26-10:1). This is an 'A' supplementary plate and its source caption is uncertain."
+  },
+  {
+   "idx": 74,
+   "book": 9,
+   "chapter": 15,
+   "v1": 32,
+   "v2": 33,
+   "scene": "At Gilgal, Samuel carries out judgment before the LORD on Agag, king of the Amalekites.",
+   "confidence": "high"
+  },
+  {
+   "idx": 75,
+   "book": 9,
+   "chapter": 17,
+   "v1": 49,
+   "v2": 51,
+   "scene": "David stands over the fallen Goliath, whom his sling-stone struck down, and takes the giant's own sword.",
+   "confidence": "high"
+  },
+  {
+   "idx": 76,
+   "book": 9,
+   "chapter": 18,
+   "v1": 10,
+   "v2": 11,
+   "scene": "As David plays the harp, King Saul, troubled by an evil spirit, hurls his javelin at him.",
+   "confidence": "high",
+   "also": [
+    [
+     9,
+     19,
+     9,
+     10
+    ]
+   ],
+   "note": "Commons cites 1 Sam 18:6-14; the same javelin attempt recurs at 19:9-10."
+  },
+  {
+   "idx": 77,
+   "book": 9,
+   "chapter": 19,
+   "v1": 11,
+   "v2": 12,
+   "scene": "Michal lets David down through a window by night so he can escape the men Saul sent to kill him.",
+   "confidence": "high"
+  },
+  {
+   "idx": 78,
+   "book": 9,
+   "chapter": 20,
+   "v1": 41,
+   "v2": 42,
+   "scene": "David and Jonathan embrace and weep as they part, bound by their oath before the LORD.",
+   "confidence": "high",
+   "note": "Commons cites 1 Sam 20:42."
+  },
+  {
+   "idx": 79,
+   "book": 9,
+   "chapter": 24,
+   "v1": 8,
+   "v2": 11,
+   "scene": "Outside the cave at En-gedi, David bows and holds up the piece of Saul's robe to show he spared the king's life.",
+   "confidence": "high",
+   "note": "Commons cites 1 Sam 24:2-20 (the cave at En-gedi), not the similar spear-and-cruse episode of ch. 26."
+  },
+  {
+   "idx": 80,
+   "book": 9,
+   "chapter": 28,
+   "v1": 11,
+   "v2": 14,
+   "scene": "At Endor the woman cries out as the form of Samuel rises, and Saul bows with his face to the ground.",
+   "confidence": "high",
+   "note": "Commons cites 1 Sam 28:7-25."
+  },
+  {
+   "idx": 81,
+   "book": 9,
+   "chapter": 31,
+   "v1": 3,
+   "v2": 6,
+   "scene": "Badly wounded on Mount Gilboa, Saul falls upon his own sword, and his armour-bearer dies beside him.",
+   "confidence": "high",
+   "also": [
+    [
+     13,
+     10,
+     3,
+     6
+    ]
+   ]
+  },
+  {
+   "idx": 82,
+   "book": 9,
+   "chapter": 31,
+   "v1": 11,
+   "v2": 12,
+   "scene": "The valiant men of Jabesh-gilead travel all night to take the bodies of Saul and his sons down from the wall of Beth-shan.",
+   "confidence": "high",
+   "also": [
+    [
+     13,
+     10,
+     11,
+     12
+    ]
+   ]
+  },
+  {
+   "idx": 83,
+   "book": 10,
+   "chapter": 2,
+   "v1": 14,
+   "v2": 16,
+   "scene": "Twelve young men from Ish-bosheth's side and twelve of David's grapple at the pool of Gibeon and fall together.",
+   "confidence": "high",
+   "note": "Commons cites 2 Sam 2:5-17; the field was named Helkath-hazzurim after this combat."
+  },
+  {
+   "idx": 84,
+   "book": 10,
+   "chapter": 12,
+   "v1": 31,
+   "v2": 31,
+   "scene": "David gathers the army of Israel against Rabbah and captures the royal city of the Ammonites.",
+   "confidence": "medium",
+   "also": [
+    [
+     13,
+     20,
+     1,
+     3
+    ]
+   ],
+   "note": "Commons cites 2 Sam 12:26-31. Could not view the image to confirm whether it shows the assault (v29) or its aftermath (vv30-31).",
+   "resolved": "The correct passage is 2 Samuel 12:31, so the checker is right. The Commons file page's caption reads \"David punishing the Ammonites. 2 Samuel 12:31\". That wording is the original 1866 plate title and points to a single verse. The file's own title, \"David Attacks the Ammonites\", and its broad 12:26-31 reference are later Commons labels. In the KJV, 12:29 only says David took Rabbah, and 12:30 is about the crown and the spoil. Verse 31 is where the people of the city are brought out and put under saws, harrows of iron and axes of iron. The checker viewed the image: David is in a chariot driven over prostrate Ammonite captives before the city walls. That matches v31 as Doré read it in the Vulgate, which has iron chariots where the KJV has harrows, and does not match the assault in v29. Suggested scene text: \"After Rabbah falls, David subjects its captive people to harsh punishment beneath iron-shod chariots.\" Alternate passage: 1 Chronicles 20:3.",
+   "_sugg": "After Rabbah falls, David subjects its captive people to harsh punishment beneath iron-shod chariots."
+  },
+  {
+   "idx": 85,
+   "book": 10,
+   "chapter": 18,
+   "v1": 9,
+   "v2": 15,
+   "scene": "Absalom hangs caught in the boughs of a great oak as Joab thrusts three darts into his heart.",
+   "confidence": "high"
+  },
+  {
+   "idx": 86,
+   "book": 10,
+   "chapter": 18,
+   "v1": 33,
+   "v2": 33,
+   "scene": "In the chamber over the gate, King David weeps for his son, crying out for Absalom.",
+   "confidence": "high",
+   "also": [
+    [
+     10,
+     19,
+     1,
+     4
+    ]
+   ],
+   "note": "Commons cites 2 Sam 18:33; the lament continues in 19:4."
+  },
+  {
+   "idx": 87,
+   "book": 10,
+   "chapter": 21,
+   "v1": 8,
+   "v2": 10,
+   "scene": "Rizpah spreads sackcloth on the rock and guards the bodies of her sons from birds by day and beasts by night.",
+   "confidence": "high",
+   "note": "Commons cites 2 Sam 21:8-14; her vigil is v10."
+  },
+  {
+   "idx": 88,
+   "book": 10,
+   "chapter": 21,
+   "v1": 15,
+   "v2": 17,
+   "scene": "When David grows faint in battle, Abishai rushes to his aid and strikes down the giant Ishbi-benob.",
+   "confidence": "high"
+  },
+  {
+   "idx": 89,
+   "book": 11,
+   "chapter": 3,
+   "v1": 24,
+   "v2": 27,
+   "scene": "Solomon orders the living child divided with a sword, and the true mother pleads for the baby's life.",
+   "confidence": "high",
+   "note": "Whole account is 1 Kgs 3:16-28 (Commons); the depicted moment is the sword and the mother's plea."
+  },
+  {
+   "idx": 90,
+   "book": 11,
+   "chapter": 5,
+   "v1": 6,
+   "v2": 10,
+   "scene": "Workmen fell the great cedars of Lebanon for the house Solomon will build to the name of the LORD.",
+   "confidence": "medium",
+   "also": [
+    [
+     14,
+     2,
+     8,
+     10
+    ],
+    [
+     14,
+     2,
+     16,
+     16
+    ]
+   ],
+   "note": "Commons says '2Sam. 5:1-18', clearly a slip for 1 Kgs 5:1-18. The felling is also described in 5:13-18 (the levy sent to Lebanon); 5:6-10 is where the cedars are requested and supplied."
+  },
+  {
+   "idx": 91,
+   "book": 11,
+   "chapter": 10,
+   "v1": 1,
+   "v2": 3,
+   "scene": "The queen of Sheba arrives in Jerusalem with a great train of camels, spices and gold to test Solomon's wisdom.",
+   "confidence": "high",
+   "also": [
+    [
+     14,
+     9,
+     1,
+     2
+    ]
+   ],
+   "note": "Commons cites 1 Kgs 10:1-13; her praise and gifts follow in vv4-10."
+  },
+  {
+   "idx": 92,
+   "book": 11,
+   "chapter": 4,
+   "v1": 29,
+   "v2": 34,
+   "scene": "The aged King Solomon sits in quiet contemplation, the sage famed for his proverbs and songs.",
+   "confidence": "low",
+   "note": "Commons cites 1 Kgs 4:29-34 and files the image under Ecclesiastes, with an alternate version named 'Dore Solomon Proverbs'. The title 'in Old Age' could also point to 1 Kgs 11:4 ('when Solomon was old'), but nothing indicates the plate shows his turn to idols. Ecclesiastes 1:12-13 is another possible anchor. Could not view the image."
+  },
+  {
+   "idx": 93,
+   "book": 11,
+   "chapter": 13,
+   "v1": 24,
+   "v2": 25,
+   "scene": "The disobedient man of God lies dead in the road, with the lion and his donkey standing quietly beside the body.",
+   "confidence": "high",
+   "note": "Commons cites 1 Kgs 13:11-34; v28 repeats the same tableau when the old prophet arrives."
+  },
+  {
+   "idx": 94,
+   "book": 11,
+   "chapter": 17,
+   "v1": 21,
+   "v2": 23,
+   "scene": "Elijah cries to the LORD over the widow's son, who revives, and he gives the boy back to his mother alive.",
+   "confidence": "high"
+  },
+  {
+   "idx": 95,
+   "book": 11,
+   "chapter": 18,
+   "v1": 40,
+   "v2": 40,
+   "scene": "At Elijah's command the people seize the prophets of Baal and they are slain at the brook Kishon.",
+   "confidence": "high"
+  },
+  {
+   "idx": 96,
+   "book": 11,
+   "chapter": 19,
+   "v1": 5,
+   "v2": 7,
+   "scene": "An angel touches the sleeping Elijah beneath the juniper tree and bids him rise and eat the bread and water provided.",
+   "confidence": "high"
+  },
+  {
+   "idx": 97,
+   "book": 11,
+   "chapter": 20,
+   "v1": 29,
+   "v2": 30,
+   "scene": "Israel's small army routs the vast Syrian host at Aphek, and a wall falls on those who flee into the city.",
+   "confidence": "high",
+   "note": "Commons cites 1 Kgs 20:26-34 (the Russian caption names the hundred thousand slain, v29), not the earlier rout at Samaria in 20:20-21."
+  },
+  {
+   "idx": 98,
+   "book": 11,
+   "chapter": 22,
+   "v1": 34,
+   "v2": 35,
+   "scene": "Struck by an arrow shot at random, King Ahab is held up in his chariot as the battle rages, and he dies at evening.",
+   "confidence": "medium",
+   "also": [
+    [
+     14,
+     18,
+     33,
+     34
+    ]
+   ],
+   "note": "Commons cites 1 Kgs 22:29-40. Could not view the image. If it shows the dogs licking the blood from the chariot, extend to v38."
+  },
+  {
+   "idx": 99,
+   "book": 12,
+   "chapter": 1,
+   "v1": 9,
+   "v2": 12,
+   "scene": "From a hilltop Elijah calls down fire from heaven, which consumes the captains and soldiers King Ahaziah sent to seize him.",
+   "confidence": "high"
+  },
+  {
+   "idx": 100,
+   "book": 12,
+   "chapter": 2,
+   "v1": 11,
+   "v2": 12,
+   "scene": "A chariot and horses of fire part Elijah from Elisha as the prophet is taken up by a whirlwind into heaven.",
+   "confidence": "high"
+  },
+  {
+   "idx": 101,
+   "book": 12,
+   "chapter": 2,
+   "v1": 23,
+   "v2": 24,
+   "scene": "After youths from Bethel jeer at Elisha on the road, two she-bears come out of the wood upon them.",
+   "confidence": "high",
+   "note": "Commons cites 2 Kings 2:23-24."
+  },
+  {
+   "idx": 102,
+   "book": 12,
+   "chapter": 6,
+   "v1": 25,
+   "v2": 30,
+   "scene": "During the Syrian siege, the king of Israel stands on the city wall above starving people as a woman cries out to him for help.",
+   "confidence": "high",
+   "note": "Engraving shows the king on the wall with the famished crowd and a pleading woman; Commons cites 2 Kings 6:18-30."
+  },
+  {
+   "idx": 103,
+   "book": 12,
+   "chapter": 9,
+   "v1": 30,
+   "v2": 33,
+   "scene": "At Jehu's command, the painted queen Jezebel is thrown down from her window at Jezreel.",
+   "confidence": "high",
+   "note": "Commons cites 2 Kings 9:22-33."
+  },
+  {
+   "idx": 104,
+   "book": 12,
+   "chapter": 9,
+   "v1": 34,
+   "v2": 37,
+   "scene": "Jehu's men come to bury Jezebel and find only her skull, feet and hands, fulfilling Elijah's word.",
+   "confidence": "high",
+   "note": "Commons cites 2 Kings 9:34-37."
+  },
+  {
+   "idx": 105,
+   "book": 12,
+   "chapter": 11,
+   "v1": 13,
+   "v2": 16,
+   "scene": "Athaliah, crying 'Treason', is seized by the captains at Jehoiada's order and put to death outside the temple.",
+   "confidence": "high",
+   "also": [
+    [
+     14,
+     23,
+     12,
+     15
+    ]
+   ],
+   "note": "Commons cites 2 Kings 11:1-20; parallel in 2 Chronicles 23."
+  },
+  {
+   "idx": 106,
+   "book": 12,
+   "chapter": 17,
+   "v1": 24,
+   "v2": 26,
+   "scene": "The foreign peoples settled in Samaria by the Assyrian king are attacked by lions sent among them because they did not fear the LORD.",
+   "confidence": "high",
+   "note": "Commons cites 2 Kings 17:20-26."
+  },
+  {
+   "idx": 107,
+   "book": 12,
+   "chapter": 19,
+   "v1": 35,
+   "v2": 35,
+   "scene": "At dawn the Assyrian camp lies strewn with the dead after the angel of the LORD passes through in the night.",
+   "confidence": "high",
+   "also": [
+    [
+     23,
+     37,
+     36,
+     36
+    ],
+    [
+     14,
+     32,
+     21,
+     21
+    ]
+   ],
+   "note": "Commons cites 2 Kings 19:20-35."
+  },
+  {
+   "idx": 108,
+   "book": 12,
+   "chapter": 25,
+   "v1": 6,
+   "v2": 7,
+   "scene": "At Riblah the captured King Zedekiah is made to watch his sons put to death before he is blinded and bound.",
+   "confidence": "high",
+   "also": [
+    [
+     24,
+     39,
+     6,
+     7
+    ],
+    [
+     24,
+     52,
+     9,
+     11
+    ]
+   ],
+   "note": "Commons cites 2 Kings 25:1-7."
+  },
+  {
+   "idx": 109,
+   "book": 13,
+   "chapter": 21,
+   "v1": 14,
+   "v2": 16,
+   "scene": "The angel of the LORD stands with drawn sword over plague-stricken Jerusalem until God commands him to stay his hand.",
+   "confidence": "high",
+   "also": [
+    [
+     10,
+     24,
+     15,
+     17
+    ]
+   ],
+   "note": "David's census plague, not a Kings event despite the section placement; Commons cites 1 Chronicles 21:15."
+  },
+  {
+   "idx": 110,
+   "book": 14,
+   "chapter": 20,
+   "v1": 22,
+   "v2": 24,
+   "scene": "As Judah sings praise, the armies of Ammon, Moab and Mount Seir turn on one another and fall in the wilderness.",
+   "confidence": "high",
+   "note": "Jehoshaphat's deliverance, 2 Chronicles 20; Commons cites 20:14-30."
+  },
+  {
+   "idx": 111,
+   "book": 15,
+   "chapter": 1,
+   "v1": 7,
+   "v2": 11,
+   "scene": "Cyrus king of Persia brings out the temple vessels Nebuchadnezzar had carried off and hands them over to Sheshbazzar for Jerusalem.",
+   "confidence": "high",
+   "also": [
+    [
+     15,
+     5,
+     14,
+     15
+    ]
+   ],
+   "note": "Commons cites Ezra 1:1-11."
+  },
+  {
+   "idx": 112,
+   "book": 15,
+   "chapter": 3,
+   "v1": 8,
+   "v2": 11,
+   "scene": "Returned exiles haul and set great stones for the house of the LORD while a leader lifts his hands in praise over the work.",
+   "confidence": "medium",
+   "note": "Commons repeats Ezra 1:1-11 (likely copied from the Cyrus plate); the building scene matches the laying of the foundation in Ezra 3. The armed men among the builders also recall Nehemiah 4:16-18."
+  },
+  {
+   "idx": 113,
+   "book": 15,
+   "chapter": 7,
+   "v1": 11,
+   "v2": 13,
+   "scene": "Before a Persian palace, King Artaxerxes' decree lets any of Israel who are willing go up to Jerusalem with Ezra.",
+   "confidence": "medium",
+   "note": "Commons cites Ezra 7:1-15; the verses chosen hold the letter's grant of freedom to go. Compare Ezra 7:6."
+  },
+  {
+   "idx": 114,
+   "book": 15,
+   "chapter": 9,
+   "v1": 5,
+   "v2": 6,
+   "scene": "At the evening sacrifice Ezra, his garments torn, falls on his knees and spreads his hands to God in confession for the people.",
+   "confidence": "high",
+   "note": "Commons cites Ezra 9:1-15."
+  },
+  {
+   "idx": 115,
+   "book": 16,
+   "chapter": 2,
+   "v1": 12,
+   "v2": 15,
+   "scene": "Nehemiah rides out by night with a few companions to survey Jerusalem's broken walls and burned gates.",
+   "confidence": "high",
+   "note": "Commons cites Nehemiah 2:1-20."
+  },
+  {
+   "idx": 116,
+   "book": 16,
+   "chapter": 8,
+   "v1": 2,
+   "v2": 6,
+   "scene": "Standing on a wooden pulpit before the Water Gate, Ezra opens and reads the book of the law to the assembled people.",
+   "confidence": "high",
+   "note": "Commons cites Nehemiah 8:1-12."
+  },
+  {
+   "idx": 117,
+   "book": 17,
+   "chapter": 1,
+   "v1": 10,
+   "v2": 12,
+   "scene": "Queen Vashti refuses the king's summons to appear at his feast, and Ahasuerus is filled with anger.",
+   "confidence": "high",
+   "note": "Commons cites Esther 1:10-22."
+  },
+  {
+   "idx": 118,
+   "book": 17,
+   "chapter": 5,
+   "v1": 1,
+   "v2": 2,
+   "scene": "Esther, in royal robes, comes unbidden into the inner court and the king holds out the golden sceptre to her.",
+   "confidence": "high",
+   "note": "Commons cites Esther 5:1-8."
+  },
+  {
+   "idx": 119,
+   "book": 17,
+   "chapter": 6,
+   "v1": 10,
+   "v2": 11,
+   "scene": "Haman leads Mordecai through the city on the king's horse in royal apparel, proclaiming the honor the king has given him.",
+   "confidence": "high",
+   "note": "Commons cites Esther 6:10-13."
+  },
+  {
+   "idx": 120,
+   "book": 17,
+   "chapter": 7,
+   "v1": 3,
+   "v2": 6,
+   "scene": "At her banquet Esther pleads for her people and names Haman to the king as their enemy.",
+   "confidence": "high",
+   "note": "Commons cites Esther 7:1-10."
+  },
+  {
+   "idx": 121,
+   "book": 18,
+   "chapter": 1,
+   "v1": 14,
+   "v2": 20,
+   "scene": "Messengers arrive one after another with news of Job's losses, and Job tears his mantle in grief.",
+   "confidence": "high",
+   "note": "Commons cites Job 1:1-22; 1:21-22 continue with Job's words of worship."
+  },
+  {
+   "idx": 122,
+   "book": 18,
+   "chapter": 2,
+   "v1": 11,
+   "v2": 13,
+   "scene": "Eliphaz, Bildad and Zophar come to mourn with Job and sit with him on the ground in silence.",
+   "confidence": "high",
+   "note": "Commons cites Job 2:1-13; the engraving shows the friends' arrival and silent sitting, before the speeches that begin in chapter 3."
+  },
+  {
+   "idx": 123,
+   "book": 23,
+   "chapter": 1,
+   "v1": 1,
+   "v2": 2,
+   "scene": "The prophet Isaiah sits in quiet contemplation on a rock above a wide landscape, receiving the vision concerning Judah and Jerusalem.",
+   "confidence": "medium",
+   "note": "A portrait plate with no single event; Commons cites Isaiah 1:1-7,16-31. The opening verses introducing his vision are the best anchor."
+  },
+  {
+   "idx": 124,
+   "book": 23,
+   "chapter": 13,
+   "v1": 19,
+   "v2": 22,
+   "scene": "Isaiah's vision of fallen Babylon, its palaces and theaters in ruins and left to birds and wild creatures.",
+   "confidence": "high",
+   "note": "Engraving shows moonlit ruins with birds and a lone spirit figure; Commons cites Isaiah 13:1-22."
+  },
+  {
+   "idx": 125,
+   "book": 23,
+   "chapter": 27,
+   "v1": 1,
+   "v2": 1,
+   "scene": "The LORD, with His great and strong sword, slays Leviathan, the twisting serpent of the sea.",
+   "confidence": "high",
+   "note": "Commons cites Isaiah 27:1-13; verse 1 is the depicted moment."
+  },
+  {
+   "idx": 126,
+   "book": 24,
+   "chapter": 36,
+   "v1": 1,
+   "v2": 4,
+   "scene": "Baruch kneels with a writing tablet, taking down the LORD's words as Jeremiah stands above him in a shaft of light and speaks.",
+   "confidence": "high",
+   "note": "Commons cites Jer 36:4 (the moment of writing). Checked against the thumbnail. Baruch writes the scroll again in 36:32."
+  },
+  {
+   "idx": 127,
+   "book": 24,
+   "chapter": 1,
+   "v1": 14,
+   "v2": 16,
+   "scene": "Jeremiah stands on stone steps under a storm-dark sky and raises his arm to proclaim the LORD's warning of disaster from the north, while listeners sit around him.",
+   "confidence": "medium",
+   "note": "Commons description cites Jer 1:14-15. The image shows a general scene of Jeremiah prophesying, so temple-court sermons such as Jer 7:1-4 or 26:1-6 would also fit."
+  },
+  {
+   "idx": 128,
+   "book": 25,
+   "chapter": 1,
+   "v1": 1,
+   "v2": 5,
+   "scene": "Grieving men, women and children sit and lie beneath the walls of ruined Jerusalem, mourning the city's desolation.",
+   "confidence": "high",
+   "note": "Commons: 'People Mourn over the Ruins of Jerusalem (Lam. 1:1-5)'. The famine imagery also recalls Lam 2:10-12."
+  },
+  {
+   "idx": 129,
+   "book": 24,
+   "chapter": 45,
+   "v1": 1,
+   "v2": 5,
+   "scene": "Baruch the scribe sits slumped against a stone wall beside his scrolls, his head in his hand, overcome with sorrow.",
+   "confidence": "low",
+   "note": "Commons cites the apocryphal Book of Baruch (Bar 1:1; 2:1-23), which is not in the 66-book KJV used here. Jer 45:1-5 is the closest canonical passage: Baruch's lament ('the LORD hath added grief to my sorrow', v3) matches the dejected figure shown."
+  },
+  {
+   "idx": 130,
+   "book": 26,
+   "chapter": 14,
+   "v1": 1,
+   "v2": 6,
+   "scene": "Ezekiel stands on a hillside with his staff and lifts his hand, while elders of Israel sit before him to hear the word of the LORD.",
+   "confidence": "medium",
+   "note": "Commons cites Ezek 14:1-21. The seated elders match 14:1 ('sat before me'). Similar scenes occur at Ezek 8:1 and 20:1."
+  },
+  {
+   "idx": 131,
+   "book": 26,
+   "chapter": 37,
+   "v1": 1,
+   "v2": 10,
+   "scene": "Ezekiel stands above a valley full of bones as the skeletons stir and rise toward life at the word of the LORD.",
+   "confidence": "high"
+  },
+  {
+   "idx": 132,
+   "book": 27,
+   "chapter": 1,
+   "v1": 1,
+   "v2": 6,
+   "scene": "Young Daniel stands deep in thought with a written scroll in his hand, while fellow captives from Judah sit and walk among the buildings of Babylon.",
+   "confidence": "low",
+   "note": "Commons description cites Dan 2:26, 31-49 (interpreting Nebuchadnezzar's dream), but no king appears in the image. Dan 1:1-6, which names Daniel among the captives of Judah, fits the title and composition better. Dan 2 is the alternative."
+  },
+  {
+   "idx": 133,
+   "book": 27,
+   "chapter": 3,
+   "v1": 21,
+   "v2": 25,
+   "scene": "Shadrach, Meshach and Abednego stand unharmed among the furnace flames while Nebuchadnezzar and his court look down in astonishment.",
+   "confidence": "high"
+  },
+  {
+   "idx": 134,
+   "book": 27,
+   "chapter": 5,
+   "v1": 24,
+   "v2": 28,
+   "scene": "At Belshazzar's feast, Daniel points to the mysterious writing on the palace wall and declares its meaning to the king.",
+   "confidence": "high",
+   "note": "Daniel's full answer begins at 5:17. The plate's focus is the writing and its interpretation (vv. 24-28)."
+  },
+  {
+   "idx": 135,
+   "book": 27,
+   "chapter": 6,
+   "v1": 16,
+   "v2": 22,
+   "scene": "Daniel stands calmly among the lions in the den, his face turned toward the light falling from the opening above.",
+   "confidence": "high"
+  },
+  {
+   "idx": 136,
+   "book": 27,
+   "chapter": 7,
+   "v1": 2,
+   "v2": 7,
+   "scene": "In Daniel's night vision, four great and fearsome beasts rise one after another from the wind-driven sea.",
+   "confidence": "high"
+  },
+  {
+   "idx": 137,
+   "book": 30,
+   "chapter": 1,
+   "v1": 1,
+   "v2": 2,
+   "scene": "Amos, the herdsman of Tekoa, stands with his staff on a hilltop at dusk, looking out over a walled city.",
+   "confidence": "medium",
+   "note": "Commons cites Amos 1:1-15. This is a portrait of the prophet, so the anchor is the introduction naming him as a herdsman of Tekoa."
+  },
+  {
+   "idx": 138,
+   "book": 32,
+   "chapter": 2,
+   "v1": 10,
+   "v2": 10,
+   "scene": "The great fish turns back to the sea after casting Jonah onto the rocky shore, where he scrambles up out of the surf.",
+   "confidence": "high",
+   "note": "The single verse narrating the event. Jonah's prayer from the fish (2:1-9) comes just before it."
+  },
+  {
+   "idx": 139,
+   "book": 32,
+   "chapter": 3,
+   "v1": 3,
+   "v2": 5,
+   "scene": "Jonah stands on a raised platform in Nineveh proclaiming the city's coming overthrow, while its people kneel and bow in repentance around him.",
+   "confidence": "high"
+  },
+  {
+   "idx": 140,
+   "book": 33,
+   "chapter": 6,
+   "v1": 1,
+   "v2": 8,
+   "scene": "Micah raises both arms as he pleads with the people of Israel to return to the LORD, some of them bowing to the ground in sorrow.",
+   "confidence": "medium",
+   "note": "Commons description cites Micah 7:1-20. Micah contains no narrated scene, and 6:1-8 is the book's clearest call to repentance ('what doth the LORD require of thee'). Micah 7:1-9 is the alternative."
+  },
+  {
+   "idx": 141,
+   "book": 38,
+   "chapter": 6,
+   "v1": 1,
+   "v2": 8,
+   "scene": "Zechariah sees four chariots with horses of different colours come out from between two mountains of brass.",
+   "confidence": "high",
+   "note": "Commons cites Zech 6:1-15. The vision itself is narrated in vv. 1-8."
+  },
+  {
+   "idx": 161,
+   "book": 42,
+   "chapter": 1,
+   "v1": 26,
+   "v2": 38,
+   "scene": "The angel Gabriel appears to Mary and greets her with the news that she will bear the Son of the Highest.",
+   "confidence": "high",
+   "note": "The caption gives Luke 1:26-28. The range covers the full Annunciation dialogue. No other Gospel narrates this scene."
+  },
+  {
+   "idx": 162,
+   "book": 42,
+   "chapter": 2,
+   "v1": 15,
+   "v2": 20,
+   "scene": "Shepherds crowd into the stable at Bethlehem and kneel in wonder before the newborn Jesus, who lies in the manger beside Mary and Joseph.",
+   "confidence": "high",
+   "note": "The caption gives Luke 2:15-16. The thumbnail confirms the shepherds are adoring the child in the manger."
+  },
+  {
+   "idx": 163,
+   "book": 40,
+   "chapter": 2,
+   "v1": 1,
+   "v2": 2,
+   "scene": "The wise men's caravan of camels and attendants travels through the night, following the star they saw in the east.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     2,
+     9,
+     10
+    ]
+   ],
+   "note": "Matt 2:9-10 narrates the star going before them."
+  },
+  {
+   "idx": 164,
+   "book": 40,
+   "chapter": 2,
+   "v1": 13,
+   "v2": 15,
+   "scene": "Joseph leads the donkey carrying Mary and the young child Jesus across the desert as they flee into Egypt.",
+   "confidence": "high"
+  },
+  {
+   "idx": 165,
+   "book": 40,
+   "chapter": 2,
+   "v1": 16,
+   "v2": 18,
+   "scene": "Herod's soldiers carry out his cruel order in Bethlehem while mothers struggle to shield their little children.",
+   "confidence": "high"
+  },
+  {
+   "idx": 166,
+   "book": 42,
+   "chapter": 2,
+   "v1": 46,
+   "v2": 47,
+   "scene": "The twelve-year-old Jesus stands among the teachers in the temple, listening and asking questions while they marvel at his understanding.",
+   "confidence": "high",
+   "note": "Mary and Joseph do not appear in the plate, so vv. 48-49 are left out."
+  },
+  {
+   "idx": 167,
+   "book": 41,
+   "chapter": 1,
+   "v1": 4,
+   "v2": 8,
+   "scene": "Clothed in camel's hair, John the Baptist stands above the gathered crowd and points heavenward as he proclaims that one mightier than he is coming.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     3,
+     1,
+     12
+    ],
+    [
+     42,
+     3,
+     3,
+     17
+    ]
+   ]
+  },
+  {
+   "idx": 168,
+   "book": 41,
+   "chapter": 1,
+   "v1": 9,
+   "v2": 11,
+   "scene": "Jesus stands in the Jordan as John baptizes him, and the Spirit descends like a dove in a stream of light from the opened heavens.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     3,
+     13,
+     17
+    ],
+    [
+     42,
+     3,
+     21,
+     22
+    ],
+    [
+     43,
+     1,
+     32,
+     34
+    ]
+   ]
+  },
+  {
+   "idx": 169,
+   "book": 42,
+   "chapter": 4,
+   "v1": 5,
+   "v2": 8,
+   "scene": "On a high mountain the devil kneels and gestures toward the kingdoms of the world, while Jesus stands firm and refuses to worship him.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     4,
+     8,
+     10
+    ],
+    [
+     41,
+     1,
+     12,
+     13
+    ]
+   ],
+   "note": "The caption gives Luke 4:7-8. Matthew places this temptation third (4:8-10)."
+  },
+  {
+   "idx": 170,
+   "book": 43,
+   "chapter": 2,
+   "v1": 5,
+   "v2": 10,
+   "scene": "At the wedding feast in Cana, servants fill the great stone waterpots at Jesus' word while the guests sit at the canopied table.",
+   "confidence": "high",
+   "note": "Viewed the plate: foreground shows servants filling large water jars (vv.6-8) beneath the feast table. Caption John 2:5-7."
+  },
+  {
+   "idx": 171,
+   "book": 43,
+   "chapter": 2,
+   "v1": 14,
+   "v2": 16,
+   "scene": "Jesus, with a scourge of cords, drives the traders and money-changers out of the temple and overturns their tables.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     21,
+     12,
+     13
+    ],
+    [
+     41,
+     11,
+     15,
+     17
+    ],
+    [
+     42,
+     19,
+     45,
+     46
+    ]
+   ],
+   "note": "John places this cleansing early in the ministry; the Synoptic accounts (at the close of the ministry) are often treated as a second cleansing but narrate the same kind of scene, so they are listed as parallels."
+  },
+  {
+   "idx": 172,
+   "book": 43,
+   "chapter": 4,
+   "v1": 6,
+   "v2": 14,
+   "scene": "Weary from his journey, Jesus sits at Jacob's well and speaks with the Samaritan woman about the living water.",
+   "confidence": "high",
+   "note": "Caption John 4:13-14; range starts where Jesus sits on the well and the woman comes to draw."
+  },
+  {
+   "idx": 173,
+   "book": 40,
+   "chapter": 9,
+   "v1": 32,
+   "v2": 34,
+   "scene": "A man freed from an unclean spirit kneels at Jesus' feet while the onlookers murmur in amazement at his authority.",
+   "confidence": "medium",
+   "also": [
+    [
+     41,
+     1,
+     23,
+     27
+    ]
+   ],
+   "note": "Viewed the plate: Doré sets it outdoors, with the delivered man kneeling and scribes conferring; the text (Capernaum synagogue exorcism) is the passage the caption Luke 4:36-37 points to.",
+   "resolved": "The checker is right. I looked at the plate (Commons 1891 Bible Panorama scan, file 14598352919). It shows a man kneeling on open ground outside a walled town with palms behind it, reaching up to Jesus, who stands haloed with his hand outstretched. A crowd stands on the left. On the right, a group of robed elders confer, and one of them points while speaking. Nothing places the scene inside a synagogue, and Luke 4:33-35 happens inside one (\"in the synagogue there was a man\"). Matthew 9:32-34 fits every part of the picture: a mute man possessed is brought to Jesus \"as they went out\", the crowds marvel, and the Pharisees mutter that he casts out devils by the prince of devils (the pointing group on the right). The checker's sources back this up. Doré's 1866 first edition titles the plate as the healing of a mute demoniac from Matthew 9 and places it in Matthew's order, and the 19th-century Doré Bible Gallery calls it 'The Dumb Man Possessed' (Matt 9:32-34). The 'Luke 4:36-37' label comes from the modern Commons gallery, and the plate's Commons title ('Jesus Healing the Man Possessed With a Devil') is generic. Suggested scene: 'A man possessed and unable to speak kneels before Jesus, reaching up to him, as the crowd marvels and the Pharisees mutter among themselves.' Drop Luke 4 and Mark 1:23-27 as the primary or 'also' passages. A thumbnail used for checking is saved at /Users/jkim/bible-study/.design/art/p173.jpg.",
+   "_sugg": null
+  },
+  {
+   "idx": 174,
+   "book": 42,
+   "chapter": 5,
+   "v1": 1,
+   "v2": 3,
+   "scene": "Seated in Simon's boat just off the shore, Jesus teaches the crowd gathered at the water's edge.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     13,
+     1,
+     2
+    ],
+    [
+     41,
+     4,
+     1,
+     2
+    ]
+   ],
+   "note": "Viewed the plate: Jesus seated in a boat at the shore teaching a standing crowd. Luke 5:1-3 is the primary; Matt 13:1-2 and Mark 4:1-2 describe Jesus likewise teaching from a boat by the sea (a separate occasion but the same depicted setting)."
+  },
+  {
+   "idx": 175,
+   "book": 41,
+   "chapter": 2,
+   "v1": 23,
+   "v2": 28,
+   "scene": "Walking through the grain fields on the Sabbath, the disciples pluck ears of corn as the Pharisees question Jesus.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     12,
+     1,
+     8
+    ],
+    [
+     42,
+     6,
+     1,
+     5
+    ]
+   ]
+  },
+  {
+   "idx": 176,
+   "book": 40,
+   "chapter": 5,
+   "v1": 1,
+   "v2": 12,
+   "scene": "Jesus sits on the mountainside and teaches the gathered multitude the Beatitudes.",
+   "confidence": "high",
+   "also": [
+    [
+     42,
+     6,
+     17,
+     23
+    ]
+   ],
+   "note": "Caption Matt 5:7-10; range covers the setting (5:1-2) and the Beatitudes. Luke's Sermon on the Plain (6:17-23) is the traditional parallel."
+  },
+  {
+   "idx": 177,
+   "book": 42,
+   "chapter": 8,
+   "v1": 2,
+   "v2": 2,
+   "scene": "Mary Magdalene kneels alone among desolate rocks in prayerful penitence, a skull resting on the stone before her.",
+   "confidence": "low",
+   "note": "Viewed the plate: a solitary penitent in a wilderness with a skull, drawn from later Christian tradition (the penitent Magdalene), not a scene narrated in Scripture. Luke 8:2 (per caption) is the only verse naming her deliverance; tradition also conflated her with the woman of Luke 7:37-38."
+  },
+  {
+   "idx": 178,
+   "book": 40,
+   "chapter": 12,
+   "v1": 22,
+   "v2": 23,
+   "scene": "Jesus stretches out his hand toward a mute man possessed by a spirit, seated by a wall as onlookers watch.",
+   "confidence": "medium",
+   "also": [
+    [
+     40,
+     12,
+     22,
+     23
+    ],
+    [
+     42,
+     11,
+     14,
+     14
+    ]
+   ],
+   "note": "Title matches Matt 9:32 KJV wording ('a dumb man possessed with a devil'); viewed plate shows a man with hand to his mouth, not evidently blind. Caption points to Matt 12:22-25 (blind and dumb man), listed as a related account with Luke 11:14.",
+   "resolved": "Both passages fit the title \"The Dumb Man Possessed\". Matt 9:32 uses the words \"a dumb man possessed with a devil\". Matt 12:22 describes \"one possessed with a devil, blind, and dumb\". The engraving (JesusCuresamute.gif) shows a man seated on a step by a wall with his hand at his mouth. Jesus stands before him with his hand stretched out, and a quiet group watches from the left. Nothing in the picture decides between the two passages: the man's mouth is shown, and nothing shows whether he is blind. Three points favour Matthew 12. (1) The Commons page's own caption is Matthew 12:22-25. (2) On that gallery, the plate sits under 'Parables & denunciations begin', after Mary Magdalene (Luke 8:2) and before the Stilling of the Tempest and Jairus's daughter. That is where the Matt 12 / Luke 11:14 Beelzebub episode falls in a harmony of the Gospels. Matt 9:32-34 comes after the raising of Jairus's daughter and the two blind men, so it would sit later. (3) Mapping it to Matt 9 would risk duplicating the separate possessed-man plate (idx 173). I narrowed the caption's 22-25 to 22-23. Those verses tell of the healing and the people's amazement, which matches the watching crowd. Verses 24-25 are the Pharisees' accusation and Jesus' reply, which the plate does not show. I could not verify the checker's claims about the 1866 French edition and the Emory record, and my decision does not rely on them. Luke 11:14 is the parallel account ('also'). Suggested scene: A man possessed, unable to speak, sits by a wall with his hand to his mouth as Jesus stretches out his hand to heal him while the people look on.",
+   "_sugg": null
+  },
+  {
+   "idx": 179,
+   "book": 41,
+   "chapter": 4,
+   "v1": 37,
+   "v2": 39,
+   "scene": "As a great storm swamps the boat, Jesus sleeps at the stern while the terrified disciples cry out to him.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     8,
+     24,
+     26
+    ],
+    [
+     42,
+     8,
+     23,
+     24
+    ]
+   ],
+   "note": "Viewed the plate: Jesus (haloed) is still asleep amid the waves and frightened disciples; range extends to v.39 where he rebukes the wind."
+  },
+  {
+   "idx": 180,
+   "book": 42,
+   "chapter": 8,
+   "v1": 51,
+   "v2": 55,
+   "scene": "In the quiet room, Jesus takes the daughter of Jairus by the hand and she rises from her bed as her mother kneels beside her.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     5,
+     40,
+     42
+    ],
+    [
+     40,
+     9,
+     25,
+     25
+    ]
+   ],
+   "note": "Viewed the plate: the girl sits up on the bed, a woman kneels at the bedside, Peter, James and John look on."
+  },
+  {
+   "idx": 181,
+   "book": 40,
+   "chapter": 13,
+   "v1": 54,
+   "v2": 57,
+   "scene": "Jesus teaches in the synagogue of his home town while the listeners question where he gained such wisdom.",
+   "confidence": "medium",
+   "also": [
+    [
+     41,
+     6,
+     1,
+     4
+    ],
+    [
+     42,
+     4,
+     16,
+     24
+    ]
+   ],
+   "note": "Viewed the plate: Jesus speaking in a synagogue with a scroll at his feet and skeptical hearers. Caption Matt 13:54; Luke 4:16-24 (Nazareth synagogue reading) is included as a closely matching account."
+  },
+  {
+   "idx": 182,
+   "book": 40,
+   "chapter": 14,
+   "v1": 8,
+   "v2": 11,
+   "scene": "The daughter of Herodias receives the head of John the Baptist on a charger, as she had asked of Herod.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     6,
+     25,
+     28
+    ]
+   ]
+  },
+  {
+   "idx": 183,
+   "book": 40,
+   "chapter": 15,
+   "v1": 32,
+   "v2": 38,
+   "scene": "Looking up to heaven, Jesus blesses and breaks the five loaves and two fishes for the multitude seated on the grass.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     6,
+     41,
+     44
+    ],
+    [
+     42,
+     9,
+     16,
+     17
+    ],
+    [
+     43,
+     6,
+     11,
+     13
+    ]
+   ],
+   "resolved": "The checker is right: this plate shows the feeding of the four thousand (Matt 15:32-38), not the five thousand. I checked this myself. (1) The 1892 Warsaw New Testament prints this engraving with a caption. It is on Commons as 'Nowy Testament Pana naszego Jezusa Chrystusa 1892 (94131149).jpg'. I read the caption at high resolution: 'CUDOWNE ROZMNOŻENIE CHLEBA. Ś. Mat. 15, 32.' (2) I compared that printing side by side with Commons JesusFeedingMultitude.jpg. They are the same engraving, and both carry Fournier's engraver signature. Pitts Theology Library also credits Fournier as engraver of this source image (00016760). (3) In the 1892 volume this plate comes right after 'Jesus walking on the sea' (94131112) and before the Transfiguration. The walking on the sea is Matt 14:25, which comes after the five thousand in Matthew. That order only fits Matt 15. (4) The picture itself matches Matt 15:33-35 ('in the wilderness ... sit down on the ground'). The crowd sits on bare, sandy desert ground with palm trees. There is no grass, so it does not match Matt 14:19 'on the grass'. The captions pointing the other way are later cataloguers' labels, not Doré's placement: Commons says 'Matthew 14:19' and Pitts titles it 'Feeding the 5,000 / Matthew 14'. The mapper's scene text is also wrong about the picture. Jesus does not appear in front looking up to heaven and breaking bread. He is a small haloed figure standing in the far background. The foreground shows the disciples carrying baskets of bread and handing out bread and fish to the seated crowd, including mothers and children. Suggested scene: 'The disciples carry baskets of bread and fish among the great multitude seated on the ground in the wilderness, while Jesus stands in the distance.' Parallel: Mark 8:6-9. Matt 14:19 could stay only as an optional secondary 'also shown with' link, not the main passage. Files: /Users/jkim/bible-study/.design/art/q183/cap1149.jpg (caption crop), /Users/jkim/bible-study/.design/art/q183/cmp.jpg (side-by-side check).",
+   "_sugg": null
+  },
+  {
+   "idx": 184,
+   "book": 43,
+   "chapter": 6,
+   "v1": 18,
+   "v2": 21,
+   "scene": "Jesus walks across the storm-tossed sea toward the distant boat, calling to the frightened disciples, \"It is I.\"",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     14,
+     24,
+     27
+    ],
+    [
+     41,
+     6,
+     47,
+     50
+    ]
+   ],
+   "note": "Viewed the plate (1869 printing captioned 'It is I'): Jesus on the waves, boat in the distance; Peter's walk is not shown."
+  },
+  {
+   "idx": 185,
+   "book": 40,
+   "chapter": 4,
+   "v1": 23,
+   "v2": 24,
+   "scene": "Kneeling among the lame, the blind and the sick laid at his feet, Jesus heals them as the crowd looks on.",
+   "confidence": "medium",
+   "note": "Viewed the plate: Jesus kneels healing a child amid many sufferers on steps near a colonnade. Caption Matt 15:31; the scene is a general healing of multitudes.",
+   "resolved": "The checker is right. Commons captions this plate \"Matthew 15:31\" but gives no primary source for it. Doré's own publications place it at Matthew 4. In the Doré Bible Gallery (Gutenberg #8710), \"Jesus Healing the Sick\" sits between \"Jesus Questioning the Doctors\" and \"Sermon on the Mount\", and its text cites Matthew iv, 23-25 (\"And Jesus went about all Galilee... healing all manner of sickness\"). The checker also reports two more sources I did not check myself: the 1866 table, which puts the plate at Matthew 4 before the Sermon, and the 1892 Warsaw printing, which reads St Matt. 4:23. The picture fits too. Jesus kneels on steps in front of a colonnaded building, with the sick and afflicted around him and a crowd looking on. That suits his going through Galilee's towns while the sick, possessed and palsied are brought to him (4:23-24). In Matt 15:29-31 he goes up a mountain and sits down, and the lame and blind are laid at his feet there. That is a different setting from what the plate shows. I chose 4:23-24 because those are the healing verses. Verse 25, the multitudes following him, can be included to match the Gallery's printed 23-25. Matt 15:29-31 can be kept as a secondary 'also' link.",
+   "_sugg": null
+  },
+  {
+   "idx": 186,
+   "book": 40,
+   "chapter": 17,
+   "v1": 1,
+   "v2": 6,
+   "scene": "On the high mountain Jesus shines in glory between Moses and Elijah, while Peter, James and John fall to the ground in awe.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     9,
+     2,
+     7
+    ],
+    [
+     42,
+     9,
+     28,
+     35
+    ]
+   ],
+   "note": "Viewed the plate: Moses holds the tablets; the three disciples lie prostrate below (Matt 17:6)."
+  },
+  {
+   "idx": 187,
+   "book": 40,
+   "chapter": 17,
+   "v1": 14,
+   "v2": 18,
+   "scene": "A father brings his afflicted son before Jesus after the disciples could not help, and Jesus rebukes the spirit and heals the boy.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     9,
+     20,
+     27
+    ],
+    [
+     42,
+     9,
+     38,
+     42
+    ]
+   ]
+  },
+  {
+   "idx": 188,
+   "book": 43,
+   "chapter": 8,
+   "v1": 3,
+   "v2": 9,
+   "scene": "The accused woman crouches beside Jesus, who has written on the ground and answers her accusers, 'He that is without sin among you, let him first cast a stone.'",
+   "confidence": "high",
+   "note": "Viewed the plate: writing visible on the pavement, accusers still present at left, so the range ends as they depart (v.9)."
+  },
+  {
+   "idx": 189,
+   "book": 42,
+   "chapter": 10,
+   "v1": 33,
+   "v2": 34,
+   "scene": "Moved with compassion, the Samaritan stops on the lonely road and binds the wounds of the man left half dead by robbers.",
+   "confidence": "high",
+   "note": "Parable; the wounded man's plight is set up in 10:30-32."
+  },
+  {
+   "idx": 190,
+   "book": 42,
+   "chapter": 10,
+   "v1": 34,
+   "v2": 35,
+   "scene": "The Samaritan brings the wounded traveler on his own beast to the inn and entrusts him to the innkeeper's care.",
+   "confidence": "high"
+  },
+  {
+   "idx": 191,
+   "book": 42,
+   "chapter": 10,
+   "v1": 38,
+   "v2": 42,
+   "scene": "In Martha's house, Mary sits at Jesus' feet listening to his word while Martha, busy with serving, appeals to him.",
+   "confidence": "high"
+  },
+  {
+   "idx": 192,
+   "book": 40,
+   "chapter": 4,
+   "v1": 23,
+   "v2": 25,
+   "scene": "Seated beneath a tree, Jesus teaches the listening crowd to trust the Father's care and to seek first the kingdom of God.",
+   "confidence": "medium",
+   "note": "Viewed the plate: a general preaching scene under a tree with seated and standing hearers. Caption Luke 12:29-31; range is the full 'take no thought' teaching (ravens, lilies, seek the kingdom). Luke 12:1 also mentions the great multitude.",
+   "resolved": "The checker is right. The plate should go at Matthew 4:23-25, with Luke 12:22-31 kept only as a secondary 'also' link. The engraving shows Jesus seated beneath a large tree, one hand raised, teaching a mixed crowd of men and women who stand, sit and kneel around him. The scene has no detail that belongs only to Luke 12. The 'Luke 12:29-31' label comes from the modern Commons gallery, which sorts the plates into a harmony of Christ's life. It is not Doré's own placement, and Luke 12:22 has Jesus speaking 'unto his disciples'. I checked the 1892 Warsaw New Testament scan saved in .design/art/q2 (sheet1892a.jpg, thumbnail 94130970). The same tree-preaching plate is captioned 'JEZUS NAUCZA LUD' ('Jesus teaches the people'), with a reference that reads 'S. Mat. 4, 2x'. It sits right after the Temptation plate (Matt 4) and just before the 'Jesus healing the sick' plate, which is also captioned from Mat. 4. That matches the checker's report of the 1866 first-edition table. The KJV text fits too: Matt 4:23 has Jesus 'preaching the gospel of the kingdom' among the people, and 4:25 says 'there followed him great multitudes of people', which matches the title 'Jesus Preaching to the Multitude'. The overlap with idx 185 at 4:23-24 follows Doré's own layout, since he set both plates on this passage. Suggested scene text: 'Seated beneath a tree, Jesus preaches the gospel of the kingdom to the people gathered around him.'",
+   "_sugg": null
+  },
+  {
+   "idx": 193,
+   "book": 42,
+   "chapter": 15,
+   "v1": 18,
+   "v2": 20,
+   "scene": "Destitute and feeding swine in a far country, the prodigal son comes to himself and resolves to return to his father.",
+   "confidence": "high",
+   "note": "Commons file name: 'The prodigal son decides to return to his father'; caption Luke 15:17.",
+   "resolved": "I viewed the actual Commons image (602x479). It shows no swine and no far country. The ragged son, barefoot and leaning on a staff, stands at the top of the stone steps of a house. He is looking toward the household gathered in mourning below the stair: seated women, an elder, servants with a shepherd's crook, children and dogs. Two women look out from the balcony. Nobody has noticed him yet. This is Doré's 'Retour de l'enfant prodigue'. The Commons filename ('decides to return') and the caption 'Luke 15:17' are misleading. KJV Luke 15:15-19 covers the swine field and the resolve made in the far country, so the mapper's range is the wrong moment. Luke 15:18-20 runs from 'I will arise and go to my father' to 'he arose, and came to his father'. That fits the plate: the resolve fulfilled, the son arriving home before the father runs to him. v.20 overlaps idx 194 (15:20-21, the embrace), which is unavoidable. Starting at v.18 lets this plate appear alone on vv.18-19. I agree with the checker. Scene: 'Ragged and leaning on his staff, the prodigal son reaches his father's house and stands at the head of the steps, looking toward the household gathered below.'",
+   "_sugg": null
+  },
+  {
+   "idx": 194,
+   "book": 42,
+   "chapter": 15,
+   "v1": 20,
+   "v2": 24,
+   "scene": "The father runs to meet his returning son and embraces him as the son confesses his unworthiness.",
+   "confidence": "high",
+   "note": "Embrace and confession are vv.20-21; range continues through the father's welcome (v.24)."
+  },
+  {
+   "idx": 195,
+   "book": 42,
+   "chapter": 16,
+   "v1": 19,
+   "v2": 21,
+   "scene": "The sore-covered beggar Lazarus lies at the gate of the feasting rich man, with dogs licking his wounds.",
+   "confidence": "high",
+   "note": "Parable of the rich man and Lazarus; engraving shows the earthly scene before both men die (vv. 22-31 continue the parable)."
+  },
+  {
+   "idx": 196,
+   "book": 42,
+   "chapter": 18,
+   "v1": 10,
+   "v2": 13,
+   "scene": "In the temple a proud Pharisee prays aloud while the publican stands far off, head bowed, beating his breast for mercy.",
+   "confidence": "high",
+   "note": "Parable framed by v. 9 and concluded in v. 14."
+  },
+  {
+   "idx": 197,
+   "book": 41,
+   "chapter": 10,
+   "v1": 13,
+   "v2": 16,
+   "scene": "Jesus welcomes the little children brought to him, over the disciples' objection, and blesses them.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     19,
+     13,
+     15
+    ],
+    [
+     42,
+     18,
+     15,
+     17
+    ]
+   ]
+  },
+  {
+   "idx": 198,
+   "book": 43,
+   "chapter": 11,
+   "v1": 41,
+   "v2": 44,
+   "scene": "At the opened tomb Jesus calls with a loud voice, and Lazarus comes forth still bound in grave clothes before the astonished mourners.",
+   "confidence": "high"
+  },
+  {
+   "idx": 199,
+   "book": 40,
+   "chapter": 21,
+   "v1": 7,
+   "v2": 9,
+   "scene": "Jesus rides into Jerusalem on a colt as crowds spread garments and branches in the way, crying Hosanna.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     11,
+     7,
+     10
+    ],
+    [
+     42,
+     19,
+     35,
+     38
+    ],
+    [
+     43,
+     12,
+     12,
+     15
+    ]
+   ]
+  },
+  {
+   "idx": 200,
+   "book": 40,
+   "chapter": 22,
+   "v1": 19,
+   "v2": 21,
+   "scene": "Shown a Roman coin by those seeking to trap him, Jesus asks whose image it bears and answers, Render unto Caesar what is Caesar's and unto God what is God's.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     12,
+     14,
+     17
+    ],
+    [
+     42,
+     20,
+     22,
+     25
+    ]
+   ],
+   "note": "Setup of the Pharisees' and Herodians' question is in vv. 15-18."
+  },
+  {
+   "idx": 201,
+   "book": 41,
+   "chapter": 12,
+   "v1": 41,
+   "v2": 44,
+   "scene": "Watching at the temple treasury, Jesus points out the poor widow whose two small coins outweigh all the gifts of the rich.",
+   "confidence": "high",
+   "also": [
+    [
+     42,
+     21,
+     1,
+     4
+    ]
+   ]
+  },
+  {
+   "idx": 202,
+   "book": 41,
+   "chapter": 14,
+   "v1": 22,
+   "v2": 24,
+   "scene": "At the Passover table Jesus blesses and breaks the bread and gives the cup to the twelve as his body and blood of the new covenant.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     26,
+     26,
+     28
+    ],
+    [
+     42,
+     22,
+     19,
+     20
+    ],
+    [
+     46,
+     11,
+     23,
+     25
+    ]
+   ]
+  },
+  {
+   "idx": 203,
+   "book": 42,
+   "chapter": 22,
+   "v1": 41,
+   "v2": 44,
+   "scene": "Kneeling in anguished prayer on the Mount of Olives, Jesus is strengthened by an angel from heaven as his sweat falls like drops of blood.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     26,
+     39,
+     39
+    ],
+    [
+     41,
+     14,
+     35,
+     36
+    ]
+   ],
+   "note": "The strengthening angel and bloody sweat are unique to Luke."
+  },
+  {
+   "idx": 204,
+   "book": 40,
+   "chapter": 26,
+   "v1": 39,
+   "v2": 41,
+   "scene": "Jesus prays alone in Gethsemane that the cup might pass, then finds his disciples asleep and urges them to watch and pray.",
+   "confidence": "medium",
+   "also": [
+    [
+     41,
+     14,
+     35,
+     38
+    ],
+    [
+     42,
+     22,
+     41,
+     46
+    ]
+   ],
+   "note": "Doré Bible Gallery pairs this plate with Matthew 26:36-46; caption points to vv. 40-41 (the sleeping disciples)."
+  },
+  {
+   "idx": 205,
+   "book": 41,
+   "chapter": 14,
+   "v1": 43,
+   "v2": 46,
+   "scene": "Judas arrives with an armed crowd bearing torches and betrays Jesus with a kiss, and they seize him.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     26,
+     47,
+     50
+    ],
+    [
+     42,
+     22,
+     47,
+     48
+    ],
+    [
+     43,
+     18,
+     2,
+     5
+    ]
+   ]
+  },
+  {
+   "idx": 206,
+   "book": 43,
+   "chapter": 18,
+   "v1": 25,
+   "v2": 27,
+   "scene": "In the high priest's courtyard Peter, challenged by those around the fire, denies knowing Jesus as the cock crows.",
+   "confidence": "medium",
+   "also": [
+    [
+     40,
+     26,
+     69,
+     75
+    ],
+    [
+     41,
+     14,
+     66,
+     72
+    ],
+    [
+     42,
+     22,
+     55,
+     62
+    ]
+   ],
+   "note": "The Gospels record three denials (first in John 18:17); range follows the plate caption John 18:26-27 for the final denial."
+  },
+  {
+   "idx": 207,
+   "book": 40,
+   "chapter": 27,
+   "v1": 26,
+   "v2": 26,
+   "scene": "After Pilate releases Barabbas, Jesus is bound and scourged by the soldiers before being handed over to be crucified.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     15,
+     15,
+     15
+    ],
+    [
+     43,
+     19,
+     1,
+     1
+    ]
+   ],
+   "note": "Doré Bible Gallery titles this plate The Flagellation and cites these same three verses."
+  },
+  {
+   "idx": 208,
+   "book": 43,
+   "chapter": 19,
+   "v1": 2,
+   "v2": 3,
+   "scene": "Soldiers press a woven crown of thorns onto Jesus' head, robe him in purple, and strike him while hailing him in mockery as King of the Jews.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     27,
+     28,
+     29
+    ],
+    [
+     41,
+     15,
+     17,
+     18
+    ]
+   ]
+  },
+  {
+   "idx": 209,
+   "book": 43,
+   "chapter": 19,
+   "v1": 13,
+   "v2": 15,
+   "scene": "Pilate, seated at the Pavement, presents the thorn-crowned Jesus to the crowd, which cries out for his crucifixion.",
+   "confidence": "medium",
+   "also": [
+    [
+     40,
+     27,
+     22,
+     23
+    ],
+    [
+     41,
+     15,
+     12,
+     14
+    ],
+    [
+     42,
+     23,
+     20,
+     23
+    ]
+   ],
+   "note": "Follows the caption John 19:15 ('Behold your King'); the related Ecce Homo presentation ('Behold the man') is John 19:4-6."
+  },
+  {
+   "idx": 210,
+   "book": 40,
+   "chapter": 27,
+   "v1": 29,
+   "v2": 30,
+   "scene": "Robed and crowned with thorns, Jesus is mocked by kneeling soldiers who spit on him and strike his head with a reed.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     15,
+     18,
+     19
+    ],
+    [
+     43,
+     19,
+     3,
+     3
+    ]
+   ]
+  },
+  {
+   "idx": 211,
+   "book": 41,
+   "chapter": 15,
+   "v1": 20,
+   "v2": 21,
+   "scene": "On the road to Golgotha Jesus sinks beneath the weight of the cross, and Simon of Cyrene is compelled to carry it.",
+   "confidence": "medium",
+   "also": [
+    [
+     40,
+     27,
+     31,
+     32
+    ],
+    [
+     42,
+     23,
+     26,
+     28
+    ],
+    [
+     43,
+     19,
+     16,
+     17
+    ]
+   ],
+   "note": "The fall itself comes from devotional tradition, not the Gospel text; the nearest narrated moment is Simon of Cyrene being made to bear the cross (Luke adds the lamenting women)."
+  },
+  {
+   "idx": 212,
+   "book": 40,
+   "chapter": 27,
+   "v1": 33,
+   "v2": 34,
+   "scene": "The procession reaches Golgotha, the place of a skull, where Jesus is offered wine mingled with gall and refuses it.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     15,
+     22,
+     23
+    ],
+    [
+     42,
+     23,
+     33,
+     33
+    ],
+    [
+     43,
+     19,
+     17,
+     17
+    ]
+   ]
+  },
+  {
+   "idx": 213,
+   "book": 40,
+   "chapter": 27,
+   "v1": 35,
+   "v2": 37,
+   "scene": "Soldiers haul upright the cross bearing Jesus while others cast lots for his garments and the title is set above his head.",
+   "confidence": "medium",
+   "also": [
+    [
+     41,
+     15,
+     24,
+     26
+    ],
+    [
+     42,
+     23,
+     33,
+     34
+    ],
+    [
+     43,
+     19,
+     18,
+     19
+    ]
+   ],
+   "note": "The raising of the cross is implied by 'they crucified him' (v. 35); Bible Panorama reproduction captions this plate Matthew 27:35."
+  },
+  {
+   "idx": 214,
+   "book": 42,
+   "chapter": 23,
+   "v1": 33,
+   "v2": 35,
+   "scene": "Jesus hangs on the cross between two criminals, praying for his executioners' forgiveness as the people stand watching and the rulers scoff.",
+   "confidence": "high",
+   "also": [
+    [
+     40,
+     27,
+     38,
+     42
+    ],
+    [
+     41,
+     15,
+     27,
+     31
+    ],
+    [
+     43,
+     19,
+     18,
+     18
+    ]
+   ]
+  },
+  {
+   "idx": 215,
+   "book": 43,
+   "chapter": 19,
+   "v1": 18,
+   "v2": 19,
+   "scene": "At Golgotha soldiers fasten Jesus to the cross with nails as Pilate's title, King of the Jews, is prepared for it.",
+   "confidence": "medium",
+   "also": [
+    [
+     40,
+     27,
+     35,
+     35
+    ],
+    [
+     41,
+     15,
+     24,
+     25
+    ],
+    [
+     42,
+     23,
+     33,
+     33
+    ]
+   ],
+   "note": "The nails are not described at the moment of crucifixion; they are confirmed in John 20:25."
+  },
+  {
+   "idx": 216,
+   "book": 42,
+   "chapter": 23,
+   "v1": 44,
+   "v2": 48,
+   "scene": "Darkness covers the land from the sixth to the ninth hour as Jesus commends his spirit to the Father and the onlookers turn away in fear and grief.",
+   "confidence": "medium",
+   "also": [
+    [
+     40,
+     27,
+     45,
+     54
+    ],
+    [
+     41,
+     15,
+     33,
+     39
+    ]
+   ],
+   "note": "Doré Bible Gallery titles this plate Close of the Crucifixion and cites Matthew 27:45-56."
+  },
+  {
+   "idx": 217,
+   "book": 40,
+   "chapter": 27,
+   "v1": 57,
+   "v2": 58,
+   "scene": "Joseph of Arimathea, granted the body by Pilate, lowers Jesus from the cross with the help of mourning disciples.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     15,
+     43,
+     46
+    ],
+    [
+     42,
+     23,
+     50,
+     53
+    ],
+    [
+     43,
+     19,
+     38,
+     38
+    ]
+   ],
+   "note": "Matthew records the request; Mark 15:46 and Luke 23:53 state explicitly that he took the body down."
+  },
+  {
+   "idx": 218,
+   "book": 40,
+   "chapter": 27,
+   "v1": 59,
+   "v2": 59,
+   "scene": "The lifeless body of Jesus lies on a linen shroud while his grieving mother and followers keep watch before burial.",
+   "confidence": "medium",
+   "also": [
+    [
+     41,
+     15,
+     46,
+     46
+    ],
+    [
+     42,
+     23,
+     53,
+     53
+    ],
+    [
+     43,
+     19,
+     39,
+     40
+    ]
+   ],
+   "note": "The lamentation over the body is a traditional scene; the text narrates Joseph (and in John, Nicodemus) wrapping the body in linen."
+  },
+  {
+   "idx": 219,
+   "book": 40,
+   "chapter": 27,
+   "v1": 60,
+   "v2": 61,
+   "scene": "The body of Jesus is carried into Joseph's new rock-hewn tomb as Mary Magdalene and the other Mary look on.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     15,
+     46,
+     47
+    ],
+    [
+     42,
+     23,
+     53,
+     55
+    ],
+    [
+     43,
+     19,
+     41,
+     42
+    ]
+   ]
+  },
+  {
+   "idx": 220,
+   "book": 40,
+   "chapter": 28,
+   "v1": 1,
+   "v2": 7,
+   "scene": "At dawn the women come down to the opened tomb, where an angel seated on the stone points heavenward and tells them that Jesus is risen.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     16,
+     1,
+     7
+    ],
+    [
+     42,
+     24,
+     1,
+     7
+    ],
+    [
+     43,
+     20,
+     11,
+     13
+    ]
+   ],
+   "note": "Checked against a thumbnail: the plate shows the angel seated on the stone inside the tomb and the women arriving. It does not show Christ rising. Caption points to Matt 28:5-6."
+  },
+  {
+   "idx": 221,
+   "book": 42,
+   "chapter": 24,
+   "v1": 13,
+   "v2": 27,
+   "scene": "The risen Jesus walks the road to Emmaus with two disciples who do not yet know him, and explains to them what the Scriptures say about himself.",
+   "confidence": "high",
+   "also": [
+    [
+     41,
+     16,
+     12,
+     13
+    ]
+   ],
+   "note": "The whole walk (Luke 24:13-27) is the scene. The caption verses 26-27 are the teaching on the way."
+  },
+  {
+   "idx": 222,
+   "book": 43,
+   "chapter": 21,
+   "v1": 6,
+   "v2": 11,
+   "scene": "At the Sea of Tiberias, the disciples wade through the surf hauling a net full of great fish toward the risen Jesus, who stands beside the boat and calls them in.",
+   "confidence": "medium",
+   "note": "Checked against a thumbnail: fishermen drag a heavy net through shallow water while Jesus stands apart and gestures. This fits John 21:6-11 and the caption John 21:10-11. The 1891 Bible Panorama reprint put the plate at the Luke 5:4-7 miracle instead, but no one kneels as Peter does in Luke 5:8, so John 21 is kept."
+  },
+  {
+   "idx": 223,
+   "book": 41,
+   "chapter": 16,
+   "v1": 19,
+   "v2": 19,
+   "scene": "Surrounded by a host of angels, Christ is taken up into heaven in radiant glory.",
+   "confidence": "high",
+   "also": [
+    [
+     42,
+     24,
+     50,
+     51
+    ],
+    [
+     44,
+     1,
+     9,
+     11
+    ]
+   ],
+   "note": "Primary follows Doré's caption, Mark 16:19. Acts 1:9-11 gives the fullest account of the moment. Not checked against the image because Commons rate-limited the thumbnail.",
+   "resolved": "Keep Mark 16:19. The mapper and checker already agree on it, and it is Doré's own caption for this plate (\"Gusta Dore - The Ascension.jpg\"). In the KJV it reads \"he was received up into heaven, and sat on the right hand of God,\" which names the Ascension exactly. The checker is right that the scene text is wrong. I looked at the cached plate image (/Users/jkim/bible-study/.design/art/v220/223.jpg and 223_big.png), and there is no host of angels in it. Christ rises alone in a soft halo of light above a hill. About a dozen apostles on the slope below watch him go: some point or reach upward, some shade their eyes, and some kneel or sit in awe. No cloud and no two men in white are shown. Suggested scene: \"While the apostles watch from the hillside, the risen Christ is taken up alone into heaven, surrounded by radiant light.\" Acts 1:9-10 (\"while they beheld, he was taken up ... while they looked stedfastly toward heaven as he went up\") matches the moment in the picture most closely, so list it under 'also'. Luke 24:50-51 (\"he was parted from them, and carried up into heaven\") is a fitting secondary reference as well.",
+   "_sugg": "While the apostles watch from the hillside, the risen Christ is taken up alone into heaven, surrounded by radiant light."
+  },
+  {
+   "idx": 224,
+   "book": 44,
+   "chapter": 2,
+   "v1": 1,
+   "v2": 4,
+   "scene": "On the day of Pentecost, tongues like fire rest on the gathered believers as the Holy Spirit fills the house with the sound of a rushing wind.",
+   "confidence": "high",
+   "note": "Caption Acts 2:2-3; range widened to the full descent narrative."
+  },
+  {
+   "idx": 225,
+   "book": 44,
+   "chapter": 2,
+   "v1": 32,
+   "v2": 36,
+   "scene": "Standing on a rocky height with his fellow apostles, Peter points heavenward as he tells the listeners gathered below that God has raised and exalted Jesus.",
+   "confidence": "medium",
+   "note": "Checked against a thumbnail: a general outdoor preaching scene. The upward gesture matches the caption Acts 2:32-33, 'by the right hand of God exalted'. The scene could also be read as Peter standing with the eleven (2:14) or as Mark 16:20."
+  },
+  {
+   "idx": 226,
+   "book": 44,
+   "chapter": 3,
+   "v1": 1,
+   "v2": 8,
+   "scene": "At the temple gate called Beautiful, Peter and John take a man lame from birth by the hand and raise him to his feet in the name of Jesus.",
+   "confidence": "high"
+  },
+  {
+   "idx": 227,
+   "book": 44,
+   "chapter": 5,
+   "v1": 1,
+   "v2": 5,
+   "scene": "Rebuked by Peter for lying to the Holy Spirit about the price of his land, Ananias falls dead before the apostles, his coins scattered on the ground.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: Peter with raised arm, Ananias fallen, coins on the ground."
+  },
+  {
+   "idx": 228,
+   "book": 44,
+   "chapter": 7,
+   "v1": 57,
+   "v2": 60,
+   "scene": "Driven out of the city, Stephen kneels and prays for his attackers as the crowd stones him.",
+   "confidence": "high"
+  },
+  {
+   "idx": 229,
+   "book": 44,
+   "chapter": 9,
+   "v1": 3,
+   "v2": 7,
+   "scene": "Near Damascus, a light from heaven throws Saul to the ground, and the voice of Jesus asks why he persecutes him while his companions stand speechless.",
+   "confidence": "high",
+   "also": [
+    [
+     44,
+     22,
+     6,
+     10
+    ],
+    [
+     44,
+     26,
+     12,
+     16
+    ]
+   ],
+   "note": "The 'also' passages are Paul's own later accounts of the same event."
+  },
+  {
+   "idx": 230,
+   "book": 44,
+   "chapter": 10,
+   "v1": 27,
+   "v2": 33,
+   "scene": "In Caesarea, Peter speaks to Cornelius's gathered household and friends, telling them God has shown him to call no one common or unclean.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: Peter, seated and gesturing, speaks to men and women gathered on steps. Caption is Acts 10:28."
+  },
+  {
+   "idx": 231,
+   "book": 44,
+   "chapter": 12,
+   "v1": 7,
+   "v2": 10,
+   "scene": "An angel fills Herod's prison with light, loosens Peter's chains, and leads him out past the guards.",
+   "confidence": "high"
+  },
+  {
+   "idx": 232,
+   "book": 44,
+   "chapter": 19,
+   "v1": 17,
+   "v2": 20,
+   "scene": "While Paul preaches in Ephesus, new believers who had practiced magic bring their books and burn them in front of everyone.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: Paul stands on a platform while people throw books onto a bonfire."
+  },
+  {
+   "idx": 233,
+   "book": 44,
+   "chapter": 21,
+   "v1": 32,
+   "v2": 36,
+   "scene": "Roman soldiers pull Paul away from the furious crowd at the temple and carry him up the stairs toward the fortress while the people shout 'Away with him'.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: soldiers hold Paul up on the stairs above the crowd, with the commander at the top. The Commons file name mentions Paul addressing the crowd (21:40), but the image shows the rescue in 21:34-35."
+  },
+  {
+   "idx": 234,
+   "book": 44,
+   "chapter": 27,
+   "v1": 41,
+   "v2": 44,
+   "scene": "The ship carrying Paul runs aground and breaks up in the surf, and everyone aboard struggles through the waves, swimming or on planks, to reach the shore safely.",
+   "confidence": "high"
+  },
+  {
+   "idx": 235,
+   "book": 44,
+   "chapter": 17,
+   "v1": 1,
+   "v2": 4,
+   "scene": "At Thessalonica, Paul stands and reasons from the Scriptures before the elders seated in the synagogue, proclaiming that Jesus is the Christ.",
+   "confidence": "medium",
+   "also": [
+    [
+     52,
+     2,
+     9,
+     12
+    ]
+   ],
+   "note": "Doré's caption is 1 Thessalonians 2:11-12, where Paul recalls his preaching there. Acts 17:1-4 tells the event itself. The thumbnail shows Paul, arm raised, before rows of seated elders in a stone hall."
+  },
+  {
+   "idx": 236,
+   "book": 66,
+   "chapter": 1,
+   "v1": 9,
+   "v2": 11,
+   "scene": "Exiled on Patmos, John sits on a rock by the sea holding a tablet and looks up toward the light as he is told to write what he sees.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: the plate's own caption cites Revelation 1:9."
+  },
+  {
+   "idx": 237,
+   "book": 66,
+   "chapter": 6,
+   "v1": 7,
+   "v2": 8,
+   "scene": "When the fourth seal is opened, Death rides out on a pale horse with Hell following him.",
+   "confidence": "high"
+  },
+  {
+   "idx": 238,
+   "book": 66,
+   "chapter": 12,
+   "v1": 1,
+   "v2": 3,
+   "scene": "A great sign appears in heaven: a woman clothed with the sun, the moon under her feet and a crown of twelve stars on her head.",
+   "confidence": "high",
+   "note": "Caption runs to 12:3, which brings in the dragon. Not checked against the image because of rate limits, so I kept the range to the woman (12:1-2).",
+   "resolved": "I'm siding with the checker: the passage should be Revelation 12:1-3. I downloaded the 475x602 plate to .design/art/crownedvirgin.jpg and looked at it. At the top, the crowned woman stands in radiant light among the heavenly host. She appears to be holding a child. Below her, armed angels come down with spears and swords. The bottom half of the plate is a great coiling dragon with its jaws open. In the KJV, 12:1-2 is only the woman ('a woman clothed with the sun... a crown of twelve stars'). Verse 3 brings in the second sign, 'a great red dragon, having seven heads and ten horns'. Ending at verse 2 would leave out half of what the engraving shows. Doré's own caption, 12:1-3, fits the image, so it should be kept. Suggestions: put 12:7-9 in 'also', since the angels fighting the dragon show 'Michael and his angels fought against the dragon'. 12:5 (the child) could be added as well. The scene text could read: 'A great sign in heaven: a woman clothed with the sun and crowned with twelve stars, while below, the angels of heaven go out against the great dragon.'",
+   "_sugg": null
+  },
+  {
+   "idx": 239,
+   "book": 66,
+   "chapter": 18,
+   "v1": 1,
+   "v2": 2,
+   "scene": "Fallen Babylon lies in moonlit ruins, its great statues and colonnades deserted and haunted by birds and wild beasts.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: a desolate ruined city with birds and a wild animal, matching 18:2. Isaiah 13:19-22 uses similar imagery."
+  },
+  {
+   "idx": 240,
+   "book": 66,
+   "chapter": 20,
+   "v1": 11,
+   "v2": 15,
+   "scene": "Heaven blazes with the glory of the great white throne and ranks of angels, as the dead are judged and angels drive the condemned down into the abyss.",
+   "confidence": "high",
+   "note": "Checked against a thumbnail: throne in radiance above, angels casting a mass of figures downward."
+  },
+  {
+   "idx": 241,
+   "book": 66,
+   "chapter": 21,
+   "v1": 9,
+   "v2": 11,
+   "scene": "From a high mountain an angel shows John the holy city, the new Jerusalem, shining with the glory of God as light streams down from heaven.",
+   "confidence": "high",
+   "also": [
+    [
+     66,
+     21,
+     1,
+     2
+    ]
+   ],
+   "note": "Checked against a thumbnail: the angel and John stand on a mountain peak looking at the radiant city, which matches 21:10. The caption verses 21:1-2 describe the same vision and are listed under 'also'."
+  }
+ ],
+ "quality": [
+  {
+   "idx": 161,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89480043).jpg",
+   "replacement_w": 5731,
+   "replacement_h": 7945,
+   "crop": [
+    844,
+    1760,
+    4110,
+    5853
+   ],
+   "note": "Same composition (angel descending to Mary in a timbered room). Current file is 480px. The replacement is a National Library of Poland (Polona) page scan of the 1874 Warsaw Doré Bible, printed from Doré's blocks, clean with no stains in the image area. The crop keeps only the engraving (about 3266x4093) and drops the margins and the Polish caption 'Zwiastowanie, Łk 1:28'. The page is skewed under 1 degree, so the crop is the inscribed rectangle with a ~20px inset."
+  },
+  {
+   "idx": 162,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89480279).jpg",
+   "replacement_w": 5731,
+   "replacement_h": 7945,
+   "crop": [
+    816,
+    1706,
+    4111,
+    5789
+   ],
+   "note": "Same Nativity composition. The current Bible Panorama (1891) file is a later re-cut copy: at 1:1 the faces of Mary and the girl differ from Doré's original line work. The replacement is the 1874 Polona print, which is crisp and clean. Caption excluded ('Narodzenie Jezusa Chrystusa, Łk 2:16'). Crop is about 3295x4083. Alternative: 'The Birth of Jesus.jpg' (4596x5640, Danish Bibelen i Billeder 1878). It is the same original engraving but softer, with a small margin."
+  },
+  {
+   "idx": 163,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89474948).jpg",
+   "replacement_w": 5637,
+   "replacement_h": 7708,
+   "crop": [
+    885,
+    1659,
+    4150,
+    5716
+   ],
+   "note": "Same composition (the magi on camels following the star). The current Panorama file is a re-cut copy with a dark greenish cast. The replacement is the 1874 Polona original print, clean. Caption excluded ('Gwiazda przewodnia, Mt 2:9'). Crop is about 3265x4057."
+  },
+  {
+   "idx": 164,
+   "keep": false,
+   "replacement_file": "Nowy Testament Pana naszego Jezusa Chrystusa 1892 (94130811).jpg",
+   "replacement_w": 4645,
+   "replacement_h": 6246,
+   "crop": [
+    497,
+    989,
+    3766,
+    5057
+   ],
+   "note": "Same composition (Joseph leading the donkey carrying Mary and the Child). Chose the 1892 Warsaw NT (Polona) print from the same blocks rather than the 1874 copy (89475072). The 1874 copy has a visible diagonal crease or smudge across the sky; the 1892 one is equally sharp, clean, on warm-toned paper. Caption excluded ('Ucieczka do Egiptu, Mt 2:14'). Crop is about 3269x4068. The current Panorama file is a re-cut copy."
+  },
+  {
+   "idx": 165,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89475211).jpg",
+   "replacement_w": 5637,
+   "replacement_h": 7708,
+   "crop": [
+    834,
+    1627,
+    4104,
+    5713
+   ],
+   "note": "Same composition (soldiers on the steps, a mother shielding her child in the foreground). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona original print, clean. Caption excluded ('Morderstwo niewiniątek, Mt 2:16'). Crop is about 3270x4086."
+  },
+  {
+   "idx": 166,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89480558).jpg",
+   "replacement_w": 5659,
+   "replacement_h": 7945,
+   "crop": [
+    793,
+    1612,
+    4090,
+    5699
+   ],
+   "note": "Same composition (the boy Jesus among the teachers in the Temple). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Jezus między uczonymi, Łk 2:46'). Crop is about 3297x4087."
+  },
+  {
+   "idx": 167,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89475438).jpg",
+   "replacement_w": 5637,
+   "replacement_h": 7822,
+   "crop": [
+    826,
+    1644,
+    4134,
+    5738
+   ],
+   "note": "Same composition (John with the cross-staff preaching to the crowd among palms). Current file is 564px. The replacement is the 1874 Polona print, clean. Caption excluded ('Św. Jan Chrzciciel naucza na pustyni, Mt 3:1'). Crop is about 3308x4094."
+  },
+  {
+   "idx": 168,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89475624).jpg",
+   "replacement_w": 5637,
+   "replacement_h": 7822,
+   "crop": [
+    835,
+    1684,
+    4117,
+    5773
+   ],
+   "note": "Same composition (Jesus standing in the Jordan, John's raised hand, the dove and rays above). Current file is 475px. The replacement is the 1874 Polona print, clean. Caption excluded ('Chrzest Jezusa, Mt 3:15'). Crop is about 3282x4089."
+  },
+  {
+   "idx": 169,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89475772).jpg",
+   "replacement_w": 5637,
+   "replacement_h": 7822,
+   "crop": [
+    796,
+    1667,
+    4049,
+    5740
+   ],
+   "note": "Same composition (Jesus on the mountaintop with the winged tempter pointing to the kingdoms). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Jezus kuszony od djabła, Mt 4:8'). Crop is about 3253x4073."
+  },
+  {
+   "idx": 170,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483276).jpg",
+   "replacement_w": 5897,
+   "replacement_h": 8060,
+   "crop": [
+    874,
+    1747,
+    4201,
+    5902
+   ],
+   "note": "Same composition (the wedding table under an awning, servants filling water jars). Current file is 771px. The replacement is the 1874 Polona print, clean. Caption excluded ('Zaślubiny w Kanie Galilejskiej, J 2:1'). Crop is about 3327x4155."
+  },
+  {
+   "idx": 171,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89479335).jpg",
+   "replacement_w": 5731,
+   "replacement_h": 7945,
+   "crop": [
+    797,
+    1719,
+    4114,
+    5867
+   ],
+   "note": "Same composition (Jesus with the whip on the Temple steps, sellers fleeing). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded. The Polish edition places this plate at Mark 11:15, not John 2:15. Crop is about 3317x4148."
+  },
+  {
+   "idx": 172,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483382).jpg",
+   "replacement_w": 5874,
+   "replacement_h": 8059,
+   "crop": [
+    893,
+    1647,
+    4206,
+    5755
+   ],
+   "note": "Same composition (the woman with her jar standing at the well, Jesus seated). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Jezus i Samarytanka, J 4:7'). Crop is about 3313x4108."
+  },
+  {
+   "idx": 173,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89476500).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 7800,
+   "crop": [
+    829,
+    1661,
+    4231,
+    5855
+   ],
+   "note": "Same composition as the current file (a man kneeling before Jesus outdoors, with a crowd and palms). The replacement is the 1874 Polona print, clean, crop about 3402x4194. SUBJECT FLAG: the 1874 Polish caption reads 'Jezus uzdrawia niemego, Ś. Mat. 9, 32' (Jesus heals the dumb man, Matt 9:32). The 1891 Bible Panorama captions the same picture as the leper (Luke 5:13). Neither matches the canon's 'man possessed' at Luke 4:36-37, which takes place inside the synagogue. The canon titles for 173 and 178 may be swapped or misassigned. Check the verse mapping."
+  },
+  {
+   "idx": 174,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89481200).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    789,
+    1733,
+    4067,
+    5830
+   ],
+   "note": "Same composition (Jesus teaching from a boat to the people on the shore). Current file is 477px. The replacement is the 1874 Polona print, clean. Caption excluded ('Jezus naucza na morzu Galilejskiem, Łk 5:3'). Crop is about 3278x4097."
+  },
+  {
+   "idx": 175,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89476651).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 7800,
+   "crop": [
+    870,
+    1635,
+    4238,
+    5872
+   ],
+   "note": "Same composition (Jesus with the disciples in standing grain, Pharisees objecting). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Apostołowie zbierają kłosy w dzień szabatu, Mt 12:1'). Crop is about 3368x4237."
+  },
+  {
+   "idx": 177,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89481384).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    913,
+    1842,
+    4177,
+    5938
+   ],
+   "note": "Same composition (Mary Magdalene kneeling in prayer at a rock in a ravine). Current file is 400px. The replacement is the 1874 Polona print, clean. Caption excluded. The Polish edition places it at Luke 7:50 (the penitent woman), not Luke 8:2. Crop is about 3264x4096; the page is skewed about 1.3 degrees, so the crop is the inscribed rectangle."
+  },
+  {
+   "idx": 178,
+   "keep": true,
+   "replacement_file": "",
+   "note": "No better version found. This composition (Jesus touching a seated man by a wall and steps) is not in the 1874 T.2 or 1892 Polish NT (78 plates), the 1930 'Pismo Święte w obrazach' NT section I checked, the Bible Panorama (1891), or any Commons search. The 329x407 GIF is the only Commons copy, so keep it and display it small. See the 173 note: the Polish edition gives the title 'Jesus heals the dumb man (Matt 9:32)' to the kneeling-man plate, so this plate's title and verse are unverified."
+  },
+  {
+   "idx": 179,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89479109).jpg",
+   "replacement_w": 5602,
+   "replacement_h": 7945,
+   "crop": [
+    810,
+    1693,
+    4167,
+    5872
+   ],
+   "note": "Same composition (the disciples' boat in breaking waves under a dark sky with gulls). Current file is 481px. The replacement is the 1874 Polona print, clean. Caption excluded ('Jezus ucisza burzę na morzu, Mk 4:39'). Crop is about 3357x4179."
+  },
+  {
+   "idx": 180,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89481515).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    859,
+    1757,
+    4185,
+    5849
+   ],
+   "note": "Same composition (Jesus beside the girl's bed, her mother bowed at the bedside, disciples at right). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Wskrzeszenie córki Jaira, Łk 8:54'). Crop is about 3326x4092."
+  },
+  {
+   "idx": 181,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89480773).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    854,
+    1609,
+    4100,
+    5699
+   ],
+   "note": "Same composition (Jesus standing with raised hand among elders in the synagogue). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Jezus w synagodze, Łk 4:16', the Nazareth synagogue, which parallels Matt 13:54). Crop is about 3246x4090."
+  },
+  {
+   "idx": 182,
+   "keep": true,
+   "replacement_file": "",
+   "note": "Keep the current Bible Panorama (1891) file (2644x3268). It is already cropped to the image, with no page margin or caption, so no crop is needed. This plate is absent from the 1874, 1892 and 1930 Polish Doré editions, and no other high-resolution Doré version of Salome receiving the head of John the Baptist exists on Commons. Caveat: other Panorama plates are re-cut copies rather than Doré's original blocks, so this one probably is too."
+  },
+  {
+   "idx": 183,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89476956).jpg",
+   "replacement_w": 5817,
+   "replacement_h": 7780,
+   "crop": [
+    875,
+    1764,
+    4121,
+    5834
+   ],
+   "note": "Same composition (baskets of bread and fish carried through the seated multitude, palms beyond). Current file is 558px. The replacement is the 1874 Polona print, clean. Caption excluded. The Polish edition places it at Matt 15:32 (the four thousand) rather than Matt 14:19. Crop is about 3246x4070."
+  },
+  {
+   "idx": 185,
+   "keep": false,
+   "replacement_file": "Jesus healing the sick (89476181).jpg",
+   "replacement_w": 3306,
+   "replacement_h": 4136,
+   "crop": [],
+   "note": "Same composition (Jesus kneeling among the sick by a colonnade). Current file is 398px. The replacement was extracted from the 1874 Polona page 89476181 by a Commons uploader, already cropped to the engraving, desaturated and contrast-adjusted. It is clean with no margins or caption, so no crop is needed."
+  },
+  {
+   "idx": 186,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89477161).jpg",
+   "replacement_w": 5817,
+   "replacement_h": 7780,
+   "crop": [
+    887,
+    1673,
+    4162,
+    5788
+   ],
+   "note": "Same composition (Christ in radiance between Moses with the tablets and Elijah, the three disciples prostrate below). The current file is the Panorama re-cut copy. The replacement is the 1874 Polona print, clean. Caption excluded ('Przemienienie Pańskie, Mt 17:1-2'). Crop is about 3275x4115."
+  },
+  {
+   "idx": 187,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89477370).jpg",
+   "replacement_w": 5817,
+   "replacement_h": 7780,
+   "crop": [
+    894,
+    1730,
+    4149,
+    5824
+   ],
+   "note": "Same composition (the afflicted boy held on the ground by men, Jesus with raised arm, palms behind). Current file is 559px. The replacement is the 1874 Polona print, clean. Caption excluded ('Uzdrowienie lunatyka, Mt 17:15'). Crop is about 3255x4094."
+  },
+  {
+   "idx": 188,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483469).jpg",
+   "replacement_w": 5874,
+   "replacement_h": 8059,
+   "crop": [
+    973,
+    1689,
+    4249,
+    5791
+   ],
+   "note": "Same composition: Christ stands with his hand extended toward the accusers, and the woman kneels by the pillar. The current file is small (561px). The replacement is a Polona scan of the 1874 Warsaw Doré Bible (vol. 2), a clean neutral page scan. The crop removes the page margin and the Polish caption and leaves about 3276x4102."
+  },
+  {
+   "idx": 189,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89481635).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    966,
+    1773,
+    4122,
+    5882
+   ],
+   "note": "The Good Samaritan lifting the wounded man onto his horse, same composition. The current 1891 Bible Panorama file is a coarser re-cut copy: its lines are heavier and the faces are simplified. It is also rotated inside the frame, leaving paper wedges at the corners. The 1874 Polona page reproduces the fine original engraving. The crop removes the margins and caption and leaves about 3156x4109. The page is slightly skewed, so a thin wedge is lost at the lower right."
+  },
+  {
+   "idx": 190,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89481730).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    758,
+    1800,
+    4046,
+    5924
+   ],
+   "note": "The Samaritan carries the wounded man from the horse toward the innkeeper on the steps, same composition. The current Bible Panorama file is a coarser copy with paper wedges at the corners. The 1874 Polona page is sharper and faithful to the original. The crop keeps the engraving only, about 3288x4124."
+  },
+  {
+   "idx": 191,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89481903).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    867,
+    1633,
+    4154,
+    5751
+   ],
+   "note": "Christ seated in the doorway teaching, with Mary sitting at his feet and Martha standing at the left. Same composition. The current file is 482px. There is also a Bible Panorama copy (14784674082), but it is a cruder re-cut version. The 1874 Polona page crop is about 3287x4118."
+  },
+  {
+   "idx": 192,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89475971).jpg",
+   "replacement_w": 5637,
+   "replacement_h": 7822,
+   "crop": [
+    837,
+    1643,
+    4144,
+    5729
+   ],
+   "note": "Christ seated beneath a large tree, arm raised, teaching the gathered crowd. Same composition as the current file. The Bible Panorama file is a coarser copy with a Matthew 5:1 caption. In the 1874 Polish Bible this plate sits in the Matthew section, so the Luke 12 reference may deserve a check. The crop is about 3307x4086."
+  },
+  {
+   "idx": 193,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89482051).jpg",
+   "replacement_w": 7945,
+   "replacement_h": 5774,
+   "crop": [
+    1918,
+    894,
+    5964,
+    4146
+   ],
+   "note": "Landscape plate: the young man with his staff on the stone steps, the household group resting under the vine arbor. Same composition as the current 602px file. The replacement is a landscape page scan of the 1874 Polona volume. The crop removes the margins and caption and leaves about 4046x3252."
+  },
+  {
+   "idx": 194,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89482272).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    862,
+    1786,
+    4125,
+    5830
+   ],
+   "note": "The father embraces the kneeling returned son, with rejoicing figures and palms behind. Same composition. The current file is 398px. There is also a Bible Panorama copy (14598366689), but it is a coarser re-cut version. The 1874 Polona page crop is about 3263x4044."
+  },
+  {
+   "idx": 195,
+   "keep": false,
+   "replacement_file": "Lazarus and the Rich Man (89482442).jpg",
+   "replacement_w": 3339,
+   "replacement_h": 4147,
+   "crop": [],
+   "note": "Lazarus sits at the foot of the rich man's stairs with dogs around him while a feast goes on above. Same composition. This is a clean, deskewed extraction of the engraving from the 1874 Polona volume (page 89482442), already cropped to the image with no margins. It replaces the 746px file."
+  },
+  {
+   "idx": 196,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89482647).jpg",
+   "replacement_w": 5702,
+   "replacement_h": 7937,
+   "crop": [
+    771,
+    1684,
+    4076,
+    5808
+   ],
+   "note": "The Pharisee stands proudly at the right and the publican bows low on the floor, with Christ and the disciples in the bright doorway. Same composition. The current Bible Panorama file is a coarser copy with corner wedges. The 1874 Polona page crop is about 3305x4124."
+  },
+  {
+   "idx": 197,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89479213).jpg",
+   "replacement_w": 5731,
+   "replacement_h": 7945,
+   "crop": [
+    784,
+    1680,
+    4114,
+    5816
+   ],
+   "note": "Christ seated, receiving and blessing the little children brought by their mothers, with palms and a tower behind. Same composition as the current 514px file. The 1874 Polona page crop is about 3330x4136 and was checked visually: clean, no stains."
+  },
+  {
+   "idx": 198,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483578).jpg",
+   "replacement_w": 5874,
+   "replacement_h": 8059,
+   "crop": [
+    996,
+    1790,
+    4235,
+    5837
+   ],
+   "note": "Christ with arm raised as Lazarus rises from the rock tomb and a veiled figure watches in the foreground. Same composition. The current Bible Panorama file is a coarser copy with margin wedges. The 1874 Polona page crop is about 3239x4047."
+  },
+  {
+   "idx": 199,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89477540).jpg",
+   "replacement_w": 5817,
+   "replacement_h": 7780,
+   "crop": [
+    896,
+    1609,
+    4190,
+    5698
+   ],
+   "note": "Christ rides the donkey toward the city walls while the crowd spreads garments and waves palms. Same composition. A side-by-side detail comparison showed the Bible Panorama file is a crude re-engraving, with a simplified face and heavy lines. The 1874 Polona page keeps Doré's fine original line work. The crop is about 3294x4089."
+  },
+  {
+   "idx": 200,
+   "keep": false,
+   "replacement_file": "Dispute of Jesus and the Pharisees (89477737).jpg",
+   "replacement_w": 3312,
+   "replacement_h": 4162,
+   "crop": [],
+   "note": "Despite its Commons title, this file is the Tribute Money plate: Christ with halo among the Pharisees, one holding out the coin, with a palm and buildings behind. It is a clean, deskewed extraction from the 1874 Polona volume, already cropped to the engraving. It is neutral in tone and sharper than the yellowed, coarser Bible Panorama copy."
+  },
+  {
+   "idx": 202,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89478051).jpg",
+   "replacement_w": 5817,
+   "replacement_h": 7865,
+   "crop": [
+    909,
+    1630,
+    4179,
+    5700
+   ],
+   "note": "Christ at the center of the long table with the Twelve, a hanging lamp and draped curtain above. Same composition. A detail comparison confirmed the Bible Panorama file is a different, cruder re-cut, while the 1874 Polona page is faithful to Doré. The crop is about 3270x4070."
+  },
+  {
+   "idx": 203,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89482762).jpg",
+   "replacement_w": 5702,
+   "replacement_h": 7937,
+   "crop": [
+    825,
+    1658,
+    4098,
+    5746
+   ],
+   "note": "Christ kneeling in prayer in the moonlit olive grove as an angel appears above to strengthen him (Luke 22:43). Same composition. The current file is 474px. The 1874 Polona page crop is about 3273x4088."
+  },
+  {
+   "idx": 204,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89478813).jpg",
+   "replacement_w": 5602,
+   "replacement_h": 7945,
+   "crop": [
+    801,
+    1620,
+    4074,
+    5693
+   ],
+   "note": "Christ stands praying alone in the distant clearing while the disciples sleep in the foreground. Same composition. The current file is 546px. An 1878 Internet Archive scan (14577654100) also exists but is yellowed. The 1874 Polona page crop is neutral, about 3273x4073."
+  },
+  {
+   "idx": 206,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89478925).jpg",
+   "replacement_w": 5602,
+   "replacement_h": 7945,
+   "crop": [
+    758,
+    1799,
+    4013,
+    5930
+   ],
+   "note": "Peter seated by the courtyard fire, questioned by the servants and bystanders. Same composition. The current file is 478px. The alternative 'St Peter Denying Christ' file includes printed caption text, so it was not used. The 1874 Polona page crop is about 3255x4131."
+  },
+  {
+   "idx": 207,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483694).jpg",
+   "replacement_w": 5874,
+   "replacement_h": 8059,
+   "crop": [
+    859,
+    1721,
+    4162,
+    5855
+   ],
+   "note": "Christ, crowned with thorns, sits bound at the pillar surrounded by the soldiers. Same composition. The current file is 476px. The 1874 Polona page crop is about 3303x4134."
+  },
+  {
+   "idx": 208,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483870).jpg",
+   "replacement_w": 5874,
+   "replacement_h": 8059,
+   "crop": [
+    909,
+    1712,
+    4171,
+    5773
+   ],
+   "note": "Christ seated in the robe and crown of thorns, with soldiers mocking and one kneeling in feigned homage. Same composition. The current file is 798px. The 1874 Polona page crop is about 3262x4061."
+  },
+  {
+   "idx": 209,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483941).jpg",
+   "replacement_w": 5874,
+   "replacement_h": 8059,
+   "crop": [
+    932,
+    1740,
+    4240,
+    5851
+   ],
+   "note": "Ecce Homo: Christ, bound and crowned with thorns, is shown on the portico to the crowd below. Same composition. The current file is 400px. The 1874 Polona page crop is about 3308x4111."
+  },
+  {
+   "idx": 210,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89478982).jpg",
+   "replacement_w": 5602,
+   "replacement_h": 7945,
+   "crop": [
+    749,
+    1694,
+    4092,
+    5895
+   ],
+   "note": "Christ seated by the stone wall in the crown of thorns, holding a reed, while the soldiers bow in mockery. Same composition. The current Bible Panorama file is a coarser copy with paper wedges at the corners. The 1874 Polona page crop is about 3343x4201."
+  },
+  {
+   "idx": 211,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89482940).jpg",
+   "replacement_w": 5823,
+   "replacement_h": 8053,
+   "crop": [
+    751,
+    1756,
+    4098,
+    5873
+   ],
+   "note": "Christ fallen to his knees under the cross as a man, Simon of Cyrene in the Panorama caption, lifts its weight, with soldiers behind. Same composition. The current Bible Panorama file is a coarser copy with margin wedges. The 1874 Polona page crop is about 3347x4117."
+  },
+  {
+   "idx": 212,
+   "keep": false,
+   "replacement_file": "Nowy Testament Pana naszego Jezusa Chrystusa 1892 (94131731).jpg",
+   "replacement_w": 6288,
+   "replacement_h": 4640,
+   "crop": [
+    1057,
+    575,
+    5064,
+    3772
+   ],
+   "note": "Landscape plate: Christ fallen beneath the cross on the road to Calvary, with mounted soldiers and a grieving woman. Same composition as the current 686px file. This plate is missing from the 1874 volume on Commons, so the replacement is a Polona scan of the 1892 Warsaw New Testament. The paper is slightly warmer but the print is clean. The crop removes the page, red edge and caption and leaves about 4007x3197."
+  },
+  {
+   "idx": 213,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484283).jpg",
+   "replacement_w": 5825,
+   "replacement_h": 8059,
+   "crop": [
+    902,
+    1721,
+    4182,
+    5829
+   ],
+   "note": "Men heave the cross upright with Christ upon it while the women mourn and soldiers look on. Same composition. The current Bible Panorama file is a coarser copy with paper wedges at the corners. The 1874 Polona page crop is about 3280x4108."
+  },
+  {
+   "idx": 214,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89479023).jpg",
+   "replacement_w": 5602,
+   "replacement_h": 7945,
+   "crop": [
+    828,
+    1729,
+    4135,
+    5886
+   ],
+   "note": "The three crosses against a dark sky pierced by light, with onlookers and horsemen below. Same composition as the current 474px file. The 1874 Polona page crop is about 3307x4157 and is clean."
+  },
+  {
+   "idx": 215,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484137).jpg",
+   "replacement_w": 5825,
+   "replacement_h": 8059,
+   "crop": [
+    918,
+    1697,
+    4196,
+    5803
+   ],
+   "note": "Same composition: Christ being nailed to the cross as it lies on the ground, with soldiers and onlookers. This is a Polona (National Library, Warsaw) full-page scan of the 1874 Warsaw Bible, vol. 2, a 19th-century printing of the Doré wood engraving. Polish caption 'Ukrzyżowanie', St John 19:18. The current file is only 478px. The crop keeps the engraving (about 3280x4100) and drops the margins and caption. The scan is tilted about 0.3° counter-clockwise."
+  },
+  {
+   "idx": 216,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483040).jpg",
+   "replacement_w": 5854,
+   "replacement_h": 8054,
+   "crop": [
+    847,
+    1687,
+    4174,
+    5832
+   ],
+   "note": "Same composition: three crosses against a darkened sky and a fleeing crowd. Polona 1874 Warsaw Bible vol. 2, full-page scan. Caption 'Ciemności po śmierci Zbawiciela' (darkness after the Saviour's death). The current file is 556px. The crop keeps the engraving only (about 3330x4145). Tilt is negligible (0.2°)."
+  },
+  {
+   "idx": 217,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484429).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    867,
+    1705,
+    4165,
+    5824
+   ],
+   "note": "Same composition: Christ's body lowered from the cross by ladder into the arms of the mourners. Polona 1874 full-page scan, caption 'Zdjęcie z krzyża'. It is much crisper than the current 1891 Bible Panorama reprint, which is a sepia, softer reproduction (checked side by side on another plate). The crop keeps the engraving only. Tilt is about 0.6° counter-clockwise."
+  },
+  {
+   "idx": 218,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484501).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    786,
+    1740,
+    4133,
+    5839
+   ],
+   "note": "Same composition: Christ's body lying at the foot of the cross with the mourners around him. Polona 1874 full-page scan, caption 'Chrystus zdjęty z krzyża'. The current file is 736px. The crop keeps the engraving only (about 3350x4100). Tilt is about 0.4°."
+  },
+  {
+   "idx": 219,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484603).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    871,
+    1693,
+    4202,
+    5867
+   ],
+   "note": "Same composition: Christ's body carried into the rock tomb. Polona 1874 full-page scan, caption 'Złożenie Chrystusa do grobu'. It is crisper and cleaner than the current sepia 1891 Bible Panorama scan. The crop keeps the engraving only. Tilt is about 0.2°."
+  },
+  {
+   "idx": 220,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89479571).jpg",
+   "replacement_w": 5731,
+   "replacement_h": 7945,
+   "crop": [
+    767,
+    1832,
+    4101,
+    5976
+   ],
+   "note": "Same composition: the angel seated at the open tomb, with the women approaching in the shadow. Polona 1874 full-page scan, caption 'Anioł i święte niewiasty'. The margin has light foxing, but it falls outside the crop. It replaces the softer, sepia 1891 Bible Panorama scan. The crop keeps the engraving only. Tilt is about 0.5° counter-clockwise."
+  },
+  {
+   "idx": 221,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89483147).jpg",
+   "replacement_w": 5897,
+   "replacement_h": 8060,
+   "crop": [
+    881,
+    1670,
+    4250,
+    5825
+   ],
+   "note": "Same composition: Jesus walking with the two disciples on the Emmaus road at dusk. Polona 1874 full-page scan, caption 'Jezus z uczniami w Emmaus'. It replaces the 1891 Bible Panorama reprint. The crop keeps the engraving only. Tilt is negligible."
+  },
+  {
+   "idx": 222,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89480971).jpg",
+   "replacement_w": 5774,
+   "replacement_h": 7945,
+   "crop": [
+    812,
+    1734,
+    4114,
+    5843
+   ],
+   "note": "Same composition: Christ standing at left while the disciples haul a bursting net of fish. Polona 1874 full-page scan. A detail comparison shows its engraved lines are fully resolved, while the current 1891 Bible Panorama scan is blurred and sepia. The crop keeps the engraving only. Tilt is about 0.4°. Reference note: this edition captions the plate 'Połów cudowny', Luke 5:6 ('they inclosed a great multitude of fishes: and their net brake'), and places it in Christ's ministry. The canon's John 21:10-11 may be the less fitting reference."
+  },
+  {
+   "idx": 223,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89479729).jpg",
+   "replacement_w": 5731,
+   "replacement_h": 7945,
+   "crop": [
+    778,
+    1751,
+    4080,
+    5882
+   ],
+   "note": "Same composition: the radiant Christ rising above the disciples on the hill. Polona 1874 full-page scan, caption 'Wniebowstąpienie'. The current file is only 478px. The crop keeps the engraving only. The sky is very light, so the edges were checked by eye. Tilt is about 0.8° counter-clockwise; deskewing by 0.8° clockwise before cropping would allow a slightly tighter box."
+  },
+  {
+   "idx": 224,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484689).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    816,
+    1736,
+    4169,
+    5876
+   ],
+   "note": "Same composition: the dove above, and tongues of flame over the gathered apostles. Polona 1874 full-page scan, caption 'Zesłanie Ducha Św.'. It replaces the 1891 Bible Panorama reprint. The crop keeps the engraving only. Tilt is about 0.2°."
+  },
+  {
+   "idx": 225,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484816).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    861,
+    1703,
+    4197,
+    5838
+   ],
+   "note": "Same composition: apostles on a hilltop at dusk, preaching to the crowd below. Polona 1874 full-page scan, caption 'Apostołowie opowiadają Ewangelję'. It replaces the 1891 Bible Panorama reprint. The crop keeps the engraving only. Tilt is about 0.25°."
+  },
+  {
+   "idx": 226,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89484920).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    880,
+    1757,
+    4137,
+    5880
+   ],
+   "note": "Same composition: Peter and John raising the lame man on the temple steps. Polona 1874 full-page scan, caption 'Ś. Piotr i Ś. Jan uzdrawiają chromego'. It replaces the 1891 Bible Panorama reprint. The crop keeps the engraving only. Tilt is about 0.4°."
+  },
+  {
+   "idx": 227,
+   "keep": true,
+   "note": "No better copy was found. Doré's Death of Ananias is missing from the Polona 1874 vol. 2, the 1892 Polish New Testament and the 1930 Polish edition, and no Bible Panorama copy turned up. Commons searches ('Ananias Doré', Category:Ananias and Sapphira, the Doré NT category) find only this 561x698 file ('Death of Ananias.jpg' is a different, non-Doré engraving). The current file is clean with no page text, so no crop is needed. It is low resolution."
+  },
+  {
+   "idx": 228,
+   "keep": false,
+   "replacement_file": "The Death of Stephen (89485178).jpg",
+   "replacement_w": 3352,
+   "replacement_h": 4182,
+   "crop": [],
+   "note": "Same composition: Stephen kneeling by the wall while men hurl stones. Commons already has this image extracted from Polona 1874 vol. 2, page 89485178. It is cropped to the engraving, desaturated and contrast-adjusted, and the signatures are intact. It has no margins or caption, so no crop is needed. The current file is 512px."
+  },
+  {
+   "idx": 229,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89485292).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    881,
+    1644,
+    4161,
+    5742
+   ],
+   "note": "Same composition: light streaming down on Saul fallen on the Damascus road, with his companions scattered. Polona 1874 full-page scan, caption 'Ś. Paweł w drodze do Damaszku'. The page margins have foxing, but the engraving area is clean. The crop keeps the engraving only. Tilt is about 0.8° counter-clockwise, so the inner crop clips the bottom signature line slightly; deskewing 0.8° clockwise first would avoid this."
+  },
+  {
+   "idx": 230,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89485361).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    899,
+    1689,
+    4188,
+    5815
+   ],
+   "note": "Same composition: Peter in Cornelius's sunlit house under the awning, with the household gathered. Polona 1874 full-page scan, caption 'Ś. Piotr w domu Korneliusza'. The current file is 562px. The crop keeps the engraving only. Tilt is about 0.9° counter-clockwise (deskewing first gives a tighter crop)."
+  },
+  {
+   "idx": 231,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89485423).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    877,
+    1694,
+    4155,
+    5820
+   ],
+   "note": "Same composition: the angel leading Peter out past the sleeping guards by moonlight. Polona 1874 full-page scan, caption 'Oswobodzenie Ś. Piotra'. The current file is 559px. The crop keeps the engraving only. Tilt is about 1.2° counter-clockwise, so the axis-aligned inner crop loses about 1% at the edges; rotating 1.2° clockwise before cropping is recommended."
+  },
+  {
+   "idx": 232,
+   "keep": false,
+   "replacement_file": "Paul in Ephesus (89485605).jpg",
+   "replacement_w": 3346,
+   "replacement_h": 4168,
+   "crop": [],
+   "note": "Same composition: Paul on the steps while the Ephesians burn their books of magic. Commons already has this image extracted from Polona 1874 vol. 2, page 89485605. It is cropped, desaturated and contrast-adjusted, with no margins or caption. It is much crisper than the current sepia 1891 Bible Panorama scan. No crop is needed."
+  },
+  {
+   "idx": 233,
+   "keep": false,
+   "replacement_file": "Paul Addresses the Crowd After His Arrest (89485728).jpg",
+   "replacement_w": 3332,
+   "replacement_h": 4126,
+   "crop": [],
+   "note": "Same composition: soldiers with spears carrying Paul up the stairs through the mob. Commons already has this image extracted from Polona 1874 vol. 2, page 89485728. It is cropped and desaturated, with the signatures intact and no margins or caption. The current file is 519px. No crop is needed."
+  },
+  {
+   "idx": 234,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89485783).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 8059,
+   "crop": [
+    821,
+    1745,
+    4091,
+    5856
+   ],
+   "note": "Important: the current file (Bible Panorama 14598394969) is not Doré's plate. It is a different shipwreck engraving signed 'F. Lix'. This Polona 1874 page is Doré's actual plate: Paul on the rocks with arm raised as the wrecked ship breaks up in the surf, and survivors struggling ashore. Caption 'Ś. Paweł przybywa na wyspę Maltę', Acts 27:44, which matches the canon reference. The crop keeps the engraving only. Tilt is about 1.0° counter-clockwise (deskewing first gives a tighter crop)."
+  },
+  {
+   "idx": 235,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89485452).jpg",
+   "replacement_w": 5753,
+   "replacement_h": 8059,
+   "crop": [
+    966,
+    1728,
+    4270,
+    5801
+   ],
+   "note": "Same composition: Paul with raised arm addressing rows of seated listeners in an arcaded hall. Polona 1874 full-page scan. Its caption is 'Ś. Paweł w synagodze u Thessalończyków', which points to Acts 17:1-4 (Acts 17:2, 'reasoned with them out of the scriptures') as a possibly better reference than 1 Thessalonians 2. A stain on the upper-left margin falls outside the crop. The current file is 565px. Tilt is about 1.2° counter-clockwise, so rotating 1.2° clockwise before cropping is recommended."
+  },
+  {
+   "idx": 236,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89485903).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 8059,
+   "crop": [
+    848,
+    1773,
+    4141,
+    5869
+   ],
+   "note": "Same composition: John seated on the rocks of Patmos with a tablet, beneath a shaft of light. The current file (750px) has an English printed caption at the bottom. This Polona 1874 page, caption 'Ś. Jan na wyspie Patmos', is cropped to the engraving only, which excludes the Polish caption. Tilt is about 0.9° counter-clockwise."
+  },
+  {
+   "idx": 238,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89486085).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 8059,
+   "crop": [
+    836,
+    1719,
+    4129,
+    5864
+   ],
+   "note": "Same composition: the woman crowned with stars in glory above, angels descending, and the dragon below. Polona 1874 full-page scan, caption 'Niewiasta w koronie z gwiazd', Revelation 12:1. The current file is 475px. The crop keeps the engraving only. Tilt is about 0.8° counter-clockwise."
+  },
+  {
+   "idx": 240,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89486421).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 8059,
+   "crop": [
+    897,
+    1797,
+    4211,
+    5940
+   ],
+   "note": "Same composition: Christ enthroned in radiance above, an angel with trumpet, and the multitude below. Polona 1874 full-page scan, caption 'Sąd ostateczny'. The current file is 564px. The crop keeps the engraving only. Tilt is about 0.6° counter-clockwise."
+  },
+  {
+   "idx": 241,
+   "keep": false,
+   "replacement_file": "Pismo Swiete Starego i Nowego Testamentu. T. 2 1874 (89486509).jpg",
+   "replacement_w": 5745,
+   "replacement_h": 8059,
+   "crop": [
+    882,
+    1666,
+    4224,
+    5828
+   ],
+   "note": "Same composition: the angel on a mountain showing John the shining city beneath rays of light. Polona 1874 full-page scan, caption 'Anioł pokazuje Jerozolimę Ś. Janowi'. The current file is 750px. The crop keeps the engraving only. Tilt is about 0.2°."
+  }
+ ]
+}

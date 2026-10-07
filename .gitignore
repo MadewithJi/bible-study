@@ -1,0 +1,19 @@
+# Personal data: notes, profiles, password hashes, sessions, API keys (notes/config.json), ESV/NLT cache
+notes/
+# Raw sources: STEPBible asks that its raw files are not redistributed; build.py documents where to get them
+raw/
+# Local backups and audit/test working data
+.backup/
+.design/audit/
+.design/art/
+.design/uitest/
+.design/servertest/
+.design/batchtest/
+.design/linkstest/
+# Python / OS clutter
+__pycache__/
+*.pyc
+.DS_Store
+*.corrupt-*
+# Agent build tooling (not part of the app)
+.design/workflows/

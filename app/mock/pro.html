@@ -1,0 +1,1792 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>John 3 · Bible Study</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z'/%3E%3Cpath d='M12 6.8v13.4'/%3E%3C/svg%3E">
+<style>
+/* =====================================================================
+   PRODUCT PAGE — design tokens
+   ===================================================================== */
+:root {
+  --bg: #fbfbfd; --bg-elev: #ffffff; --bg-2: #f5f5f7; --bg-3: #ebebf0;
+  --label: #1d1d1f; --label-2: #6e6e73; --label-3: #86868b; --label-4: #aeaeb2;
+  --read: #1d1d1f;
+  --sep: rgba(0,0,0,.08); --sep-2: rgba(0,0,0,.14); --sep-strong: #d2d2d7;
+  --fill: rgba(118,118,128,.12); --fill-2: rgba(118,118,128,.08); --fill-3: rgba(118,118,128,.05);
+  --accent: #0071e3; --accent-hover: #0077ed; --accent-press: #006edb; --link: #0066cc;
+  --accent-tint: rgba(0,113,227,.07); --accent-tint-2: rgba(0,113,227,.13);
+  --focus: rgba(0,113,227,.6);
+  --danger: #e30000; --warn: #b64400;
+  --ot: #e8590c; --nt: #0071e3; --viz-ink: #1d1d1f;
+  --grad-num: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 52%, #bf5af2 100%);
+  --hl-yellow: rgba(255,204,0,.34); --hl-green: rgba(52,199,89,.24); --hl-blue: rgba(0,122,255,.16); --hl-pink: rgba(255,45,85,.16); --hl-orange: rgba(255,149,0,.26);
+  --sw-yellow: #ffcc00; --sw-green: #34c759; --sw-blue: #007aff; --sw-pink: #ff2d55; --sw-orange: #ff9500;
+  --tile-indigo: #5e5ce6; --tile-red: #ff3b30;
+  --glass: rgba(251,251,253,.76); --glass-2: rgba(255,255,255,.8); --glass-edge: rgba(255,255,255,.8);
+  --sheet: rgba(242,242,246,.8); --sheet-solid: #f2f2f6; --cell: rgba(255,255,255,.88); --seg-thumb: #ffffff;
+  --scrim: rgba(0,0,0,.22); --toast: rgba(29,29,31,.92); --toast-fg: #f5f5f7;
+  --sh-1: 0 0 0 .5px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
+  --sh-2: 0 0 0 .5px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.07);
+  --sh-sheet: 0 0 0 .5px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.04), 0 16px 40px rgba(0,0,0,.09), 0 44px 110px rgba(0,0,0,.14);
+  --sh-pop: 0 0 0 .5px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.12), 0 28px 64px rgba(0,0,0,.14);
+  --blur: saturate(180%) blur(20px); --blur-sheet: saturate(180%) blur(40px);
+  --r-xs: 6px; --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 22px; --r-2xl: 28px; --r-pill: 980px;
+  --ease: cubic-bezier(.32,.72,0,1);           /* iOS sheet curve */
+  --ease-out: cubic-bezier(.22,1,.36,1);
+  --ease-io: cubic-bezier(.4,0,.2,1);
+  --spring: linear(0, .076, .241, .428, .6, .742, .849, .924, .972, 1, 1.014, 1.019, 1.02, 1.017, 1.013, 1.009, 1.006, 1.004, 1.002, 1.001, 1);
+  --d-1: 150ms; --d-2: 250ms; --d-3: 350ms; --d-4: 500ms;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, "Segoe UI", Roboto, Arial, sans-serif;
+  --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, "Segoe UI", Roboto, Arial, sans-serif;
+  --serif: ui-serif, "New York", "Iowan Old Style", Charter, Palatino, Georgia, serif;
+  --grk: "SBL Greek", "Gentium Plus", ui-serif, "New York", "Times New Roman", serif;
+  --heb: "SBL Hebrew", "Ezra SIL", "Taamey Frank CLM", "Times New Roman", "Arial Hebrew", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --read-size: 20px; --measure: 680px; --sheet-w: 420px; --bar-h: 52px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000; --bg-elev: #1c1c1e; --bg-2: #1d1d1f; --bg-3: #2c2c2e;
+    --label: #f5f5f7; --label-2: #a1a1a6; --label-3: #86868b; --label-4: #636366;
+    --read: #e6e6eb;
+    --sep: rgba(255,255,255,.1); --sep-2: rgba(255,255,255,.16); --sep-strong: #424245;
+    --fill: rgba(118,118,128,.3); --fill-2: rgba(118,118,128,.2); --fill-3: rgba(118,118,128,.12);
+    --accent: #2997ff; --accent-hover: #47a6ff; --accent-press: #1a8cff; --link: #2997ff;
+    --accent-tint: rgba(41,151,255,.13); --accent-tint-2: rgba(41,151,255,.24); --focus: rgba(41,151,255,.7);
+    --danger: #ff453a; --warn: #ff9f0a;
+    --ot: #e36a10; --nt: #3b8ef0; --viz-ink: #f5f5f7;
+    --grad-num: linear-gradient(120deg, #409cff 0%, #7d7aff 52%, #da8fff 100%);
+    --hl-yellow: rgba(255,214,10,.24); --hl-green: rgba(48,209,88,.22); --hl-blue: rgba(10,132,255,.3); --hl-pink: rgba(255,55,95,.27); --hl-orange: rgba(255,159,10,.27);
+    --sw-yellow: #ffd60a; --sw-green: #30d158; --sw-blue: #0a84ff; --sw-pink: #ff375f; --sw-orange: #ff9f0a;
+    --tile-indigo: #7d7aff; --tile-red: #ff453a;
+    --glass: rgba(22,22,23,.74); --glass-2: rgba(44,44,46,.78); --glass-edge: rgba(255,255,255,.08);
+    --sheet: rgba(28,28,30,.78); --sheet-solid: #1c1c1e; --cell: rgba(58,58,60,.52); --seg-thumb: #636366;
+    --scrim: rgba(0,0,0,.5); --toast: rgba(58,58,60,.94); --toast-fg: #f5f5f7;
+    --sh-1: 0 0 0 .5px rgba(255,255,255,.06);
+    --sh-2: 0 0 0 .5px rgba(255,255,255,.07), 0 12px 32px rgba(0,0,0,.4);
+    --sh-sheet: 0 0 0 .5px rgba(255,255,255,.12), 0 24px 70px rgba(0,0,0,.6);
+    --sh-pop: 0 0 0 .5px rgba(255,255,255,.12), 0 24px 60px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000; --bg-elev: #1c1c1e; --bg-2: #1d1d1f; --bg-3: #2c2c2e;
+  --label: #f5f5f7; --label-2: #a1a1a6; --label-3: #86868b; --label-4: #636366;
+  --read: #e6e6eb;
+  --sep: rgba(255,255,255,.1); --sep-2: rgba(255,255,255,.16); --sep-strong: #424245;
+  --fill: rgba(118,118,128,.3); --fill-2: rgba(118,118,128,.2); --fill-3: rgba(118,118,128,.12);
+  --accent: #2997ff; --accent-hover: #47a6ff; --accent-press: #1a8cff; --link: #2997ff;
+  --accent-tint: rgba(41,151,255,.13); --accent-tint-2: rgba(41,151,255,.24); --focus: rgba(41,151,255,.7);
+  --danger: #ff453a; --warn: #ff9f0a;
+  --ot: #e36a10; --nt: #3b8ef0; --viz-ink: #f5f5f7;
+  --grad-num: linear-gradient(120deg, #409cff 0%, #7d7aff 52%, #da8fff 100%);
+  --hl-yellow: rgba(255,214,10,.24); --hl-green: rgba(48,209,88,.22); --hl-blue: rgba(10,132,255,.3); --hl-pink: rgba(255,55,95,.27); --hl-orange: rgba(255,159,10,.27);
+  --sw-yellow: #ffd60a; --sw-green: #30d158; --sw-blue: #0a84ff; --sw-pink: #ff375f; --sw-orange: #ff9f0a;
+  --tile-indigo: #7d7aff; --tile-red: #ff453a;
+  --glass: rgba(22,22,23,.74); --glass-2: rgba(44,44,46,.78); --glass-edge: rgba(255,255,255,.08);
+  --sheet: rgba(28,28,30,.78); --sheet-solid: #1c1c1e; --cell: rgba(58,58,60,.52); --seg-thumb: #636366;
+  --scrim: rgba(0,0,0,.5); --toast: rgba(58,58,60,.94); --toast-fg: #f5f5f7;
+  --sh-1: 0 0 0 .5px rgba(255,255,255,.06);
+  --sh-2: 0 0 0 .5px rgba(255,255,255,.07), 0 12px 32px rgba(0,0,0,.4);
+  --sh-sheet: 0 0 0 .5px rgba(255,255,255,.12), 0 24px 70px rgba(0,0,0,.6);
+  --sh-pop: 0 0 0 .5px rgba(255,255,255,.12), 0 24px 60px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+
+/* =====================================================================
+   Base
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); scroll-padding-top: calc(var(--bar-h) + 28px); -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--label); font: 400 15px/1.47 var(--sans); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { background: none; border: 0; padding: 0; margin: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+::selection { background: var(--accent-tint-2); }
+.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.i.f { fill: currentColor; stroke: none; }
+.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: fixed; left: 12px; top: -60px; z-index: 100; background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 10px; font-weight: 600; transition: top .2s var(--ease); }
+.skip:focus { top: 10px; text-decoration: none; }
+.serif { font-family: var(--serif); letter-spacing: 0; }
+[hidden] { display: none !important; }
+
+/* =====================================================================
+   Global bar (frosted)
+   ===================================================================== */
+.gnav { position: fixed; z-index: 40; top: 0; left: 0; right: 0; height: var(--bar-h); display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(180px, 400px) minmax(max-content, 1fr); align-items: center; gap: 16px; padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left)); background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-bottom: 1px solid var(--sep); transition: transform .45s var(--ease), background .3s; }
+.gnav-left, .gnav-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.gnav-right { justify-content: flex-end; gap: 6px; }
+.ib { position: relative; width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 9px; color: var(--label-2); transition: background-color var(--d-1), color var(--d-1), transform var(--d-1) var(--ease-out); }
+.ib:hover { background: var(--fill-2); color: var(--label); }
+.ib:active { transform: scale(.92); background: var(--fill); }
+.ib:disabled { opacity: .28; pointer-events: none; }
+.ib[aria-expanded="true"] { color: var(--accent); }
+.ib .i { width: 19px; height: 19px; }
+.pair { display: inline-flex; }
+.vsep { width: 1px; height: 18px; background: var(--sep-2); margin: 0 6px; flex: none; }
+.refbtn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 10px; border-radius: 9px; font: 600 17px/1 var(--display); letter-spacing: -.022em; color: var(--label); white-space: nowrap; transition: background-color var(--d-1); }
+.refbtn:hover { background: var(--fill-2); }
+.refbtn .i { width: 11px; height: 11px; stroke-width: 2.2; color: var(--label-3); margin-top: 1px; }
+.search { position: relative; display: flex; align-items: center; height: 36px; border-radius: 10px; background: var(--fill-2); transition: background-color var(--d-2), box-shadow var(--d-2); }
+.search:hover { background: var(--fill); }
+.search:focus-within { background: var(--bg-elev); box-shadow: 0 0 0 .5px var(--sep-2), 0 0 0 4px var(--accent-tint-2); }
+.search > .i { position: absolute; left: 11px; width: 16px; height: 16px; color: var(--label-3); pointer-events: none; }
+.search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; padding: 0 42px 0 34px; font-size: 14px; color: var(--label); }
+.search input::placeholder { color: var(--label-3); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search kbd { position: absolute; right: 9px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; border: 1px solid var(--sep-2); font: 500 11px/1 var(--sans); color: var(--label-3); transition: opacity var(--d-1); pointer-events: none; }
+.search:focus-within kbd, .search.has-value kbd { opacity: 0; }
+.search .cancel { display: none; }
+.ib.search-open { display: none; }
+.pill-select { position: relative; display: inline-flex; align-items: center; height: 30px; border-radius: var(--r-pill); background: var(--fill-2); color: var(--label); transition: background-color var(--d-1), color var(--d-1); flex: none; }
+.pill-select:hover { background: var(--fill); }
+.pill-select:focus-within { box-shadow: 0 0 0 3px var(--focus); }
+.pill-select select { appearance: none; -webkit-appearance: none; border: 0; outline: none; background: transparent; height: 100%; padding: 0 26px 0 12px; font: 600 13px/1 var(--sans); letter-spacing: -.005em; color: inherit; cursor: pointer; border-radius: inherit; }
+.pill-select.lead select { padding-left: 31px; }
+.pill-select > .i { position: absolute; pointer-events: none; }
+.pill-select > .lead-i { left: 10px; width: 16px; height: 16px; color: var(--label-2); }
+.pill-select > .chev { right: 10px; width: 10px; height: 10px; stroke-width: 2.4; color: var(--label-3); }
+.pill-select.on { background: var(--accent-tint-2); color: var(--accent); }
+.pill-select.on > .lead-i, .pill-select.on > .chev { color: var(--accent); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px 0 10px; border-radius: var(--r-pill); background: var(--fill-2); font: 600 13px/1 var(--sans); letter-spacing: -.005em; color: var(--label); transition: background-color var(--d-2), color var(--d-2), transform var(--d-1); flex: none; }
+.toggle .i { width: 16px; height: 16px; color: var(--label-2); transition: color var(--d-2); }
+.toggle:hover { background: var(--fill); }
+.toggle:active { transform: scale(.96); }
+.toggle[aria-pressed="true"] { background: var(--accent-tint-2); color: var(--accent); }
+.toggle[aria-pressed="true"] .i { color: var(--accent); }
+.tools { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--fill-2); flex: none; }
+.tools button { width: 34px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--label-2); transition: background-color var(--d-2), color var(--d-2), box-shadow var(--d-2); }
+.tools button:hover { color: var(--label); }
+.tools button[aria-pressed="true"] { background: var(--seg-thumb); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 0 0 .5px rgba(0,0,0,.04); }
+.tools .i { width: 18px; height: 18px; }
+
+/* =====================================================================
+   Stage (Arcs / Graph / Map)
+   ===================================================================== */
+.page { padding-top: var(--bar-h); transition: padding-right var(--d-4) var(--ease); }
+#panel { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .55s var(--ease), opacity .35s var(--ease-out); }
+#panel.open { grid-template-rows: 1fr; opacity: 1; }
+#panel > .stage-clip { min-height: 0; overflow: hidden; }
+.stage { position: relative; margin: 18px auto 6px; width: min(1200px, calc(100% - 32px)); height: min(50vh, 460px); border-radius: var(--r-2xl); background: var(--bg-elev); box-shadow: var(--sh-2); overflow: hidden; display: flex; flex-direction: column; --arc-surface: var(--bg-elev); }
+.stage-head { display: flex; align-items: center; gap: 14px; padding: 16px 14px 6px 24px; flex-wrap: wrap; }
+.stage-title { font: 600 19px/1.2 var(--display); letter-spacing: -.022em; margin: 0; }
+.stage-sub { font-size: 13px; color: var(--label-2); }
+.stage-head .spacer { flex: 1; }
+.stage-body { position: relative; flex: 1; min-height: 0; }
+.stage-body .arc-host { position: absolute; left: 20px; right: 20px; bottom: 10px; }
+.range-ctl { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--label-2); }
+.range-ctl output { min-width: 30px; font-variant-numeric: tabular-nums; color: var(--label); font-weight: 600; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 140px; height: 20px; background: transparent; cursor: pointer; --p: 0%; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--p), var(--fill) var(--p)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--fill); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 .5px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.18); transition: transform var(--d-1); }
+input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 .5px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.18); }
+input[type=range]:active::-webkit-slider-thumb { transform: scale(1.1); }
+input[type=range]:focus-visible { outline: none; }
+input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--focus), 0 2px 6px rgba(0,0,0,.18); }
+.graph-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.leaf { position: absolute; inset: 8px 12px 12px; border-radius: 18px; overflow: hidden; background: var(--bg-2); }
+.stage-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--label-2); font-size: 14px; text-align: center; padding: 20px; }
+
+/* =====================================================================
+   Hero (chapter header)
+   ===================================================================== */
+.hero { max-width: 1000px; margin: 0 auto; padding: clamp(44px, 8vw, 96px) 24px 8px; text-align: center; }
+.hero.enter > * { animation: rise .9s var(--ease-out) both; }
+.hero.enter > :nth-child(2) { animation-delay: 60ms; } .hero.enter > :nth-child(3) { animation-delay: 120ms; } .hero.enter > :nth-child(4) { animation-delay: 170ms; } .hero.enter > :nth-child(5) { animation-delay: 220ms; } .hero.enter > :nth-child(6) { animation-delay: 280ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 600 15px/1.2 var(--sans); letter-spacing: -.01em; color: var(--label-2); }
+.t-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nt); }
+.t-dot.ot { background: var(--ot); }
+.hero-title { text-wrap: balance; margin: 10px 0 0; font: 600 clamp(60px, 9.5vw, 104px)/1.02 var(--display); letter-spacing: -.028em; color: var(--label); }
+.hero-title .chnum { background: var(--grad-num); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .04em; }
+.hero-tag { margin: 18px auto 0; max-width: 24em; text-wrap: balance; font: 600 clamp(22px, 2.7vw, 28px)/1.16 var(--display); letter-spacing: -.012em; }
+.hero-tag .soft { color: var(--label-3); }
+.intro-line { text-wrap: balance; margin: 14px auto 0; max-width: 34em; font-size: 17px; line-height: 1.47; color: var(--label-2); letter-spacing: -.02em; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 28px auto 0; max-width: 800px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 15px 0 12px; border-radius: var(--r-pill); background: var(--fill-2); color: var(--label); font: 500 14px/1 var(--sans); letter-spacing: -.012em; white-space: nowrap; transition: background-color var(--d-1), transform var(--d-1) var(--ease-out); }
+.chip .i { width: 16px; height: 16px; color: var(--label-2); }
+.chip:hover { background: var(--fill); }
+.chip:active { transform: scale(.96); }
+.chip b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.chip.more { background: none; color: var(--link); padding: 0 8px; }
+.chip.more .i { color: currentColor; width: 12px; height: 12px; stroke-width: 2.2; }
+.chip.more:hover { text-decoration: underline; background: none; }
+.chip.static { cursor: default; }
+.sig { margin: 46px auto 0; max-width: 1000px; }
+.arc-host { position: relative; --arc-surface: var(--bg); cursor: crosshair; touch-action: pan-y; }
+.arc-host svg { display: block; width: 100%; overflow: visible; }
+.arc { fill: none; stroke-linecap: round; stroke-width: var(--w); opacity: var(--o); vector-effect: non-scaling-stroke; transition: opacity .35s var(--ease-out); }
+.arc.ot, .hv.ot { stroke: var(--ot); } .arc.nt, .hv.nt { stroke: var(--nt); }
+.arcs.anim .arc { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.3s var(--ease-out) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.arc-host.has-sel .arc { opacity: calc(var(--o) * .22); }
+.arc-host.has-sel .arc.on { opacity: 1; }
+.arc-host.hovering .arc { opacity: calc(var(--o) * .3); }
+.hv, .hv-halo { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.hv { stroke-width: 2.5; }
+.hv-halo { stroke: var(--arc-surface); stroke-width: 7; }
+.seg-b { opacity: .26; } .seg-b.ot { fill: var(--ot); } .seg-b.nt { fill: var(--nt); }
+.seg-b.cur { fill: var(--viz-ink); opacity: 1; }
+.arc-labels { position: absolute; left: 0; right: 0; bottom: 0; height: 16px; pointer-events: none; }
+.arc-labels span { position: absolute; bottom: 0; transform: translateX(-50%); font: 500 11px/1 var(--sans); letter-spacing: 0; color: var(--label-3); white-space: nowrap; }
+.arc-labels span.cur { color: var(--label); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 18px; margin-top: 14px; font-size: 12px; color: var(--label-2); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 14px; height: 3px; border-radius: 2px; background: var(--nt); }
+.key.ot i { background: var(--ot); }
+.legend .cap { color: var(--label-3); }
+
+/* =====================================================================
+   Reader
+   ===================================================================== */
+.reader { padding: 0 16px 120px; }
+.reader.busy { opacity: .5; transition: opacity .2s; }
+.notice { display: flex; gap: 14px; align-items: center; max-width: calc(var(--measure) + 108px); margin: 28px auto 0; padding: 14px 16px; border-radius: var(--r-md); background: var(--bg-2); font-size: 14px; color: var(--label); }
+.notice .i { color: var(--accent); width: 22px; height: 22px; }
+.notice p { margin: 0; flex: 1; }
+.notice p small { display: block; color: var(--label-2); font-size: 13px; margin-top: 2px; }
+.verses { max-width: calc(var(--measure) + 108px); margin: 56px auto 0; font-family: var(--serif); font-size: var(--read-size); line-height: 1.72; color: var(--read); letter-spacing: 0; font-kerning: normal; font-variant-ligatures: common-ligatures; }
+.verses.parallel { --measure: 1000px; }
+.col-heads { position: sticky; top: calc(var(--bar-h) + 0px); z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; padding: 10px 58px 10px 50px; margin-bottom: 6px; background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-radius: 0 0 14px 14px; font: 600 12px/1 var(--sans); letter-spacing: .02em; color: var(--label-2); }
+.verse { position: relative; padding: 5px 60px 5px 50px; border-radius: 14px; cursor: pointer; outline: none; transition: background-color .3s var(--ease-out), box-shadow .2s; -webkit-tap-highlight-color: transparent; }
+.verse:hover { background: var(--fill-3); }
+.verse:focus-visible { box-shadow: 0 0 0 3px var(--focus); }
+.verse[aria-current="true"] { background: var(--accent-tint); }
+.verse.flash { animation: flash 2.2s var(--ease-io); }
+@keyframes flash { 0%, 40% { background: var(--accent-tint-2); } 100% { background: transparent; } }
+.vnum { position: absolute; left: 6px; top: 5px; width: 36px; height: calc(var(--read-size) * 1.72); display: flex; align-items: center; justify-content: flex-end; font: 600 12px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--label-3); user-select: none; -webkit-user-select: none; }
+.vnum span { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 10px; transition: background-color .3s var(--ease), color .3s; }
+.verse:hover .vnum span { color: var(--label-2); }
+.verse[aria-current="true"] .vnum span { background: var(--accent); color: #fff; animation: pop .5s var(--spring); }
+@keyframes pop { from { transform: scale(.6); } to { transform: none; } }
+.vtext { -webkit-box-decoration-break: clone; box-decoration-break: clone; border-radius: 4px; }
+.verse[class*="hl-"] .vtext { padding: 1px 2px; margin: 0 -2px; }
+.hl-yellow .vtext { background: var(--hl-yellow); } .hl-green .vtext { background: var(--hl-green); } .hl-blue .vtext { background: var(--hl-blue); } .hl-pink .vtext { background: var(--hl-pink); } .hl-orange .vtext { background: var(--hl-orange); }
+.vcols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.vcols .alt .vtext { color: var(--label-2); }
+.vmeta { position: absolute; right: 8px; top: 5px; height: calc(var(--read-size) * 1.72); display: flex; align-items: center; gap: 4px; font-family: var(--sans); }
+.badges { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: -2px; color: var(--label-3); }
+.badges:empty { display: none; }
+.badges .i { width: 15px; height: 15px; }
+.badges .b-note { color: var(--accent); }
+.xc { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 7px 0 6px; border-radius: 11px; font: 500 12px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--label-4); transition: background-color .2s, color .2s; }
+.xc .i { width: 12px; height: 12px; stroke-width: 1.8; }
+.verse:hover .xc, .verse[aria-current="true"] .xc { color: var(--label-2); }
+.xc:hover { background: var(--fill); color: var(--label) !important; }
+.inter { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 6px; font-family: var(--sans); }
+.inter.rtl { direction: rtl; }
+.iw { display: inline-flex; flex-direction: column; align-items: center; padding: 3px 6px; border-radius: 8px; direction: ltr; transition: background-color var(--d-1); }
+.iw:hover { background: var(--bg-elev); box-shadow: var(--sh-1); }
+.iw .o { font-size: 20px; line-height: 1.25; color: var(--label); }
+.iw .o.grk { font-family: var(--grk); } .iw .o.heb { font-family: var(--heb); direction: rtl; font-size: 22px; }
+.iw .tl { font: italic 11px/1.3 var(--sans); color: var(--label-3); }
+.iw .gl { font: 12px/1.3 var(--sans); color: var(--label-2); max-width: 120px; text-align: center; }
+.iw.variant .o { color: var(--warn); }
+.foot-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: calc(var(--measure) + 108px); margin: 72px auto 0; }
+.foot-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 20px 22px; border-radius: var(--r-lg); background: var(--bg-2); text-align: left; transition: background-color var(--d-2), transform var(--d-2) var(--ease-out); }
+.foot-tile:hover { background: var(--bg-3); }
+.foot-tile:active { transform: scale(.985); }
+.foot-tile.next { align-items: flex-end; text-align: right; }
+.foot-tile small { font: 600 13px/1 var(--sans); color: var(--label-2); letter-spacing: -.005em; }
+.foot-tile span { display: inline-flex; align-items: center; gap: 8px; font: 600 21px/1.2 var(--display); letter-spacing: -.02em; color: var(--label); }
+.foot-tile .i { width: 18px; height: 18px; stroke-width: 2; color: var(--accent); transition: transform .35s var(--ease); }
+.foot-tile.prev:hover .i { transform: translateX(-3px); } .foot-tile.next:hover .i { transform: translateX(3px); }
+.foot-tile:disabled { visibility: hidden; }
+.copyright { max-width: calc(var(--measure) + 108px); margin: 36px auto 0; padding-top: 18px; border-top: 1px solid var(--sep); font-size: 12px; line-height: 1.5; color: var(--label-3); text-align: center; }
+
+/* =====================================================================
+   Sheet (drawer)
+   ===================================================================== */
+.scrim { position: fixed; inset: 0; z-index: 44; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .45s var(--ease); }
+body.drawer-open.overlay .scrim { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; z-index: 50; top: calc(var(--bar-h) + 12px); right: 12px; bottom: 12px; width: var(--sheet-w); display: flex; flex-direction: column; border-radius: var(--r-xl); background: var(--sheet); -webkit-backdrop-filter: var(--blur-sheet); backdrop-filter: var(--blur-sheet); box-shadow: var(--sh-sheet), inset 0 1px 0 var(--glass-edge); overflow: hidden; transform: translate3d(calc(100% + 28px), 0, 0); visibility: hidden; transition: transform .42s var(--ease), visibility 0s linear .42s; }
+.drawer.open { transform: translate3d(0, var(--drag, 0px), 0); visibility: visible; transition: transform .56s var(--ease), visibility 0s; }
+.drawer.dragging { transition: none; }
+.grabber { display: none; width: 100%; height: 18px; flex: none; cursor: grab; touch-action: none; }
+.grabber::before { content: ""; display: block; width: 36px; height: 5px; margin: 7px auto 0; border-radius: 3px; background: var(--label-4); opacity: .7; }
+.sheet-top { flex: none; padding: 14px 14px 12px 20px; transition: box-shadow .2s; }
+.drawer.scrolled .sheet-top { box-shadow: 0 1px 0 var(--sep); }
+.sheet-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.sheet-title { flex: 1; min-width: 0; }
+.sheet-title h2 { margin: 0; font: 700 22px/1.18 var(--display); letter-spacing: -.022em; }
+.sheet-title p { margin: 2px 0 0; font-size: 13px; color: var(--label-2); }
+.save { align-self: center; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--label-3); white-space: nowrap; }
+.save .i { width: 13px; height: 13px; stroke-width: 2; }
+.save.warn { color: var(--danger); }
+.close-btn { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--fill); color: var(--label-2); transition: background-color var(--d-1), transform var(--d-1) var(--ease-out); }
+.close-btn .i { width: 12px; height: 12px; stroke-width: 2.6; }
+.close-btn:hover { background: var(--fill); color: var(--label); filter: brightness(.96); }
+.close-btn:active { transform: scale(.9); }
+/* iOS segmented control */
+.segmented { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; height: 32px; padding: 2px; border-radius: 9px; background: var(--fill); isolation: isolate; }
+.segmented > button { position: relative; z-index: 1; border-radius: 7px; font: 500 13px/1 var(--sans); letter-spacing: -.01em; color: var(--label); white-space: nowrap; transition: color var(--d-2); padding: 0 4px; }
+.segmented > button[aria-selected="true"], .segmented > button[aria-checked="true"] { font-weight: 600; }
+.segmented > button + button::before { content: ""; position: absolute; left: -.5px; top: 8px; bottom: 8px; width: 1px; background: var(--sep-2); transition: opacity var(--d-2); }
+.segmented > button[aria-selected="true"]::before, .segmented > button[aria-selected="true"] + button::before,
+.segmented > button[aria-checked="true"]::before, .segmented > button[aria-checked="true"] + button::before { opacity: 0; }
+.segmented > button:focus-visible { outline-offset: -1px; outline-width: 2px; }
+.seg-ind { position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 0; width: 0; border-radius: 7px; background: var(--seg-thumb); box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04), 0 0 0 .5px rgba(0,0,0,.04); transition: transform .5s var(--spring), width .5s var(--spring); }
+.segmented.no-anim .seg-ind { transition: none; }
+.segmented.sm { height: 28px; }
+.segmented.sm > button { font-size: 12px; }
+.sheet-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 6px 16px 40px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--fill) transparent; }
+.view { animation: viewIn .38s var(--ease-out) both; }
+@keyframes viewIn { from { opacity: 0; transform: translate3d(var(--dx, 0px), 6px, 0); } to { opacity: 1; transform: none; } }
+.view.push { animation: pushIn .5s var(--ease) both; }
+.view.pop { animation: popIn .5s var(--ease) both; }
+@keyframes pushIn { from { transform: translate3d(60%, 0, 0); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes popIn { from { transform: translate3d(-30%, 0, 0); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* content primitives inside the sheet */
+.vq { margin: 4px 2px 18px; font: 400 17px/1.55 var(--serif); letter-spacing: 0; color: var(--label); }
+.vq.sm { font-size: 15px; color: var(--label-2); margin-bottom: 14px; }
+.lh { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 26px 4px 8px; }
+.lh:first-child { margin-top: 8px; }
+.lh h3 { margin: 0; font: 600 17px/1.25 var(--display); letter-spacing: -.02em; }
+.lh span, .lh .link { font-size: 13px; color: var(--label-2); white-space: nowrap; }
+.lh .link { color: var(--link); }
+.foot-note { margin: 10px 16px 0; font-size: 12px; line-height: 1.45; color: var(--label-3); }
+.link { color: var(--link); font-size: inherit; } .link:hover { text-decoration: underline; }
+.group { list-style: none; margin: 0; padding: 0; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); overflow: hidden; }
+.group > li { position: relative; }
+.group > li + li::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--sep); transform: scaleY(.5); transform-origin: top; z-index: 1; }
+.group.av > li + li::before { left: 60px; }
+.cell { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 11px 14px 11px 16px; text-align: left; color: var(--label); transition: background-color var(--d-1); }
+.cell:hover { background: var(--fill-3); }
+.cell:active { background: var(--fill-2); }
+.cell-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cell-title { font: 600 15px/1.3 var(--sans); letter-spacing: -.015em; }
+.cell-sub { font-size: 13px; line-height: 1.4; color: var(--label-2); }
+.cell-sub.serif { font: 400 14px/1.45 var(--serif); letter-spacing: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cell-sub:empty::before { content: ""; display: block; height: 11px; width: 82%; margin: 4px 0 3px; border-radius: 6px; background: linear-gradient(90deg, var(--fill-2), var(--fill), var(--fill-2)); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.cell-trail { flex: none; display: flex; align-items: center; gap: 10px; color: var(--label-3); align-self: center; }
+.chev { width: 13px; height: 13px; stroke-width: 2; color: var(--label-4); transition: transform .45s var(--ease); }
+[aria-expanded="true"] > .cell-trail .chev, [aria-expanded="true"] .chev { transform: rotate(90deg); }
+.votes { display: inline-flex; align-items: center; gap: 8px; }
+.vbar { width: 44px; height: 4px; border-radius: 2px; background: var(--fill); overflow: hidden; }
+.vbar i { display: block; height: 100%; border-radius: 0 2px 2px 0; background: var(--nt); transform-origin: left; animation: grow .8s var(--ease-out) both; }
+.vbar.ot i { background: var(--ot); }
+@keyframes grow { from { transform: scaleX(0); } }
+.vn { min-width: 30px; font: 500 12px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label-2); text-align: right; }
+.expand { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .5s var(--ease); }
+.open > .expand { grid-template-rows: 1fr; }
+.expand > div { min-height: 0; overflow: hidden; }
+.expand-in { padding: 0 14px 14px 16px; opacity: 0; transform: translateY(-4px); transition: opacity .35s var(--ease-out) .05s, transform .45s var(--ease); }
+.open > .expand .expand-in { opacity: 1; transform: none; }
+.ctx-read { padding: 12px 14px; border-radius: 10px; background: var(--fill-3); font: 400 15px/1.55 var(--serif); letter-spacing: 0; }
+.ctx-read p { margin: 0 0 6px; color: var(--label-2); } .ctx-read p:last-child { margin: 0; }
+.ctx-read p.t { color: var(--label); }
+.ctx-read p.t span.tx { background: var(--accent-tint-2); -webkit-box-decoration-break: clone; box-decoration-break: clone; border-radius: 3px; padding: 1px 2px; }
+.ctx-read .n { font: 600 10px/1 var(--sans); color: var(--label-3); margin-right: 6px; vertical-align: 2px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 15px; border-radius: var(--r-pill); font: 500 14px/1 var(--sans); letter-spacing: -.012em; white-space: nowrap; transition: background-color var(--d-1), transform var(--d-1) var(--ease-out), color var(--d-1); }
+.btn .i { width: 15px; height: 15px; }
+.btn:active { transform: scale(.96); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-tinted { background: var(--accent-tint-2); color: var(--accent); }
+.btn-tinted:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.btn-plain { color: var(--link); padding: 0 10px; }
+.btn-plain:hover { background: var(--fill-2); }
+.btn-gray { background: var(--fill); color: var(--label); }
+.btn-gray:hover { background: var(--fill); filter: brightness(.97); }
+.btn-wide { width: 100%; height: 40px; border-radius: 12px; font-weight: 600; margin-top: 12px; }
+.btn.sm { height: 28px; padding: 0 12px; font-size: 13px; }
+.danger { color: var(--danger) !important; }
+.filter-row { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.filter-row .segmented { flex: 1; }
+.canon-mini { position: relative; margin: 0 2px 4px; }
+.canon-mini svg { display: block; width: 100%; height: 46px; overflow: visible; }
+.canon-mini .dot { stroke: var(--sheet-solid); stroke-width: 2; cursor: pointer; transition: r .25s var(--ease-out); }
+.canon-mini .dot.ot { fill: var(--ot); } .canon-mini .dot.nt { fill: var(--nt); }
+.canon-mini text { font: 500 10.5px var(--sans); fill: var(--label-3); letter-spacing: 0; }
+.canon-mini text.cur { fill: var(--label); font-weight: 600; }
+.mini-legend { display: flex; gap: 14px; margin: 2px 4px 0; font-size: 12px; color: var(--label-2); }
+/* stats + tiles */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.stat { padding: 12px 12px 11px; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); min-width: 0; }
+.stat small { display: block; font: 500 12px/1.2 var(--sans); color: var(--label-2); margin-bottom: 6px; }
+.stat b { display: block; font: 600 17px/1.2 var(--display); letter-spacing: -.02em; overflow-wrap: anywhere; }
+.timeline { display: block; width: 100%; height: 96px; margin-top: 2px; }
+.timeline .band { fill: var(--fill-2); } .timeline .band.alt { fill: var(--fill-3); }
+.timeline .band-l { font: 500 9.5px var(--sans); fill: var(--label-3); letter-spacing: 0; }
+.timeline .ev { stroke: var(--label-4); stroke-width: 1; opacity: .5; }
+.timeline .ev.here { stroke: var(--accent); opacity: 1; stroke-width: 2; }
+.timeline .ax { font: 500 9.5px var(--sans); fill: var(--label-3); letter-spacing: 0; }
+.timeline .mk { stroke: var(--accent); stroke-width: 1.5; }
+.timeline .mk-dot { fill: var(--accent); stroke: var(--sheet-solid); stroke-width: 2; }
+.timeline .mk-l { font: 600 11px var(--sans); fill: var(--label); letter-spacing: 0; }
+.tile-i { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--fill); color: var(--label-2); }
+.tile-i .i { width: 17px; height: 17px; }
+.tile-i.indigo { background: color-mix(in srgb, var(--tile-indigo) 16%, transparent); color: var(--tile-indigo); }
+.tile-i.red { background: color-mix(in srgb, var(--tile-red) 14%, transparent); color: var(--tile-red); }
+.tile-i.blue { background: var(--accent-tint-2); color: var(--accent); }
+.avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #a5abb8, #858994); color: #fff; font: 600 13px/1 var(--sans); letter-spacing: 0; }
+.dict { margin: 0; font-size: 14px; line-height: 1.55; color: var(--label-2); white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.dict.full { -webkit-line-clamp: unset; display: block; }
+.rel { margin: 0 0 8px; font-size: 13px; color: var(--label); }
+.mini-map { position: relative; height: 180px; border-radius: var(--r-md); overflow: hidden; background: var(--bg-2); box-shadow: var(--sh-1); margin-bottom: 8px; }
+.intro-card { margin-top: 26px; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); overflow: hidden; }
+.intro-card > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 14px; cursor: pointer; transition: background-color var(--d-1); }
+.intro-card > summary::-webkit-details-marker { display: none; }
+.intro-card > summary:hover { background: var(--fill-3); }
+.intro-card[open] > summary .chev { transform: rotate(90deg); }
+.intro-body { padding: 2px 16px 16px; animation: viewIn .4s var(--ease-out); }
+.kv { margin: 0; }
+.kv > div { display: grid; grid-template-columns: 82px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--sep); font-size: 14px; line-height: 1.45; }
+.kv > div:first-child { border-top: 0; }
+.kv dt { color: var(--label-2); font-size: 13px; }
+.kv dd { margin: 0; }
+.tags-static { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.tag-s { height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--r-pill); background: var(--fill-2); font-size: 13px; color: var(--label); }
+.outline { list-style: none; margin: 12px 0 0; padding: 0; border-radius: 10px; background: var(--fill-3); overflow: hidden; }
+.outline li + li { border-top: 1px solid var(--sep); }
+.outline button { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; text-align: left; font-size: 14px; transition: background-color var(--d-1); }
+.outline button:hover { background: var(--fill-2); }
+.outline .rng { font: 600 13px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label-2); }
+.outline .here { font: 600 11px/1 var(--sans); color: var(--accent); background: var(--accent-tint-2); padding: 4px 8px; border-radius: var(--r-pill); }
+.outline li.cur .rng { color: var(--accent); }
+.credit { margin: 14px 2px 0; font-size: 12px; line-height: 1.45; color: var(--label-3); }
+/* original language */
+.lang-eyebrow { margin: 2px 4px 6px; font: 600 12px/1.2 var(--sans); color: var(--label-2); letter-spacing: .01em; }
+.orig-line { margin: 0 0 18px; padding: 16px 16px; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); font-size: 25px; line-height: 1.75; }
+.orig-line.grk { font-family: var(--grk); } .orig-line.heb { font-family: var(--heb); direction: rtl; font-size: 28px; }
+.ow { border-radius: 6px; padding: 0 3px; margin: 0 -1px; transition: background-color var(--d-1), color var(--d-1); }
+.ow:hover { background: var(--fill-2); }
+.ow.on { background: var(--accent-tint-2); color: var(--accent); }
+.ow.variant { color: var(--warn); }
+.words > li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto; gap: 12px; align-items: start; padding: 11px 14px 11px 16px; transition: background-color .4s var(--ease-out); }
+.words > li.focus { background: var(--accent-tint); }
+.w-o { display: flex; flex-direction: column; gap: 2px; font-size: 21px; line-height: 1.25; }
+.w-o.grk { font-family: var(--grk); } .w-o.heb { font-family: var(--heb); text-align: right; font-size: 23px; }
+.w-tl { font: italic 13px/1.3 var(--sans); color: var(--label-2); direction: ltr; text-align: left; }
+.w-g { display: flex; flex-direction: column; gap: 3px; padding-top: 2px; }
+.w-gl { font: 600 15px/1.3 var(--sans); letter-spacing: -.012em; }
+.w-m { font-size: 12px; line-height: 1.35; color: var(--label-2); }
+.w-m::first-letter { text-transform: uppercase; }
+.w-var { align-self: flex-start; font: 600 11px/1 var(--sans); color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); padding: 4px 7px; border-radius: var(--r-pill); margin-top: 2px; }
+.words > li.variant .w-o { color: var(--warn); }
+.strong { height: 26px; min-width: 52px; padding: 0 9px; border-radius: 7px; background: var(--accent-tint-2); color: var(--accent); font: 600 12px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: 0; transition: background-color var(--d-1), transform var(--d-1); margin-top: 2px; }
+.strong:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.strong:active { transform: scale(.94); }
+.strong.static { cursor: default; display: inline-grid; place-items: center; min-width: 0; }
+.navbar { display: flex; align-items: center; margin: 0 -8px 6px; }
+.back { display: inline-flex; align-items: center; gap: 2px; height: 32px; padding: 0 10px 0 4px; border-radius: 8px; color: var(--link); font-size: 15px; transition: background-color var(--d-1); }
+.back .i { width: 20px; height: 20px; stroke-width: 2.2; }
+.back:hover { background: var(--fill-2); }
+.lex { text-align: center; padding: 12px 0 18px; }
+.lex-lemma { font-size: 46px; line-height: 1.2; }
+.lex-lemma.grk { font-family: var(--grk); } .lex-lemma.heb { font-family: var(--heb); }
+.lex-meta { display: inline-flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 15px; color: var(--label-2); }
+.lex-meta i { font-style: italic; }
+.kvg > li { padding: 12px 16px; }
+.kvg dt { font: 600 12px/1.2 var(--sans); color: var(--label-2); margin-bottom: 4px; }
+.kvg dd { margin: 0; font-size: 15px; line-height: 1.45; }
+.dist { display: grid; gap: 7px; margin: 4px 4px 16px; }
+.dist-row { display: grid; grid-template-columns: 58px 1fr 34px; align-items: center; gap: 10px; font-size: 12px; color: var(--label-2); }
+.dist-t { height: 8px; }
+.dist-t i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); transform-origin: left; animation: grow .9s var(--ease-out) both; }
+.dist-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--label); font-weight: 500; }
+/* notes */
+.card { border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); }
+.note-card { padding: 14px 14px 12px; }
+.scope { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 2px 12px; font-size: 13px; color: var(--label-2); }
+.hl-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.hl-row > span { font: 600 13px/1 var(--sans); color: var(--label-2); }
+.swatches { display: flex; gap: 10px; }
+.sw { position: relative; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; transition: transform .45s var(--spring), box-shadow .25s; }
+.sw .i { width: 14px; height: 14px; stroke-width: 2.6; opacity: 0; transform: scale(.4); transition: opacity .2s, transform .45s var(--spring); }
+.sw:hover { transform: scale(1.08); }
+.sw:active { transform: scale(.92); }
+.sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--sheet-solid), 0 0 0 4px var(--c); }
+.sw[aria-checked="true"] .i { opacity: 1; transform: none; }
+.sw-yellow { background: var(--sw-yellow); --c: var(--sw-yellow); } .sw-yellow .i { color: #1d1d1f; }
+.sw-green { background: var(--sw-green); --c: var(--sw-green); } .sw-blue { background: var(--sw-blue); --c: var(--sw-blue); } .sw-pink { background: var(--sw-pink); --c: var(--sw-pink); } .sw-orange { background: var(--sw-orange); --c: var(--sw-orange); }
+.sw-none { background: var(--fill); color: var(--label-3); --c: var(--label-3); }
+.sw-none .i { opacity: 1; transform: none; width: 16px; height: 16px; stroke-width: 1.6; }
+.editor { border-radius: 10px; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--sep); transition: box-shadow var(--d-2), background-color var(--d-2); }
+.editor:focus-within { background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); }
+.editor-top { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0 12px; font-size: 12px; color: var(--label-3); }
+.editor-top .segmented { width: 148px; }
+.note-text { display: block; width: 100%; min-height: 140px; resize: none; border: 0; outline: none; background: transparent; padding: 10px 12px 12px; font: 400 15px/1.55 var(--sans); color: var(--label); }
+.note-text::placeholder { color: var(--label-3); }
+.md { padding: 6px 12px 12px; font-size: 15px; line-height: 1.55; min-height: 100px; }
+.md p { margin: 6px 0; } .md h2, .md h3, .md h4 { margin: 10px 0 4px; font-family: var(--display); letter-spacing: -.015em; }
+.md blockquote { margin: 6px 0; padding-left: 12px; border-left: 3px solid var(--sep-2); color: var(--label-2); }
+.md code { font: 13px var(--mono); background: var(--fill-2); padding: 1px 5px; border-radius: 4px; }
+.vlink { color: var(--link); cursor: pointer; border-bottom: 1px solid color-mix(in srgb, var(--link) 35%, transparent); }
+.tokens { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 8px; min-height: 40px; border-radius: 10px; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--sep); cursor: text; transition: box-shadow var(--d-2); }
+.tokens:focus-within { box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); }
+.tokens > .i { width: 15px; height: 15px; color: var(--label-3); margin-left: 2px; }
+.token { display: inline-flex; align-items: center; gap: 3px; height: 26px; padding: 0 4px 0 10px; border-radius: var(--r-pill); background: var(--accent-tint-2); color: var(--accent); font: 500 13px/1 var(--sans); animation: pop .4s var(--spring); }
+.token button { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; color: inherit; opacity: .7; }
+.token button:hover { opacity: 1; background: var(--accent-tint-2); }
+.token .i { width: 10px; height: 10px; stroke-width: 2.6; }
+.tokens input { flex: 1; min-width: 90px; border: 0; outline: none; background: transparent; height: 26px; font-size: 14px; color: var(--label); }
+.tokens input::placeholder { color: var(--label-3); }
+.hdot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--fill); box-shadow: inset 0 0 0 .5px rgba(0,0,0,.1); }
+.hdot.yellow { background: var(--sw-yellow); } .hdot.green { background: var(--sw-green); } .hdot.blue { background: var(--sw-blue); } .hdot.pink { background: var(--sw-pink); } .hdot.orange { background: var(--sw-orange); }
+.disclosure { margin-top: 22px; }
+.disclosure > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; cursor: pointer; font: 600 17px/1.25 var(--display); letter-spacing: -.02em; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary .chev { width: 14px; height: 14px; }
+.disclosure[open] > summary .chev { transform: rotate(90deg); }
+.field { position: relative; display: flex; align-items: center; height: 40px; border-radius: 10px; background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--sep); transition: box-shadow var(--d-2), background-color var(--d-2); }
+.field:focus-within { background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); }
+.field > .i { position: absolute; left: 11px; width: 16px; height: 16px; color: var(--label-3); pointer-events: none; }
+.field input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; padding: 0 12px; font-size: 14px; color: var(--label); }
+.field > .i + input { padding-left: 34px; }
+.field input::placeholder { color: var(--label-3); }
+.field.bad { box-shadow: inset 0 0 0 1px var(--danger), 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent); animation: shake .4s var(--ease-io); }
+@keyframes shake { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+.field-msg { margin: 6px 4px 0; font-size: 12px; color: var(--danger); }
+.field-row { display: grid; grid-template-columns: 1fr 92px; gap: 8px; margin-top: 8px; }
+.export-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.form-card { padding: 12px; }
+.player { position: relative; aspect-ratio: 16 / 9; margin-bottom: 14px; border-radius: var(--r-md); overflow: hidden; background: #000; box-shadow: var(--sh-2); animation: viewIn .4s var(--ease-out); }
+.player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.video { display: flex; align-items: center; }
+.video .cell { flex: 1; padding-right: 4px; }
+.thumb { position: relative; flex: none; width: 104px; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: linear-gradient(135deg, #3a3a3c, #1d1d1f); box-shadow: 0 0 0 .5px var(--sep); }
+.thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.thumb .play { position: absolute; inset: 0; margin: auto; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.28); -webkit-backdrop-filter: blur(10px) saturate(180%); backdrop-filter: blur(10px) saturate(180%); color: #fff; transition: transform .3s var(--spring); }
+.thumb .play .i { width: 12px; height: 12px; margin-left: 2px; }
+.video .cell:hover .play { transform: scale(1.12); }
+.more-btn { flex: none; width: 36px; height: 36px; margin-right: 6px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); transition: background-color var(--d-1); }
+.more-btn:hover { background: var(--fill-2); }
+.more-btn .i { width: 20px; height: 20px; stroke-width: 2.4; }
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 36px 20px; color: var(--label-2); }
+.empty .tile-i { width: 48px; height: 48px; border-radius: 14px; margin-bottom: 4px; }
+.empty .tile-i .i { width: 26px; height: 26px; }
+.empty h4 { margin: 0; font: 600 17px/1.3 var(--display); color: var(--label); letter-spacing: -.02em; }
+.empty p { margin: 0; font-size: 14px; max-width: 28em; }
+mark { background: color-mix(in srgb, var(--sw-yellow) 42%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.topic-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.topic-chips .chip { height: 30px; font-size: 13px; padding: 0 12px 0 10px; }
+
+/* =====================================================================
+   Menus, tooltip, toast
+   ===================================================================== */
+.menu { position: fixed; z-index: 70; min-width: 220px; padding: 6px; border-radius: 14px; background: var(--glass-2); -webkit-backdrop-filter: var(--blur-sheet); backdrop-filter: var(--blur-sheet); box-shadow: var(--sh-pop); transform-origin: top right; animation: menuIn .32s var(--spring); }
+@keyframes menuIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+.menu button, .menu a { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; height: 36px; padding: 0 12px; border-radius: 8px; font-size: 14px; color: var(--label); text-decoration: none; }
+.menu button:hover, .menu a:hover, .menu button:focus-visible, .menu a:focus-visible { background: var(--accent); color: #fff; outline: none; }
+.menu .i { width: 16px; height: 16px; }
+.menu hr { border: 0; height: 1px; background: var(--sep); margin: 5px 8px; }
+.menu .danger:hover, .menu .danger:focus-visible { background: var(--danger); color: #fff !important; }
+.tip { position: fixed; z-index: 80; max-width: 320px; padding: 10px 12px; border-radius: 12px; background: var(--glass-2); -webkit-backdrop-filter: var(--blur-sheet); backdrop-filter: var(--blur-sheet); box-shadow: var(--sh-pop); pointer-events: none; opacity: 0; transform: translateY(4px) scale(.98); transition: opacity .15s, transform .2s var(--ease-out); font-size: 13px; }
+.tip.on { opacity: 1; transform: none; }
+.tip .tt { display: flex; align-items: center; gap: 6px; font-weight: 600; letter-spacing: -.012em; }
+.tip .tt .i { width: 12px; height: 12px; stroke-width: 2.2; color: var(--label-3); }
+.tip .tm { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--label-2); }
+.tip .tm i { width: 8px; height: 8px; border-radius: 50%; background: var(--nt); } .tip .tm i.ot { background: var(--ot); }
+.tip .tx { margin-top: 6px; font: 13px/1.45 var(--serif); letter-spacing: 0; color: var(--label); }
+.toast { position: fixed; z-index: 90; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 14px; max-width: min(560px, calc(100vw - 32px)); padding: 12px 14px 12px 18px; border-radius: 14px; background: var(--toast); color: var(--toast-fg); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: var(--sh-pop); font-size: 14px; line-height: 1.35; transform: translate(-50%, 0); animation: toastIn .5s var(--spring); }
+.toast.out { opacity: 0; transform: translate(-50%, 12px); transition: opacity .25s, transform .3s var(--ease-out); }
+.toast button { flex: none; color: #64b0ff; font-weight: 600; }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 24px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* =====================================================================
+   Dialogs (picker, settings, help)
+   ===================================================================== */
+dialog.modal { border: 0; padding: 0; margin: auto; width: calc(100% - 32px); max-width: 560px; max-height: calc(100dvh - 48px); border-radius: 24px; background: var(--bg-elev); color: var(--label); box-shadow: var(--sh-pop); overflow: hidden; }
+dialog.modal[open] { display: flex; flex-direction: column; animation: dlgIn .5s var(--spring); }
+dialog.modal.closing { animation: dlgOut .2s var(--ease-io) forwards; }
+dialog.modal::backdrop { background: var(--scrim); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: fade .3s var(--ease-out); }
+@keyframes dlgIn { from { opacity: 0; transform: scale(.94) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes dlgOut { to { opacity: 0; transform: scale(.97); } }
+@keyframes fade { from { opacity: 0; } }
+.modal-head { display: flex; align-items: center; gap: 12px; padding: 18px 18px 14px 24px; }
+.modal-title { flex: 1; margin: 0; font: 700 22px/1.2 var(--display); letter-spacing: -.022em; }
+.modal-body { padding: 0 24px 8px; overflow-y: auto; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px 20px; }
+.group-h { margin: 18px 4px 8px; font: 600 13px/1.2 var(--sans); color: var(--label-2); }
+.group-h:first-child { margin-top: 4px; }
+.frows { background: var(--bg-2); box-shadow: none; }
+.frow { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; padding: 8px 14px 8px 16px; font-size: 15px; }
+.frow input:not([type=range]) { width: 58%; height: 32px; border: 0; outline: none; border-radius: 8px; background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--sep); padding: 0 10px; font-size: 14px; text-align: right; transition: box-shadow var(--d-2); }
+.frow input:not([type=range]):focus { box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); text-align: left; }
+.frow .segmented { width: 210px; }
+.size-ctl { display: flex; align-items: center; gap: 10px; color: var(--label-2); }
+.size-ctl .a1 { font: 500 12px/1 var(--serif); } .size-ctl .a2 { font: 500 19px/1 var(--serif); }
+.group-foot { margin: 8px 16px 0; font-size: 12px; line-height: 1.5; color: var(--label-3); }
+dialog.picker { max-width: 980px; height: min(700px, calc(100dvh - 48px)); }
+.picker .modal-head { padding-bottom: 12px; border-bottom: 1px solid var(--sep); }
+.mini-search { position: relative; display: flex; align-items: center; width: 220px; height: 32px; border-radius: 9px; background: var(--fill-2); }
+.mini-search .i { position: absolute; left: 9px; width: 15px; height: 15px; color: var(--label-3); }
+.mini-search input { width: 100%; height: 100%; border: 0; outline: none; background: none; padding: 0 10px 0 30px; font-size: 14px; }
+.mini-search:focus-within { box-shadow: 0 0 0 3px var(--accent-tint-2), inset 0 0 0 1px var(--accent); background: var(--bg-elev); }
+.picker-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.picker-books { overflow-y: auto; padding: 16px 20px 24px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; align-content: start; }
+.pcol h3 { margin: 4px 0 10px 8px; font: 600 12px/1 var(--sans); letter-spacing: .02em; color: var(--label-2); }
+.pgroup { margin-bottom: 14px; }
+.pgroup h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px 8px; font: 600 11px/1.3 var(--sans); color: var(--label-3); letter-spacing: .01em; }
+.pgroup h4 i { width: 6px; height: 6px; border-radius: 50%; background: var(--nt); } .pgroup h4 i.ot { background: var(--ot); }
+.pbooks { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; }
+.pbook { text-align: left; padding: 6px 8px; border-radius: 8px; font-size: 13.5px; line-height: 1.2; color: var(--label); transition: background-color var(--d-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pbook:hover { background: var(--fill-2); }
+.pbook.on { background: var(--accent-tint-2); color: var(--accent); font-weight: 600; }
+.picker-chapters { overflow-y: auto; padding: 18px 24px 24px; background: var(--bg-2); }
+.pc-title { margin: 0; font: 600 30px/1.1 var(--display); letter-spacing: -.025em; }
+.pc-sub { margin: 4px 0 16px; font-size: 13px; color: var(--label-2); }
+.chgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
+.pch { position: relative; height: 46px; border-radius: 10px; font: 600 14px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label); background: color-mix(in srgb, var(--accent) calc(var(--h) * 82%), var(--bg-elev)); box-shadow: 0 0 0 .5px var(--sep); transition: transform var(--d-2) var(--spring), box-shadow var(--d-2); }
+.pch.hot { color: #fff; }
+.pch:hover { transform: scale(1.06); box-shadow: 0 0 0 .5px var(--sep), 0 6px 14px rgba(0,0,0,.12); }
+.pch.cur { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 4px var(--label); }
+.pch.noted::after { content: ""; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .8; }
+.heat-legend { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 12px; color: var(--label-2); }
+.heat-legend i { width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--bg-elev), var(--accent)); box-shadow: 0 0 0 .5px var(--sep); }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 0; align-items: center; font-size: 14px; }
+.keys dt { display: flex; gap: 4px; justify-content: flex-end; }
+.keys dd { margin: 0; color: var(--label); }
+kbd.k { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 7px; background: var(--bg-2); box-shadow: inset 0 -1px 0 var(--sep-2), 0 0 0 .5px var(--sep-2); font: 500 12px/1 var(--sans); color: var(--label); }
+.credits { margin: 18px 0 0; font-size: 12px; line-height: 1.5; color: var(--label-3); }
+
+/* Leaflet skin */
+.leaflet-container { font: inherit !important; background: var(--bg-2) !important; }
+.leaflet-control-zoom { border: 0 !important; border-radius: 10px !important; overflow: hidden; box-shadow: var(--sh-2) !important; }
+.leaflet-control-zoom a { width: 32px !important; height: 32px !important; line-height: 30px !important; background: var(--glass-2) !important; color: var(--label) !important; -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-color: var(--sep) !important; }
+.leaflet-control-attribution { background: var(--glass-2) !important; color: var(--label-3) !important; border-radius: 8px 0 0 0; font-size: 10px !important; }
+.leaflet-control-attribution a { color: var(--label-2) !important; }
+.leaflet-tile-pane { filter: saturate(.55) contrast(.96) brightness(1.03); }
+:root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(.45) brightness(.85) contrast(.92); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(.45) brightness(.85) contrast(.92); } }
+.pin { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(0,0,0,.3); display: grid; place-items: center; }
+.pin::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.leaflet-popup-content-wrapper { border-radius: 14px !important; background: var(--glass-2) !important; color: var(--label) !important; -webkit-backdrop-filter: var(--blur-sheet); backdrop-filter: var(--blur-sheet); box-shadow: var(--sh-pop) !important; }
+.leaflet-popup-content { margin: 12px 14px !important; font-size: 13px; line-height: 1.45; }
+.leaflet-popup-tip { background: var(--glass-2) !important; }
+.map-fallback { position: absolute; inset: 0; }
+.map-fallback .pf { fill: var(--accent); stroke: var(--bg-elev); stroke-width: 3; }
+.map-fallback text { font: 600 11px var(--sans); fill: var(--label); letter-spacing: 0; }
+.map-fallback .grid { stroke: var(--sep); stroke-width: 1; }
+
+/* =====================================================================
+   Responsive
+   ===================================================================== */
+@media (min-width: 1100px) {
+  body.drawer-open .page { padding-right: calc(var(--sheet-w) + 24px); }
+}
+@media (min-width: 1400px) { :root { --sheet-w: 440px; } }
+@media (max-width: 1179px) {
+  .pill-select.par select { width: 50px; color: transparent; padding-right: 0; }
+  .pill-select.par select option { color: var(--label); }
+  .toggle .lbl { display: none; }
+  .toggle { padding: 0; width: 34px; justify-content: center; }
+}
+@media (max-width: 899px) {
+  .gnav { grid-template-columns: 1fr auto; }
+  .search { display: none; }
+  .ib.search-open { display: inline-grid; }
+  .gnav.searching .search { display: flex; position: absolute; left: 10px; right: 10px; top: 8px; z-index: 3; background: var(--bg-elev); box-shadow: 0 0 0 .5px var(--sep-2), var(--sh-2); }
+  .gnav.searching .search .cancel { display: block; position: absolute; right: 10px; color: var(--link); font-size: 14px; }
+  .gnav.searching .search kbd { display: none; }
+  .gnav.searching .search input { padding-right: 70px; }
+}
+@media (max-width: 699px) {
+  :root { --bar-h: 96px; --read-size: 19px; }
+  .gnav { grid-template-columns: 1fr auto; grid-template-rows: 52px 44px; height: var(--bar-h); gap: 0 6px; padding: 0 8px; }
+  .gnav-left { grid-area: 1 / 1; }
+  .ib.search-open { grid-area: 1 / 2; }
+  .gnav.searching .search { grid-row: 1; }
+  .gnav-right { grid-area: 2 / 1 / 3 / 3; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding: 0 4px 8px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); }
+  .gnav-right::-webkit-scrollbar { display: none; }
+  .gnav.hide { transform: translateY(-100%); }
+  .vsep.hide-m { display: none; }
+  .hero { padding: 40px 16px 0; }
+  .hero-tag { font-size: 22px; }
+  .intro-line { font-size: 15px; }
+  .chip { height: 32px; font-size: 13px; }
+  .sig { margin-top: 32px; }
+  .reader { padding: 0 4px 100px; }
+  .verses { margin-top: 36px; }
+  .verse { padding: 4px 40px 4px 34px; border-radius: 12px; }
+  .vnum { left: -2px; width: 32px; top: 4px; }
+  .vmeta { right: 4px; top: 4px; }
+  .vcols { grid-template-columns: 1fr; gap: 6px; }
+  .col-heads { display: none; }
+  .foot-nav { grid-template-columns: 1fr 1fr; }
+  .foot-tile { padding: 16px; }
+  .foot-tile span { font-size: 17px; }
+  .drawer { top: auto; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); width: auto; height: min(86dvh, 760px); border-radius: var(--r-2xl); transform: translate3d(0, calc(100% + 24px), 0); }
+  .grabber { display: block; }
+  .sheet-top { padding-top: 0; }
+  .stage { height: 56vh; width: calc(100% - 16px); border-radius: 22px; }
+  .stage-head { padding: 14px 12px 4px 18px; }
+  .picker-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .picker-books { grid-template-columns: 1fr; padding: 12px 16px; }
+  .picker-chapters { max-height: 40vh; padding: 14px 16px 20px; }
+  .mini-search { width: 140px; }
+  .picker .modal-head { flex-wrap: wrap; }
+  .frow .segmented { width: 170px; }
+  .frow input:not([type=range]) { width: 52%; }
+  .stats { grid-template-columns: 1fr 1fr 1fr; }
+}
+@media (hover: none) { .xc { color: var(--label-3); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important; }
+  .drawer, .drawer.open { transition: opacity .2s linear, visibility 0s !important; }
+  .drawer:not(.open) { opacity: 0; }
+}
+@media (forced-colors: active) {
+  .verse[aria-current="true"] { outline: 2px solid Highlight; }
+  .seg-ind { border: 2px solid Highlight; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#reader">Skip to the text</a>
+
+<!-- SF-Symbols-like icon sprite: 24px grid, 1.5px strokes, round caps & joins -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-books" viewBox="0 0 24 24"><rect x="3.5" y="4" width="4" height="16" rx="1"/><rect x="9.5" y="6.5" width="4" height="13.5" rx="1"/><path d="M15.4 7.9l3.2-.86 3.35 12.5-3.2.86z"/><path d="M3.5 8h4M9.5 10h4"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+    <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M8.5 13.5L4 9l4.5-4.5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H10"/></symbol>
+    <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M15.5 13.5L20 9l-4.5-4.5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20 20"/></symbol>
+    <symbol id="i-alpha" viewBox="0 0 24 24"><path d="M2.5 18.5L7 5.5l4.5 13M4.1 14h5.8"/><path d="M20.8 10.2c-.5 4-1.9 8.3-4.3 8.3-1.7 0-2.7-1.4-2.7-3.3 0-2.3 1.4-4.2 3.2-4.2 2.4 0 2.9 3.3 3.9 5.9.3.9.8 1.5 1.5 1.5"/></symbol>
+    <symbol id="i-arcs" viewBox="0 0 24 24"><path d="M3 18.5h18"/><path d="M4.5 18.5a7.5 7.5 0 0115 0"/><path d="M9 18.5a3 3 0 016 0"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="6.5" r="2.5"/><circle cx="12.5" cy="18" r="2.5"/><path d="M8.5 7l7-.4M7.1 9.3l4.3 6.4M17 8.9l-3.5 6.9"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4.5L3.5 6.5v13l5.5-2 6 2 5.5-2v-13l-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></symbol>
+    <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><path d="M14.5 4.5v15M17 8.5h1.5M17 11.5h1.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M18.88 9.87L21.02 10.17 21.02 13.83 18.88 14.13 18.37 15.36 19.67 17.08 17.08 19.67 15.36 18.37 14.13 18.88 13.83 21.02 10.17 21.02 9.87 18.88 8.64 18.37 6.92 19.67 4.33 17.08 5.63 15.36 5.12 14.13 2.98 13.83 2.98 10.17 5.12 9.87 5.63 8.64 4.33 6.92 6.92 4.33 8.64 5.63 9.87 5.12 10.17 2.98 13.83 2.98 14.13 5.12 15.36 5.63 17.08 4.33 19.67 6.92 18.37 8.64Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 014.9.6c0 1.7-2.5 2.1-2.5 3.8"/><path d="M12 17.1v.01" stroke-width="2.2"/></symbol>
+    <symbol id="i-xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1-1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.6" cy="9" r="2.6"/><path d="M16.2 14.1c2.3.2 3.9 1.8 4.4 4.4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11.2a6.5 6.5 0 0113 0C18.5 15.4 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.3"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z"/><path d="M12 6.8v13.4"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M11 4.5H7a3 3 0 00-3 3v9.5a3 3 0 003 3h9.5a3 3 0 003-3V13"/><path d="M17.8 3.9a1.9 1.9 0 012.7 2.7l-8 8-3.5.9.9-3.5z"/></symbol>
+    <symbol id="i-play-rect" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10.3 9.4v5.2l4.4-2.6z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4a1 1 0 001.5.86l12-7.2a1 1 0 000-1.72l-12-7.2A1 1 0 007 4.8z"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.8 12.6V4.8a1 1 0 011-1h7.8l7.6 7.6a1.4 1.4 0 010 2l-6.2 6.2a1.4 1.4 0 01-2 0z"/><path d="M8.3 8.3v.01" stroke-width="2.6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-ellipsis" viewBox="0 0 24 24"><path d="M6 12h.01M12 12h.01M18 12h.01"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 6.5h15M9.5 6.5V4.8a1 1 0 011-1h3a1 1 0 011 1v1.7M6.5 6.5l.8 12.2a1.5 1.5 0 001.5 1.3h6.4a1.5 1.5 0 001.5-1.3l.8-12.2"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5"/><path d="M18 14v3.5a2.5 2.5 0 01-2.5 2.5h-9A2.5 2.5 0 014 17.5v-9A2.5 2.5 0 016.5 6H10"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8.5 10.5H7a2.5 2.5 0 00-2.5 2.5v5A2.5 2.5 0 007 20.5h10a2.5 2.5 0 002.5-2.5v-5a2.5 2.5 0 00-2.5-2.5h-1.5"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 3.5v11M8 10.5l4 4 4-4"/><path d="M8.5 7.5H7A2.5 2.5 0 004.5 10v8A2.5 2.5 0 007 20.5h10a2.5 2.5 0 002.5-2.5v-8A2.5 2.5 0 0017 7.5h-1.5"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-columns" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M12 4.5v15"/></symbol>
+    <symbol id="i-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M7 17L17 7"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9z"/><path d="M18.5 16v4M16.5 18h4"/></symbol>
+  </defs>
+</svg>
+
+<header id="topbar" class="gnav">
+  <div class="gnav-left">
+    <button id="btn-pick" class="ib" aria-label="Browse books" title="Browse books"><svg class="i"><use href="#i-books"/></svg></button>
+    <button id="cur-ref" class="refbtn" aria-haspopup="dialog" title="Choose book and chapter"><span id="cur-ref-text">John 3</span><svg class="i" aria-hidden="true"><use href="#i-chev-down"/></svg></button>
+    <span class="pair">
+      <button id="btn-prev" class="ib" aria-label="Previous chapter" title="Previous chapter (←)"><svg class="i"><use href="#i-chev-left"/></svg></button>
+      <button id="btn-next" class="ib" aria-label="Next chapter" title="Next chapter (→)"><svg class="i"><use href="#i-chev-right"/></svg></button>
+    </span>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <span class="pair">
+      <button id="btn-back" class="ib" aria-label="Back" title="Back to where you came from" disabled><svg class="i"><use href="#i-back"/></svg></button>
+      <button id="btn-fwd" class="ib" aria-label="Forward" title="Forward" disabled><svg class="i"><use href="#i-fwd"/></svg></button>
+    </span>
+  </div>
+  <form id="search-form" class="search" role="search">
+    <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+    <input id="search" type="search" placeholder="Search verses, words, G26, topics" autocomplete="off" aria-label="Search: a reference, words, a Strong's number or a topic">
+    <kbd aria-hidden="true">/</kbd>
+    <button type="button" class="cancel">Cancel</button>
+  </form>
+  <button class="ib search-open" aria-label="Search" title="Search (/)"><svg class="i"><use href="#i-search"/></svg></button>
+  <div class="gnav-right">
+    <label class="pill-select" title="Primary translation"><span class="sr">Primary translation</span><select id="tr"></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <label class="pill-select lead par" title="Parallel translation"><span class="sr">Parallel translation</span><svg class="i lead-i" aria-hidden="true"><use href="#i-columns"/></svg><select id="tr2"></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <button id="btn-orig" class="toggle" aria-pressed="false" title="Show Hebrew / Greek under each verse (o)"><svg class="i" aria-hidden="true"><use href="#i-alpha"/></svg><span class="lbl">Original</span><span class="sr">language interlinear</span></button>
+    <div class="tools" role="group" aria-label="Visualisations">
+      <button data-panel-btn="arcs" aria-pressed="false" aria-label="Cross-reference arcs" title="Arcs (a)"><svg class="i"><use href="#i-arcs"/></svg></button>
+      <button data-panel-btn="graph" aria-pressed="false" aria-label="Link graph" title="Graph (g)"><svg class="i"><use href="#i-graph"/></svg></button>
+      <button data-panel-btn="map" aria-pressed="false" aria-label="Map of places" title="Map (m)"><svg class="i"><use href="#i-map"/></svg></button>
+    </div>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <button id="btn-drawer" class="ib" aria-label="Study panel" aria-controls="drawer" aria-expanded="false" title="Study panel"><svg class="i"><use href="#i-sidebar"/></svg></button>
+    <button id="btn-settings" class="ib" aria-label="Settings" title="Settings and API keys"><svg class="i"><use href="#i-gear"/></svg></button>
+    <button id="btn-help" class="ib" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"><svg class="i"><use href="#i-help"/></svg></button>
+  </div>
+</header>
+
+<div class="page" id="page">
+  <section id="panel" aria-hidden="true" inert><div class="stage-clip"><div class="stage" id="stage"></div></div></section>
+  <main id="layout">
+    <section id="reader" class="reader" aria-live="off"></section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside id="drawer" class="drawer" aria-labelledby="drawer-title" aria-hidden="true" inert>
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-top">
+    <div class="sheet-head">
+      <div class="sheet-title"><h2 id="drawer-title">John 3</h2><p id="drawer-sub">King James Version</p></div>
+      <span id="save-status" class="save" role="status" aria-live="polite"></span>
+      <button id="drawer-close" class="close-btn" aria-label="Close study panel" title="Close (Esc)"><svg class="i"><use href="#i-xmark"/></svg></button>
+    </div>
+    <nav id="drawer-tabs" class="segmented" role="tablist" aria-label="Study panel sections">
+      <span class="seg-ind" aria-hidden="true"></span>
+      <button role="tab" data-tab="xref" aria-selected="true" aria-controls="drawer-body">Links</button>
+      <button role="tab" data-tab="context" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Context</button>
+      <button role="tab" data-tab="orig" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Original</button>
+      <button role="tab" data-tab="notes" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Notes</button>
+      <button role="tab" data-tab="media" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Video</button>
+      <button role="tab" data-tab="search" aria-selected="false" aria-controls="drawer-body" tabindex="-1" hidden>Search</button>
+    </nav>
+  </div>
+  <div id="drawer-body" class="sheet-body" role="tabpanel" aria-labelledby="drawer-title" tabindex="-1"></div>
+</aside>
+
+<dialog id="picker" class="modal picker" aria-labelledby="picker-title">
+  <div class="modal-head">
+    <h2 id="picker-title" class="modal-title">Books</h2>
+    <label class="mini-search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="picker-filter" placeholder="Filter" autocomplete="off" aria-label="Filter books"></label>
+    <button class="close-btn" data-close aria-label="Close"><svg class="i"><use href="#i-xmark"/></svg></button>
+  </div>
+  <div class="picker-body">
+    <div id="picker-books" class="picker-books"></div>
+    <div id="picker-chapters" class="picker-chapters"></div>
+  </div>
+</dialog>
+
+<dialog id="settings" class="modal" aria-labelledby="settings-title">
+  <form id="settings-form" method="dialog" style="display:contents">
+    <div class="modal-head"><h2 id="settings-title" class="modal-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i"><use href="#i-xmark"/></svg></button></div>
+    <div class="modal-body">
+      <h3 class="group-h">Appearance</h3>
+      <ul class="group frows">
+        <li class="frow"><span id="theme-l">Theme</span><div id="theme" class="segmented sm" role="radiogroup" aria-labelledby="theme-l"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-theme-opt="auto" aria-checked="true">Auto</button><button type="button" role="radio" data-theme-opt="light" aria-checked="false">Light</button><button type="button" role="radio" data-theme-opt="dark" aria-checked="false">Dark</button></div></li>
+        <li class="frow"><label for="fontsize">Reading size</label><div class="size-ctl"><span class="a1" aria-hidden="true">A</span><input id="fontsize" type="range" min="15" max="26" value="20"><span class="a2" aria-hidden="true">A</span></div></li>
+      </ul>
+      <h3 class="group-h">Licensed translations</h3>
+      <ul class="group frows">
+        <li class="frow"><label for="esv-key">ESV API key</label><input id="esv-key" autocomplete="off" spellcheck="false" placeholder="Paste key"></li>
+        <li class="frow"><label for="nlt-key">NLT API key</label><input id="nlt-key" autocomplete="off" spellcheck="false" placeholder="Paste key"></li>
+      </ul>
+      <p class="group-foot">Free for personal use at <a href="https://api.esv.org/" target="_blank" rel="noopener">api.esv.org</a> and <a href="https://api.nlt.to/" target="_blank" rel="noopener">api.nlt.to</a>. Text is fetched a chapter at a time and cached on this computer. NIV, NKJV and LSB have no free API — choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="help" class="modal" aria-labelledby="help-title">
+  <div class="modal-head"><h2 id="help-title" class="modal-title">Keyboard shortcuts</h2><button class="close-btn" data-close aria-label="Close"><svg class="i"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body">
+    <dl class="keys">
+      <dt><kbd class="k">←</kbd><kbd class="k">→</kbd></dt><dd>Previous / next chapter</dd>
+      <dt><kbd class="k">j</kbd><kbd class="k">k</kbd></dt><dd>Next / previous verse</dd>
+      <dt><kbd class="k">/</kbd></dt><dd>Search — a reference (<i>rom 8:28</i>), words, Strong's (<i>G26</i>) or a topic</dd>
+      <dt><kbd class="k">o</kbd></dt><dd>Hebrew / Greek interlinear</dd>
+      <dt><kbd class="k">a</kbd><kbd class="k">g</kbd><kbd class="k">m</kbd></dt><dd>Arcs · Graph · Map</dd>
+      <dt><kbd class="k">n</kbd></dt><dd>Note for the selected verse (or double-click a verse)</dd>
+      <dt><kbd class="k">esc</kbd></dt><dd>Close the panel or the study sheet</dd>
+    </dl>
+    <p class="credits">KJV &amp; BSB (public domain) · OpenBible.info cross-references &amp; topics (CC BY) · STEPBible TAHOT/TAGNT (CC BY 4.0) · Strong's via OpenScriptures (CC BY-SA) · Theographic Bible Metadata (CC BY-SA 4.0) · Easton's Bible Dictionary (1897).</p>
+  </div>
+  <div class="modal-foot"><button class="btn btn-primary" data-close>Done</button></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="tip" class="tip" role="tooltip"></div>
+
+<script>
+/* =====================================================================
+   Product page mock — plain JS, real data, NO persistence.
+   Notes, highlights, videos and settings live in memory only.
+   Never PUT/POST anything to /api.
+   ===================================================================== */
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const pad = n => String(n).padStart(2, '0');
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const behavior = () => (RM.matches ? 'auto' : 'smooth');
+const I = (n, c = '') => `<svg class="i${c ? ' ' + c : ''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+
+// ------------------------------------------------------------ data (GET only, cached)
+const cache = new Map();
+function J(url) {
+  if (!cache.has(url)) cache.set(url, fetch(url).then(r => { if (!r.ok) throw new Error(r.status + ' ' + url); return r.json(); }).catch(e => { cache.delete(url); throw e; }));
+  return cache.get(url);
+}
+const D = {
+  meta: () => J('/data/meta.json'),
+  bible: (tr, b) => J(`/data/bibles/${tr}/${pad(b)}.json`),
+  xref: b => J(`/data/xref/${pad(b)}.json`),
+  ctx: b => J(`/data/context/${pad(b)}.json`).catch(() => ({})),
+  intros: () => J('/data/context/books.json'),
+  events: () => J('/data/events.json'),
+  people: () => J('/data/people.json'),
+  places: () => J('/data/places.json'),
+  orig: b => J(`/data/orig/${pad(b)}.json`).catch(() => ({})),
+  strongs: l => J(`/data/strongs/${l}.json`),
+  conc: s => J(`/data/conc/${s}.json`).catch(() => []),
+  topics: () => J('/data/topics.json'),
+};
+
+// ------------------------------------------------------------ state (in memory)
+const S = { books: [], trs: [], b: 43, c: 3, sel: null, tr: 'kjv', tr2: '', orig: false, open: false, tab: 'xref', panel: null,
+  hist: [], fut: [], strong: null, word: null, expand: null, filter: 'all', minVotes: 0, search: null, notice: null, theme: 'auto', mode: 'preview', firstRender: true };
+const NOTES = {
+  '43.3.16': { highlight: 'yellow', text: "**The gospel in miniature.** God's love is the *cause*, the giving of the Son the *measure*, believing the *means*.\n\nCompare [[Romans 5:8]] and [[1 John 4:9]].", tags: ['gospel', 'love'],
+    videos: [{ id: 'G-2e9mMf7E8', url: 'https://www.youtube.com/watch?v=G-2e9mMf7E8', title: 'Overview: John 1–12', start: 192, added: 1 }], updated: 5 },
+  '43.3.3': { highlight: 'blue', text: 'ἄνωθεν — "again" or "from above". Nicodemus hears the first; Jesus means both.', tags: ['new-birth'], videos: [], updated: 4 },
+  '43.3.14': { highlight: '', text: 'The bronze serpent — [[Numbers 21:9]]. Looking in faith, as Israel looked.', tags: ['typology'], videos: [], updated: 3 },
+  '43.3.30': { highlight: 'green', text: '', tags: [], videos: [], updated: 2 },
+  '45.8.28': { highlight: 'orange', text: 'All things — not some things.', tags: ['providence'], videos: [], updated: 1 },
+  '19.23.1': { highlight: 'pink', text: 'Memorised with the kids.', tags: ['memory'], videos: [], updated: 0 },
+};
+const HL = ['yellow', 'green', 'blue', 'pink', 'orange'];
+const TABS = ['xref', 'context', 'orig', 'notes', 'media', 'search'];
+
+// ------------------------------------------------------------ helpers
+const bk = n => S.books[n - 1];
+const refLabel = (b, c, v, e) => `${bk(b).name} ${c}${v ? ':' + v : ''}${e && e > v ? '–' + e : ''}`;
+const keyOf = (b, c, v) => (v ? `${b}.${c}.${v}` : `${b}.${c}`);
+const yearLabel = y => (y === null || y === undefined || y === '' || isNaN(+y)) ? '' : (+y < 0 ? `${-y} BC` : `AD ${+y}`);
+const trInfo = id => S.trs.find(t => t.id === id) || { abbr: String(id).toUpperCase(), name: id };
+const isHeb = b => b <= 39;
+const pvTr = () => (S.tr === 'bsb' ? 'bsb' : 'kjv');
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+function mode(arr) { const m = new Map(); let best = arr[0], bc = 0; for (const x of arr) { const c = (m.get(x) || 0) + 1; m.set(x, c); if (c > bc) { bc = c; best = x; } } return best; }
+async function previewText(b, c, v, e) {
+  const book = await D.bible(pvTr(), b); const ch = book[c] || []; const end = e && e > v ? Math.min(e, ch.length) : v;
+  const out = []; for (let i = v; i <= end; i++) out.push(ch[i - 1] || ''); return out.join(' ');
+}
+const clip = (t, n) => (t.length > n ? t.slice(0, n).replace(/\s\S*$/, '') + '…' : t);
+function fmtDur(d) { const m = String(d || '').match(/^(\d+)([DWMY])$/); if (!m) return d || ''; const u = { D: 'day', W: 'week', M: 'month', Y: 'year' }[m[2]]; return plural(+m[1], u); }
+function initials(n) { return n.split(/\s+/).filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join('') || n[0]; }
+function isDark() { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); }
+
+// Morphology (inlined copy of app/js/morph.js)
+const MH = { nounType: { c: 'common', p: 'proper', g: 'gentilic' }, adjType: { a: 'adjective', c: 'cardinal', o: 'ordinal', g: 'gentilic' }, pronType: { d: 'demonstrative', f: 'indefinite', i: 'interrogative', p: 'personal', r: 'relative' }, partType: { a: 'affirmation', d: 'definite article', e: 'exhortation', i: 'interrogative', j: 'interjection', m: 'demonstrative', n: 'negative', o: 'direct object marker', r: 'relative' }, sufType: { d: 'directional he', h: 'paragogic he', n: 'paragogic nun', p: 'pronominal' }, stem: { q: 'Qal', N: 'Niphal', p: 'Piel', P: 'Pual', h: 'Hiphil', H: 'Hophal', t: 'Hithpael', o: 'Polel', O: 'Polal', r: 'Hithpolel', m: 'Poel', M: 'Poal', k: 'Palel', K: 'Pulal', Q: 'Qal passive', l: 'Pilpel', L: 'Polpal', f: 'Hithpalpel', D: 'Nithpael', j: 'Pealal', i: 'Pilel', u: 'Hothpaal', c: 'Tiphil', v: 'Hishtaphel', w: 'Nithpalel', y: 'Nithpoel', z: 'Hithpoel' }, aStem: { q: 'Peal', Q: 'Peil', u: 'Hithpeel', p: 'Pael', P: 'Ithpaal', M: 'Hithpaal', a: 'Aphel', h: 'Haphel', s: 'Saphel', e: 'Shaphel', H: 'Hophal', i: 'Ithpeel', t: 'Hishtaphel', v: 'Ishtaphel', w: 'Hithaphel', o: 'Polel', z: 'Ithpoel', r: 'Hithpolel', f: 'Hithpalpel', b: 'Hephal', c: 'Tiphel', m: 'Poel', l: 'Palpel', L: 'Ithpalpel', O: 'Ithpolel', G: 'Ittaphal' }, vtype: { p: 'perfect', q: 'sequential perfect', i: 'imperfect', w: 'sequential imperfect', h: 'cohortative', j: 'jussive', v: 'imperative', r: 'participle active', s: 'participle passive', a: 'infinitive absolute', c: 'infinitive construct' }, person: { 1: '1st', 2: '2nd', 3: '3rd' }, gender: { m: 'masc', f: 'fem', c: 'common', b: 'both' }, number: { s: 'sing', p: 'plur', d: 'dual' }, hstate: { a: 'absolute', c: 'construct', d: 'determined' } };
+function hebPart(code, lang) { if (!code) return ''; const p = code[0], r = code.slice(1), o = []; switch (p) { case 'N': o.push(MH.nounType[r[0]] ? MH.nounType[r[0]] + ' noun' : 'noun', MH.gender[r[1]], MH.number[r[2]], MH.hstate[r[3]]); break; case 'V': o.push((lang === 'A' ? MH.aStem : MH.stem)[r[0]] || '', MH.vtype[r[1]] || 'verb'); if (/[123]/.test(r[2] || '')) o.push(MH.person[r[2]], MH.gender[r[3]], MH.number[r[4]]); else o.push(MH.gender[r[2]], MH.number[r[3]], MH.hstate[r[4]]); break; case 'A': o.push(MH.adjType[r[0]] || 'adjective', MH.gender[r[1]], MH.number[r[2]], MH.hstate[r[3]]); break; case 'P': o.push((MH.pronType[r[0]] || '') + ' pronoun', MH.person[r[1]], MH.gender[r[2]], MH.number[r[3]]); break; case 'R': o.push(r[0] === 'd' ? 'preposition + article' : 'preposition'); break; case 'C': o.push('conjunction'); break; case 'D': o.push('adverb'); break; case 'T': o.push(MH.partType[r[0]] || 'particle'); break; case 'S': o.push((MH.sufType[r[0]] || '') + ' suffix', MH.person[r[1]], MH.gender[r[2]], MH.number[r[3]]); break; default: return code; } return o.filter(Boolean).join(' '); }
+const MG = { tense: { P: 'present', I: 'imperfect', F: 'future', A: 'aorist', R: 'perfect', L: 'pluperfect', X: 'no tense', '2A': '2nd aorist', '2F': '2nd future', '2R': '2nd perfect', '2L': '2nd pluperfect' }, voice: { A: 'active', M: 'middle', P: 'passive', E: 'middle/passive', D: 'middle deponent', O: 'passive deponent', N: 'middle/passive deponent', Q: 'impersonal active', X: 'no voice' }, mood: { I: 'indicative', S: 'subjunctive', O: 'optative', M: 'imperative', N: 'infinitive', P: 'participle', R: 'imperative participle' }, case: { N: 'nominative', G: 'genitive', D: 'dative', A: 'accusative', V: 'vocative' }, number: { S: 'singular', P: 'plural' }, gender: { M: 'masc', F: 'fem', N: 'neut' }, pos: { N: 'noun', A: 'adjective', T: 'article', V: 'verb', P: 'personal pronoun', R: 'relative pronoun', C: 'reciprocal pronoun', D: 'demonstrative pronoun', K: 'correlative pronoun', I: 'interrogative pronoun', X: 'indefinite pronoun', Q: 'correlative/interrogative pronoun', F: 'reflexive pronoun', S: 'possessive pronoun', ADV: 'adverb', CONJ: 'conjunction', COND: 'conditional', PRT: 'particle', PREP: 'preposition', INJ: 'interjection', ARAM: 'Aramaic word', HEB: 'Hebrew word', 'N-PRI': 'proper noun (indeclinable)', 'A-NUI': 'numeral (indeclinable)', 'N-LI': 'letter', 'N-OI': 'noun (other indeclinable)' } };
+const ord = d => d + (d === '1' ? 'st' : d === '2' ? 'nd' : 'rd');
+function greek(code) { if (!code) return ''; const parts = code.split('-'), pos = parts[0]; if (pos === 'V') { const t = parts[1] || '', o = ['verb']; let i = 1, tense = t[0]; if (t[0] === '2') { tense = '2' + t[1]; i = 2; } o.push(MG.tense[tense], MG.voice[t[i]], MG.mood[t[i + 1]]); const rest = parts[2] || ''; if (/^[123][SP]$/.test(rest)) o.push(`${ord(rest[0])} ${MG.number[rest[1]]}`); else if (rest.length === 3) o.push(MG.case[rest[0]], MG.number[rest[1]], MG.gender[rest[2]]); return o.filter(Boolean).join(' · '); } if (MG.pos[code]) return MG.pos[code]; const o = [MG.pos[pos] || pos], cng = parts[1] || ''; if (/^[123]/.test(cng)) { o.push(ord(cng[0]) + ' person', MG.case[cng[1]], MG.number[cng[2]], MG.gender[cng[3]]); } else if (cng.length >= 3) o.push(MG.case[cng[0]], MG.number[cng[1]], MG.gender[cng[2]]); if (parts[2]) o.push({ T: 'title', P: 'person', L: 'location', G: 'gentilic', S: 'superlative', C: 'comparative', I: 'interrogative', N: 'negative', K: 'crasis', ATT: 'Attic form' }[parts[2]] || parts[2]); return o.filter(Boolean).join(' · '); }
+function decodeMorph(code, heb) { if (!code) return ''; if (heb) { const lang = code[0]; return code.slice(1).split('/').map(c => hebPart(c, lang)).filter(Boolean).join(' + ') + (lang === 'A' ? ' (Aramaic)' : ''); } return greek(code); }
+function wordTypeLabel(t) { if (!t) return ''; if (/^[LQRX]/.test(t) && t.length <= 2) return { L: 'Leningrad text', Q: 'Qere (scribal correction)', R: 'Restored text', X: 'From LXX' }[t[0]]; const n = /N/i.test(t), k = /K/i.test(t); if (n && k) return t === 'NKO' ? '' : 'Minor variant'; if (k && !n) return 'Textus Receptus only'; if (n && !k) return 'Critical text only'; return 'Variant reading'; }
+const isVariant = t => !!t && !/^[LQRX]/.test(t) && t !== 'NKO' && !(/N/.test(t) && /K/.test(t));
+
+// Reference parsing (from app/js/store.js)
+function parseReference(text) {
+  const m = text.trim().match(/^([1-3]?\s*[a-z]+(?:\s+(?:of\s+)?[a-z]+)*)\.?\s*(\d+)?(?:[:.\s]+(\d+))?$/i); if (!m) return null;
+  const name = m[1].toLowerCase().replace(/\s+/g, ' ').trim(); const norm = s => s.toLowerCase().replace(/\s+/g, ' ');
+  let f = S.books.find(b => norm(b.name) === name || norm(b.osis) === name || norm(b.short) === name);
+  if (!f) { const a = { psalm: 'Psalms', 'song of solomon': 'Song of Songs', sos: 'Song of Songs', rev: 'Revelation', jn: 'John', jhn: 'John', mt: 'Matthew', mk: 'Mark', lk: 'Luke', gn: 'Genesis', ex: 'Exodus', dt: 'Deuteronomy', phil: 'Philippians', php: 'Philippians', phm: 'Philemon', phlm: 'Philemon' }[name]; if (a) f = S.books.find(b => b.name === a); }
+  if (!f) { const c = S.books.filter(b => norm(b.name).startsWith(name) || (norm(b.name).replace(/^\d\s/, '').startsWith(name.replace(/^\d\s?/, '')) && name[0] === norm(b.name)[0])); f = c.find(b => norm(b.name).startsWith(name)) || c[0]; }
+  if (!f) return null;
+  const c = m[2] ? Math.min(Math.max(1, +m[2]), f.chapters.length) : 1; const v = m[3] ? Math.min(+m[3], f.chapters[c - 1]) : 0;
+  return { b: f.n, c, v };
+}
+
+// ------------------------------------------------------------ toast + tooltip
+let toastT;
+function toast(msg, action) {
+  const t = $('#toast'); clearTimeout(toastT); t.classList.remove('out'); t.hidden = false;
+  t.innerHTML = `<span>${esc(msg)}</span>${action ? `<button type="button">${esc(action.label)}</button>` : ''}`;
+  if (action) t.querySelector('button').onclick = () => { action.run(); hideToast(); };
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  toastT = setTimeout(hideToast, action ? 6000 : 4200);
+}
+function hideToast() { const t = $('#toast'); t.classList.add('out'); setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, 300); }
+const tip = {
+  el: null, tok: 0,
+  show(x, y, html) { const el = this.el || (this.el = $('#tip')); el.innerHTML = html; el.classList.add('on'); const r = el.getBoundingClientRect(); el.style.left = Math.max(8, Math.min(x + 14, innerWidth - r.width - 8)) + 'px'; el.style.top = Math.max(8, Math.min(y + 16, innerHeight - r.height - 8)) + 'px'; },
+  hide() { (this.el || $('#tip')).classList.remove('on'); this.tok++; },
+};
+
+// ------------------------------------------------------------ canon geometry (66-book bar, chapter-weighted)
+function canon(W, x0 = 0) {
+  const total = S.books.reduce((s, b) => s + b.chapters.length, 0), usable = W - x0 * 2;
+  let ws = S.books.map(b => Math.max(2, usable * b.chapters.length / total)); const sum = ws.reduce((a, z) => a + z, 0); ws = ws.map(w => w * usable / sum);
+  let x = x0; return S.books.map((b, i) => { const s = { b: b.n, x0: x, x1: x + ws[i] }; x += ws[i]; return s; });
+}
+function xAt(segs, b, c, v) { const s = segs[b - 1], B = bk(b); const f = ((c - 1) + (v ? (v - .5) / Math.max(1, B.chapters[c - 1]) : .5)) / B.chapters.length; return s.x0 + f * (s.x1 - s.x0); }
+function pickLabels(segs, W, want) {
+  const placed = []; let html = '';
+  for (const b of want) { const s = segs[b - 1]; if (!s) continue; const name = bk(b).name; const x = (s.x0 + s.x1) / 2, w = name.length * 6.4 + 10; const cxl = Math.min(W - w / 2, Math.max(w / 2, x)); const box = [cxl - w / 2, cxl + w / 2]; if (placed.some(p => !(box[1] < p[0] || box[0] > p[1]))) continue; placed.push(box); html += `<span class="${b === S.b ? 'cur' : ''}" style="left:${(cxl / W * 100).toFixed(2)}%">${esc(name)}</span>`; }
+  return html;
+}
+function chapterLinks(xr, c) {
+  const out = []; for (const [k, list] of Object.entries(xr)) { if (!k.startsWith(c + ':')) continue; const v = +k.split(':')[1]; for (const x of list) out.push({ v, b: x[0], c: x[1], tv: x[2], e: x[3], votes: x[4] }); } return out;
+}
+
+// Arc diagram (SVG, stretches horizontally with non-scaling strokes; labels in HTML so they never distort)
+function drawArcs(host, o) {
+  const W = Math.max(300, Math.round(host.clientWidth)), H = o.H, base = H - 24; const segs = canon(W, 1);
+  const links = o.links.filter(l => l.votes >= (o.minVotes || 0)).sort((a, z) => a.votes - z.votes);
+  const maxV = Math.max(1, ...links.map(l => l.votes)); const items = []; let p = '';
+  const anim = o.animate && !RM.matches;
+  for (const l of links) {
+    const xa = xAt(segs, S.b, S.c, l.v), xb = xAt(segs, l.b, l.c, l.tv), dx = Math.abs(xb - xa);
+    const ah = Math.max(4, (base - 8) * Math.pow(dx / W, o.k)), cx = (xa + xb) / 2, cy = base - 2 * ah, t = Math.sqrt(l.votes / maxV);
+    const d = `M${xa.toFixed(1)} ${base}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${xb.toFixed(1)} ${base}`;
+    const cls = l.b <= 39 ? 'ot' : 'nt';
+    p += `<path class="arc ${cls}" data-v="${l.v}" d="${d}" pathLength="1" style="--o:${(0.12 + 0.74 * t).toFixed(3)};--w:${(0.6 + 1.9 * t).toFixed(2)}px${anim ? `;animation-delay:${Math.round(60 + 900 * dx / W)}ms` : ''}"/>`;
+    const pts = []; for (let j = 0; j <= 16; j++) { const u = j / 16; pts.push([(1 - u) * (1 - u) * xa + 2 * (1 - u) * u * cx + u * u * xb, (1 - u) * (1 - u) * base + 2 * (1 - u) * u * cy + u * u * base]); }
+    items.push({ l, pts, d, cls });
+  }
+  let bar = ''; for (const s of segs) { const B = bk(s.b); bar += `<rect class="seg-b ${B.test === 'OT' ? 'ot' : 'nt'}${s.b === S.b ? ' cur' : ''}" x="${(s.x0 + .5).toFixed(1)}" y="${base + 4}" width="${Math.max(.8, s.x1 - s.x0 - 1).toFixed(1)}" height="5" rx="1.5"/>`; }
+  const want = [S.b, 1, 19, 23, 40, 66, 45, 44];
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px" role="img" aria-label="${esc(o.aria || '')}"><g class="arcs${anim ? ' anim' : ''}">${p}</g><path class="hv-halo" d=""/><path class="hv" d=""/><g>${bar}</g></svg><div class="arc-labels">${pickLabels(segs, W, want)}</div>`;
+  Object.assign(host, { _items: items, _segs: segs, _W: W, _H: H, _base: base, _o: o, _hover: -1 });
+  markArcSel(host);
+  if (!host._bound) { bindArcs(host); host._bound = true; }
+}
+function markArcSel(host) {
+  if (!host || !host._items) return; const sel = S.sel;
+  host.classList.toggle('has-sel', !!sel && host._items.some(it => it.l.v === sel));
+  $$('.arc', host).forEach(p => p.classList.toggle('on', !!sel && +p.dataset.v === sel));
+}
+function bindArcs(host) {
+  const paint = i => {
+    const hv = $('.hv', host), halo = $('.hv-halo', host); host.classList.toggle('hovering', i >= 0);
+    if (i < 0) { hv.setAttribute('d', ''); halo.setAttribute('d', ''); return; }
+    const it = host._items[i]; hv.setAttribute('d', it.d); halo.setAttribute('d', it.d); hv.setAttribute('class', 'hv ' + it.cls);
+  };
+  host.addEventListener('pointermove', e => {
+    if (!host._items) return; const r = host.getBoundingClientRect(); const svg = host.firstElementChild; const rh = svg.getBoundingClientRect().height || host._H;
+    const mx = (e.clientX - r.left) * host._W / r.width, my = (e.clientY - r.top) * host._H / rh;
+    let best = -1, bd = 9; host._items.forEach((it, i) => { for (const q of it.pts) { const d = Math.hypot(q[0] - mx, q[1] - my); if (d < bd) { bd = d; best = i; } } });
+    if (best !== host._hover) { host._hover = best; paint(best); }
+    if (best >= 0) {
+      const l = host._items[best].l, tk = ++tip.tok;
+      const head = `<div class="tt">${esc(refLabel(S.b, S.c, l.v))}${I('arrow-right')}${esc(refLabel(l.b, l.c, l.tv, l.e))}</div><div class="tm"><i class="${l.b <= 39 ? 'ot' : ''}"></i>${l.b <= 39 ? 'Old' : 'New'} Testament · ${l.votes.toLocaleString()} votes</div>`;
+      tip.show(e.clientX, e.clientY, head);
+      previewText(l.b, l.c, l.tv, l.e).then(t => { if (tk === tip.tok) tip.show(e.clientX, e.clientY, head + `<div class="tx">${esc(clip(t, 200))}</div>`); });
+    } else if (my > host._base - 2) {
+      const s = host._segs.find(s => mx >= s.x0 && mx < s.x1); if (s) { tip.tok++; tip.show(e.clientX, e.clientY, `<div class="tt">${esc(bk(s.b).name)}</div><div class="tm">${bk(s.b).chapters.length} chapters · ${esc(bk(s.b).div)}</div>`); } else tip.hide();
+    } else tip.hide();
+  });
+  host.addEventListener('pointerleave', () => { host._hover = -1; paint(-1); tip.hide(); });
+  host.addEventListener('click', () => { if (host._hover >= 0) { tip.hide(); host._o.onPick(host._items[host._hover].l); } });
+}
+
+// ------------------------------------------------------------ reader
+async function renderReader() {
+  const el = $('#reader'), b = S.b, c = S.c, B = bk(b);
+  const tok = (el.dataset.tok = String(Math.random())); el.classList.add('busy');
+  const [text, alt, xr, ctx, intros, events, orig] = await Promise.all([D.bible(S.tr, b), S.tr2 ? D.bible(S.tr2, b) : null, D.xref(b), D.ctx(b), D.intros(), D.events(), S.orig ? D.orig(b) : null]);
+  if (el.dataset.tok !== tok) return; el.classList.remove('busy');
+  const n = B.chapters[c - 1], intro = intros[b - 1] || {}, ch = ctx[String(c)] || { v: {} };
+  const years = Object.values(ch.v).map(x => x.y).filter(y => y !== undefined), era = years.length ? mode(years) : null;
+  const people = new Set(), places = new Set(), evs = new Set();
+  Object.values(ch.v).forEach(x => { (x.p || []).forEach(i => people.add(i)); (x.pl || []).forEach(i => places.add(i)); (x.e || []).forEach(i => evs.add(i)); });
+  const evNames = [...evs].map(i => events[i]).filter(Boolean).sort((a, z) => a.sk - z.sk).map(e => e.t);
+  const section = (intro.outline || []).find(o => { const m = o[0].match(/(\d+)(?:\s*[–-]\s*(\d+))?/); return m && c >= +m[1] && c <= +(m[2] || m[1]); });
+  let tag = '';
+  if (evNames.length) tag = `${esc(evNames[0])}.${evNames.length > 1 ? ` <span class="soft">${esc(evNames.slice(1, 3).join('. '))}.</span>` : section ? ` <span class="soft">${esc(section[1])}.</span>` : ''}`;
+  else if (section) tag = `${esc(section[1])}.`;
+  const links = chapterLinks(xr, c), nOT = links.filter(l => l.b <= 39).length;
+  const text1 = text[c] || [], text2 = alt ? (alt[c] || []) : null;
+  const fresh = el.dataset.ch !== `${b}.${c}`; el.dataset.ch = `${b}.${c}`;
+  let h = `<header class="hero${fresh ? ' enter' : ''}">
+    <p class="eyebrow"><span class="t-dot ${B.test === 'OT' ? 'ot' : ''}" aria-hidden="true"></span>${B.test === 'OT' ? 'Old Testament' : 'New Testament'} · ${esc(B.div)}</p>
+    <h1 class="hero-title">${esc(B.name)} <span class="chnum">${c}</span></h1>
+    ${tag ? `<p class="hero-tag">${tag}</p>` : ''}
+    <p class="intro-line">${esc(intro.author || '')}${intro.date ? ' · ' + esc(intro.date) : ''}</p>
+    <div class="chips">
+      ${era !== null ? `<button class="chip" data-tab="context" title="Approximate year of the events in this chapter">${I('clock')}c. ${yearLabel(era)}</button>` : ''}
+      ${evs.size ? `<button class="chip" data-tab="context">${I('calendar')}<span><b>${evs.size}</b> ${evs.size > 1 ? 'events' : 'event'}</span></button>` : ''}
+      ${people.size ? `<button class="chip" data-tab="context">${I('people')}<span><b>${people.size}</b> people</span></button>` : ''}
+      ${places.size ? `<button class="chip" data-tab="context">${I('pin')}<span><b>${places.size}</b> ${places.size > 1 ? 'places' : 'place'}</span></button>` : ''}
+      <button class="chip" data-tab="xref" title="Cross-reference links leaving this chapter">${I('link')}<span><b>${(B.xo[c] || 0).toLocaleString()}</b> links</span></button>
+      <button class="chip more" data-tab="context" data-intro="1">About ${esc(B.name)}${I('chev-right')}</button>
+    </div>
+    <figure class="sig" style="margin-left:auto;margin-right:auto">
+      <div class="arc-host" id="sig-arcs"></div>
+      <figcaption class="legend"><span class="key ot"><i></i>Old Testament · ${nOT}</span><span class="key"><i></i>New Testament · ${links.length - nOT}</span><span class="cap">Every link leaving ${esc(B.name)} ${c} — select an arc to study it.</span></figcaption>
+    </figure>
+  </header>`;
+  if (S.notice) h += `<div class="notice" role="note">${I('sparkle')}<p>${esc(S.notice.title)}<small>${esc(S.notice.body)}</small></p><button class="btn btn-tinted sm" data-open-settings>Open Settings</button><button class="close-btn" data-dismiss-notice aria-label="Dismiss">${I('xmark')}</button></div>`;
+  h += `<div class="verses${S.tr2 ? ' parallel' : ''}" lang="en">`;
+  if (S.tr2) h += `<div class="col-heads" aria-hidden="true"><span>${esc(trInfo(S.tr).name)}</span><span>${esc(trInfo(S.tr2).name)}</span></div>`;
+  const heb = isHeb(b);
+  for (let v = 1; v <= n; v++) {
+    const note = NOTES[keyOf(b, c, v)], xc = (xr[`${c}:${v}`] || []).length;
+    const t1 = esc(text1[v - 1] || '');
+    const body = text2 ? `<div class="vcols"><div><span class="vtext">${t1}</span>${badges(note)}</div><div class="alt"><span class="vtext">${esc(text2[v - 1] || '')}</span></div></div>` : `<span class="vtext">${t1}</span>${badges(note)}`;
+    let inter = '';
+    if (orig) { const w = orig[`${c}:${v}`]; if (w) inter = `<div class="inter${heb ? ' rtl' : ''}" lang="${heb ? 'he' : 'grc'}">${w.map((x, i) => `<span class="iw${isVariant(x[6]) ? ' variant' : ''}" data-v="${v}" data-i="${i}" title="${esc([x[3], decodeMorph(x[4], heb)].filter(Boolean).join(' · '))}"><span class="o ${heb ? 'heb' : 'grk'}">${esc(x[0])}</span><span class="tl">${esc(x[1])}</span><span class="gl">${esc(x[2])}</span></span>`).join('')}</div>`; }
+    h += `<div class="verse${note?.highlight ? ' hl-' + note.highlight : ''}" id="v${v}" data-v="${v}" tabindex="0"${S.sel === v ? ' aria-current="true"' : ''}><span class="vnum"><span>${v}</span></span>${body}<span class="vmeta">${xc ? `<button class="xc" data-v="${v}" tabindex="-1" aria-label="${xc} cross-references" title="${xc} cross-references">${I('link')}${xc}</button>` : ''}</span>${inter}</div>`;
+  }
+  h += '</div>';
+  const prev = stepTarget(-1), next = stepTarget(1);
+  h += `<nav class="foot-nav" aria-label="Chapters">
+    <button class="foot-tile prev" data-nav="-1" ${prev ? '' : 'disabled'}><small>Previous</small><span>${I('arrow-left')}${prev ? esc(refLabel(prev.b, prev.c)) : ''}</span></button>
+    <button class="foot-tile next" data-nav="1" ${next ? '' : 'disabled'}><small>Next</small><span>${next ? esc(refLabel(next.b, next.c)) : ''}${I('arrow-right')}</span></button></nav>`;
+  h += `<p class="copyright">${[S.tr, S.tr2].filter(Boolean).map(t => `${esc(trInfo(t).name)} · ${esc(trInfo(t).licence || '')}`).join('<br>')}<br>Cross-references: OpenBible.info (CC BY)</p>`;
+  el.innerHTML = h;
+  const host = $('#sig-arcs');
+  drawArcs(host, { links, H: innerWidth < 700 ? 120 : 164, k: .62, animate: fresh, aria: `${links.length} cross-reference arcs from ${B.name} ${c} across the 66 books`,
+    onPick: l => select(l.v, { tab: 'xref', expand: `${l.b}.${l.c}.${l.tv}` }) });
+  S.firstRender = false;
+  if (S.sel) $('#v' + S.sel)?.scrollIntoView({ block: 'center' });
+}
+function badges(note) {
+  if (!note) return '<span class="badges"></span>';
+  const bs = [];
+  if (note.text) bs.push(`<span title="Has a note">${I('note', 'b-note')}<span class="sr">Has a note</span></span>`);
+  if (note.videos?.length) bs.push(`<span title="${plural(note.videos.length, 'video')}">${I('play-rect')}<span class="sr">${plural(note.videos.length, 'video')}</span></span>`);
+  if (note.tags?.length) bs.push(`<span title="${esc(note.tags.map(t => '#' + t).join(' '))}">${I('tag')}<span class="sr">Tags ${esc(note.tags.join(', '))}</span></span>`);
+  return `<span class="badges">${bs.join('')}</span>`;
+}
+function refreshMarker(v) {
+  const el = $('#v' + v); if (!el) return; const note = NOTES[keyOf(S.b, S.c, v)];
+  el.className = el.className.replace(/\bhl-\w+/g, '').trim(); if (note?.highlight) el.classList.add('hl-' + note.highlight);
+  const old = $('.badges', el); if (old) old.outerHTML = badges(note);
+}
+function stepTarget(dir) { let b = S.b, c = S.c + dir; if (c < 1) { if (b === 1) return null; b -= 1; c = bk(b).chapters.length; } if (c > bk(b).chapters.length) { if (b === 66) return null; b += 1; c = 1; } return { b, c }; }
+function updateSelection() {
+  $$('#reader .verse[aria-current]').forEach(e => e.removeAttribute('aria-current'));
+  if (S.sel) { const el = $('#v' + S.sel); if (el) { el.setAttribute('aria-current', 'true'); const r = el.getBoundingClientRect(); const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-h')) || 52; if (r.top < top + 8 || r.bottom > innerHeight - 8) el.scrollIntoView({ block: 'center', behavior: behavior() }); } }
+  markArcSel($('#sig-arcs')); markArcSel($('#stage-arcs'));
+}
+function flashVerses(list) { $$('#reader .verse.flash').forEach(e => e.classList.remove('flash')); list.forEach(v => { const e = $('#v' + v); if (e) { void e.offsetWidth; e.classList.add('flash'); } }); $('#v' + list[0])?.scrollIntoView({ block: 'center', behavior: behavior() }); }
+
+// ------------------------------------------------------------ navigation
+function navigate(b, c, v = 0, o = {}) {
+  if (!o.noHistory) { S.hist.push({ b: S.b, c: S.c, v: S.sel }); S.fut = []; }
+  const changed = b !== S.b || c !== S.c; S.b = b; S.c = c; S.sel = v || null; S.strong = null; S.expand = null;
+  if (o.panel) S.panel = o.panel;
+  if (S.sel && S.tab === 'search') S.tab = 'xref';
+  renderReader().then(() => { if (!S.sel && changed) window.scrollTo({ top: 0, behavior: 'auto' }); });
+  if (S.open) renderDrawer(); renderPanel(); updateBar(); updateHash();
+}
+function step(dir) { const t = stepTarget(dir); if (t) navigate(t.b, t.c, 0); }
+function select(v, o = {}) {
+  S.sel = v; S.word = o.word ?? null; if (o.focus) S.mode = 'write'; S.strong = o.strong || null; S.expand = o.expand || null;
+  if (o.tab) S.tab = o.tab; else if (S.tab === 'search') S.tab = 'xref';
+  updateSelection(); openDrawer(true); renderDrawer({ focus: o.tab === 'notes' && o.focus }); updateBar(); updateHash();
+  if (S.panel === 'graph') renderPanel();
+}
+function updateBar() {
+  $('#cur-ref-text').textContent = refLabel(S.b, S.c, S.sel);
+  document.title = `${refLabel(S.b, S.c, S.sel)} · Bible Study`;
+  $('#btn-prev').disabled = !stepTarget(-1); $('#btn-next').disabled = !stepTarget(1);
+  $('#btn-back').disabled = !S.hist.length; $('#btn-fwd').disabled = !S.fut.length;
+  $('#btn-orig').setAttribute('aria-pressed', String(S.orig));
+  $$('[data-panel-btn]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.panelBtn === S.panel)));
+  $('#tr').value = S.tr; $('#tr2').value = S.tr2; $('#tr2').closest('.pill-select').classList.toggle('on', !!S.tr2);
+}
+function updateHash() { const h = `#${S.b}/${S.c}${S.sel ? '/' + S.sel : ''}`; if (location.hash !== h) history.replaceState(null, '', h); }
+function readHash() { const m = location.hash.match(/^#(\d+)\/(\d+)(?:\/(\d+))?/); if (m) { S.b = Math.min(66, Math.max(1, +m[1])); S.c = Math.min(bk(S.b).chapters.length, Math.max(1, +m[2])); S.sel = m[3] ? +m[3] : null; } }
+
+// ------------------------------------------------------------ drawer (sheet)
+const wide = () => innerWidth >= 1100;
+function openDrawer(on) {
+  if (S.open === on) return; S.open = on;
+  const d = $('#drawer'); d.classList.toggle('open', on); d.inert = !on; d.setAttribute('aria-hidden', String(!on));
+  document.body.classList.toggle('drawer-open', on); $('#btn-drawer').setAttribute('aria-expanded', String(on));
+  syncOverlay();
+  if (on) { const seg = $('#drawer-tabs'); seg.classList.add('no-anim'); moveInd(seg); setTimeout(() => seg.classList.remove('no-anim'), 50); }
+  else { d.style.removeProperty('--drag'); tip.hide(); closeMenu(); }
+  clearTimeout(openDrawer.t); openDrawer.t = setTimeout(redrawSig, 560);
+}
+function syncOverlay() { document.body.classList.toggle('overlay', !wide()); }
+function closeDrawer() { const had = S.open; openDrawer(false); if (had && S.sel) $('#v' + S.sel)?.focus({ preventScroll: true }); }
+function moveInd(seg) {
+  const act = seg.querySelector('[aria-selected="true"],[aria-checked="true"]'), ind = seg.querySelector('.seg-ind'); if (!act || !ind) return;
+  ind.style.width = act.offsetWidth + 'px'; ind.style.transform = `translateX(${act.offsetLeft}px)`;
+}
+function updateTabs() {
+  $$('#drawer-tabs [role=tab]').forEach(b => { const on = b.dataset.tab === S.tab; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+  $('#drawer-tabs [data-tab=search]').hidden = !S.search; moveInd($('#drawer-tabs'));
+}
+function openTab(tab, o = {}) {
+  const oi = TABS.indexOf(S.tab), ni = TABS.indexOf(tab);
+  S.tab = tab; if (tab !== 'orig') S.strong = null; if (o.strong) S.strong = o.strong;
+  openDrawer(true); renderDrawer({ ...o, dx: ni === oi ? 0 : (ni > oi ? 18 : -18) });
+}
+async function renderDrawer(o = {}) {
+  updateTabs(); if (menuEl) closeMenu(); if (!S.open) return;
+  const body = $('#drawer-body'), tok = (body.dataset.tok = String(Math.random()));
+  $('#drawer-title').textContent = refLabel(S.b, S.c, S.sel);
+  $('#drawer-sub').textContent = S.tab === 'orig' ? (isHeb(S.b) ? 'Hebrew · STEPBible TAHOT' : 'Greek · STEPBible TAGNT') : trInfo(S.tr === 'kjv' || S.tr === 'bsb' ? S.tr : 'kjv').name;
+  let html = '';
+  try {
+    switch (S.tab) {
+      case 'xref': html = await tabLinks(); break;
+      case 'context': html = await tabContext(o); break;
+      case 'orig': html = await tabOrig(); break;
+      case 'notes': html = tabNotes(); break;
+      case 'media': html = tabMedia(); break;
+      case 'search': html = S.search ? S.search.html : ''; break;
+    }
+  } catch (e) { console.error(e); html = `<div class="empty"><h4>Something went wrong</h4><p>${esc(e.message)}</p></div>`; }
+  if (body.dataset.tok !== tok) return;
+  const cls = o.push ? 'view push' : o.pop ? 'view pop' : 'view';
+  body.innerHTML = `<div class="${cls}" style="--dx:${o.dx || 0}px">${html}</div>`;
+  if (!o.keepScroll) body.scrollTop = 0;
+  after(o);
+}
+
+// Links
+async function tabLinks() {
+  const b = S.b, c = S.c, v = S.sel, xr = await D.xref(b);
+  if (!v) {
+    const rows = Object.entries(xr).filter(([k]) => k.startsWith(c + ':')).map(([k, l]) => ({ v: +k.split(':')[1], n: l.length, top: l[0] })).sort((a, z) => z.n - a.n).slice(0, 12);
+    const max = rows[0]?.n || 1;
+    return `<div class="lh"><h3>Most-linked verses</h3><span>${esc(bk(b).name)} ${c}</span></div>
+      <ul class="group">${rows.map(r => `<li><button class="cell" data-select="${r.v}"><span class="cell-body"><span class="cell-title">Verse ${r.v}</span><span class="cell-sub">Top link: ${esc(refLabel(r.top[0], r.top[1], r.top[2], r.top[3]))}</span></span><span class="cell-trail"><span class="votes"><span class="vbar"><i style="width:${Math.round(100 * r.n / max)}%;background:var(--accent)"></i></span><span class="vn">${r.n}</span></span>${I('chev-right', 'chev')}</span></button></li>`).join('')}</ul>
+      <p class="foot-note">Select a verse to see its cross-references. Data: OpenBible.info (CC BY); votes reflect how many readers found a link helpful.</p>`;
+  }
+  const list = xr[`${c}:${v}`] || [], text = await previewText(b, c, v), max = list[0]?.[4] || 1;
+  const nOT = list.filter(x => x[0] <= 39).length, nNT = list.length - nOT;
+  if (!list.length) return `<blockquote class="vq">${esc(text)}</blockquote><div class="empty"><span class="tile-i blue">${I('link')}</span><h4>No cross-references</h4><p>OpenBible.info has no links recorded for this verse.</p></div>`;
+  const f = S.filter;
+  return `<blockquote class="vq">${esc(text)}</blockquote>
+    <div class="canon-mini" id="canon-mini" aria-hidden="true"></div>
+    <div class="lh"><h3>Cross-references</h3><span>${list.length} · ranked by votes</span></div>
+    <div class="filter-row"><div class="segmented sm" id="xfilter" role="radiogroup" aria-label="Filter by testament"><span class="seg-ind"></span>
+      <button role="radio" data-f="all" aria-checked="${f === 'all'}">All ${list.length}</button><button role="radio" data-f="ot" aria-checked="${f === 'ot'}" ${nOT ? '' : 'disabled'}>Old ${nOT}</button><button role="radio" data-f="nt" aria-checked="${f === 'nt'}" ${nNT ? '' : 'disabled'}>New ${nNT}</button></div></div>
+    <ul class="group xrefs">${list.map((x, i) => { const t = x[0] <= 39 ? 'ot' : 'nt'; return `
+      <li class="xref" data-b="${x[0]}" data-c="${x[1]}" data-v="${x[2]}" data-e="${x[3]}" data-t="${t}" ${f !== 'all' && f !== t ? 'hidden' : ''}>
+        <button class="cell" aria-expanded="false" aria-controls="xe${i}"><span class="cell-body"><span class="cell-title">${esc(refLabel(x[0], x[1], x[2], x[3]))}</span><span class="cell-sub serif" data-preview></span></span>
+          <span class="cell-trail"><span class="votes" title="${x[4].toLocaleString()} votes"><span class="vbar ${t}"><i style="width:${Math.max(5, Math.round(100 * x[4] / max))}%;animation-delay:${Math.min(i, 12) * 30}ms"></i></span><span class="vn">${x[4].toLocaleString()}</span></span>${I('chev-right', 'chev')}</span></button>
+        <div class="expand" id="xe${i}" role="region" aria-label="${esc(refLabel(x[0], x[1]))} in context"><div><div class="expand-in"></div></div></div></li>`; }).join('')}</ul>
+    <div class="mini-legend" style="margin-top:10px"><span class="key ot"><i></i>Old Testament</span><span class="key"><i></i>New Testament</span></div>
+    <p class="foot-note">Cross-references: OpenBible.info (CC BY). Tap a row to read it in context.</p>`;
+}
+async function fillPreviews(root) {
+  const items = $$('.xref', root);
+  await Promise.all([...new Set(items.map(li => +li.dataset.b))].map(b => D.bible(pvTr(), b).catch(() => null)));
+  for (const li of items) { const p = $('[data-preview]', li); if (!p || p.textContent) continue; try { p.textContent = clip(await previewText(+li.dataset.b, +li.dataset.c, +li.dataset.v, +li.dataset.e), 170); } catch (e) { p.textContent = ' '; } if (!root.isConnected) return; }
+}
+function drawCanonMini(host, list) {
+  const W = Math.max(260, host.clientWidth), H = 46, base = 30, segs = canon(W, 1), max = list[0]?.[4] || 1;
+  let bar = ''; for (const s of segs) { const B = bk(s.b); bar += `<rect class="seg-b ${B.test === 'OT' ? 'ot' : 'nt'}${s.b === S.b ? ' cur' : ''}" x="${(s.x0 + .4).toFixed(1)}" y="${base}" width="${Math.max(.8, s.x1 - s.x0 - .8).toFixed(1)}" height="4" rx="1"/>`; }
+  const dots = list.map((x, i) => ({ x, i })).sort((a, z) => a.x[4] - z.x[4]).map(({ x, i }) => { const r = 2.5 + 3.5 * Math.sqrt(x[4] / max); return `<circle class="dot ${x[0] <= 39 ? 'ot' : 'nt'}" data-i="${i}" cx="${xAt(segs, x[0], x[1], x[2]).toFixed(1)}" cy="${base - 4 - r}" r="${r.toFixed(1)}"><title>${esc(refLabel(x[0], x[1], x[2], x[3]))} · ${x[4]} votes</title></circle>`; }).join('');
+  const ntX = segs[39].x0;
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${bar}${dots}<text x="1" y="${H - 1}">Old Testament</text><line x1="${ntX.toFixed(1)}" x2="${ntX.toFixed(1)}" y1="${base + 6}" y2="${base + 10}" stroke="var(--label-4)"/><text x="${W - 1}" y="${H - 1}" text-anchor="end">New Testament</text></svg>`;
+  host.onclick = e => { const d = e.target.closest('.dot'); if (!d) return; const li = $$('#drawer-body .xref')[+d.dataset.i]; if (li) { if (li.hidden) { S.filter = 'all'; applyFilter(); } if (!li.classList.contains('open')) expandXref(li); li.scrollIntoView({ block: 'center', behavior: behavior() }); } };
+}
+function applyFilter() { const seg = $('#xfilter'); if (!seg) return; $$('[role=radio]', seg).forEach(b => b.setAttribute('aria-checked', String(b.dataset.f === S.filter))); moveInd(seg); $$('#drawer-body .xref').forEach(li => { li.hidden = S.filter !== 'all' && li.dataset.t !== S.filter; }); }
+async function expandXref(li) {
+  const btn = $('.cell', li), box = $('.expand-in', li);
+  if (li.classList.contains('open')) { li.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); return; }
+  const b = +li.dataset.b, c = +li.dataset.c, v = +li.dataset.v, e = +li.dataset.e || v;
+  if (!box.dataset.loaded) {
+    const book = await D.bible(pvTr(), b), ch = book[c] || [], from = Math.max(1, v - 2), to = Math.min(ch.length, e + 2);
+    let h = '<div class="ctx-read">'; for (let i = from; i <= to; i++) { const t = i >= v && i <= e; h += `<p class="${t ? 't' : ''}"><span class="n">${i}</span>${t ? `<span class="tx">${esc(ch[i - 1] || '')}</span>` : esc(ch[i - 1] || '')}</p>`; }
+    h += `</div><div class="actions"><button class="btn btn-primary sm" data-go="${b}.${c}.${v}">Open ${esc(refLabel(b, c))}${I('arrow-right')}</button><button class="btn btn-tinted sm" data-graph="1">${I('graph')}Graph</button><button class="btn btn-tinted sm" data-addnote="${esc(refLabel(b, c, v, e))}">${I('plus')}Add to note</button></div>`;
+    box.innerHTML = h; box.dataset.loaded = '1';
+  }
+  void li.offsetWidth; li.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+}
+
+// Context
+async function tabContext(o) {
+  const b = S.b, c = S.c, v = S.sel;
+  const [ctx, intros, people, places, events] = await Promise.all([D.ctx(b), D.intros(), D.people(), D.places(), D.events()]);
+  const B = bk(b), intro = intros[b - 1] || {}, ch = ctx[String(c)] || { v: {} };
+  const scope = v ? { [v]: ch.v[String(v)] || {} } : ch.v;
+  const pIds = new Map(), plIds = new Map(), eIds = new Set(), years = [];
+  Object.values(scope).forEach(x => { (x.p || []).forEach(i => pIds.set(i, (pIds.get(i) || 0) + 1)); (x.pl || []).forEach(i => plIds.set(i, (plIds.get(i) || 0) + 1)); (x.e || []).forEach(i => eIds.add(i)); if (x.y !== undefined) years.push(x.y); });
+  const chEv = new Set(); Object.values(ch.v).forEach(x => (x.e || []).forEach(i => chEv.add(i)));
+  const era = years.length ? years.sort((a, z) => a - z)[Math.floor(years.length / 2)] : null;
+  const writer = (ch.w || []).map(i => people[i]?.t || people[i]?.n).filter(Boolean).join(', ');
+  const pName = i => people[i]?.t || people[i]?.n || '?', plName = i => places[i]?.n || '?';
+  let h = `<div class="stats">
+    <div class="stat"><small>When</small><b>${era !== null ? 'c. ' + yearLabel(era) : '—'}</b></div>
+    <div class="stat"><small>Writer</small><b>${esc(writer || (intro.author || '—').split(',')[0].replace(/^Traditionally /, ''))}</b></div>
+    <div class="stat"><small>Written</small><b>${esc((intro.date || '—').replace(/^c\.\s*/, 'c. '))}</b></div></div>`;
+  h += `<div class="lh"><h3>Timeline</h3><span>${esc(B.name)} ${c} in Bible history</span></div>${timelineSVG(events, v ? eIds : chEv, era)}`;
+  const evs = [...(v ? eIds : chEv)].map(i => ({ id: i, ...events[i] })).filter(e => e.t).sort((a, z) => a.sk - z.sk);
+  if (evs.length) h += `<div class="lh"><h3>Events</h3><span>${evs.length}</span></div><ul class="group av">${evs.map(e => {
+    const here = (e.v || []).filter(r => r[0] === b && r[1] === c).map(r => r[2]);
+    return `<li><button class="cell" data-event="${e.id}"><span class="tile-i indigo">${I('calendar')}</span><span class="cell-body"><span class="cell-title">${esc(e.t)}</span><span class="cell-sub">${[yearLabel(e.y), fmtDur(e.dur), (e.pl || []).map(plName).join(', ')].filter(Boolean).map(esc).join(' · ')}</span></span><span class="cell-trail">${here.length ? `<span class="vn">v${here[0]}${here.length > 1 ? '–' + here[here.length - 1] : ''}</span>` : ''}${I('chev-right', 'chev')}</span></button></li>`; }).join('')}</ul>`;
+  const pl = [...pIds.entries()].map(([i, n]) => ({ id: i, n, ...people[i] })).filter(p => p.t !== undefined).sort((a, z) => z.n - a.n || z.vc - a.vc);
+  if (pl.length) h += `<div class="lh"><h3>People</h3><span>${v ? 'in this verse' : 'in this chapter'} · ${pl.length}</span></div><ul class="group av">${pl.map(p => `<li class="person"><button class="cell" data-person="${p.id}" aria-expanded="false"><span class="avatar" aria-hidden="true">${esc(initials(p.t || p.n))}</span><span class="cell-body"><span class="cell-title">${esc(p.t || p.n)}</span><span class="cell-sub">${esc([lifespan(p), p.vc ? plural(p.vc, 'verse') : ''].filter(Boolean).join(' · '))}</span></span><span class="cell-trail">${I('chev-right', 'chev')}</span></button><div class="expand"><div><div class="expand-in"></div></div></div></li>`).join('')}</ul>`;
+  const pls = [...plIds.entries()].map(([i, n]) => ({ id: i, n, ...places[i] })).filter(p => p.n).sort((a, z) => z.n - a.n);
+  if (pls.length) h += `<div class="lh"><h3>Places</h3><button class="link" data-panel="map">Open full map</button></div><div class="mini-map" id="mini-map"></div><ul class="group av">${pls.map(p => `<li class="place"><button class="cell" data-place="${p.id}" aria-expanded="false"><span class="tile-i red">${I('pin')}</span><span class="cell-body"><span class="cell-title">${esc(p.n)}</span><span class="cell-sub">${esc([p.ft, p.c, p.aka ? 'also ' + p.aka : ''].filter(Boolean).join(' · ') || 'Place')}</span></span><span class="cell-trail">${I('chev-right', 'chev')}</span></button><div class="expand"><div><div class="expand-in"></div></div></div></li>`).join('')}</ul>`;
+  const sec = o.intro || (!evs.length && !pl.length);
+  const inSec = r => { const m = r.match(/(\d+)(?:\s*[–-]\s*(\d+))?/); return m && c >= +m[1] && c <= +(m[2] || m[1]); };
+  h += `<details class="intro-card" id="intro-card" ${sec ? 'open' : ''}><summary><span class="tile-i blue">${I('book')}</span><span class="cell-body"><span class="cell-title">About ${esc(B.name)}</span><span class="cell-sub">Author, audience, purpose, themes and outline</span></span>${I('chev-right', 'chev')}</summary>
+    <div class="intro-body"><dl class="kv">${kv('Author', intro.author)}${kv('Date', intro.date)}${kv('Audience', intro.audience)}${kv('Setting', intro.setting)}${kv('Purpose', intro.purpose)}</dl>
+    ${intro.themes ? `<div class="tags-static">${intro.themes.map(t => `<span class="tag-s">${esc(t)}</span>`).join('')}</div>` : ''}
+    ${intro.outline ? `<ol class="outline">${intro.outline.map(r => `<li class="${inSec(r[0]) ? 'cur' : ''}"><button data-goch="${esc(r[0].match(/\d+/)?.[0] || 1)}"><span class="rng">${esc(r[0])}</span><span>${esc(r[1])}</span>${inSec(r[0]) ? '<span class="here">You are here</span>' : ''}</button></li>`).join('')}</ol>` : ''}
+    <p class="credit">Introductions summarise mainstream scholarship; dates are approximate. People, places, events: Theographic Bible Metadata (CC BY-SA 4.0). Dictionary: Easton's (1897).</p></div></details>`;
+  return h;
+}
+const kv = (k, v) => (v ? `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>` : '');
+function lifespan(p) {
+  if (p.b != null && p.d != null) return `${yearLabel(p.b)} – ${yearLabel(p.d)}`;
+  if (p.y0 != null && p.y0 === p.y1) return `active c. ${yearLabel(p.y0)}`;
+  if (p.y0 != null) return `active ${yearLabel(p.y0)} – ${yearLabel(p.y1)}`; return '';
+}
+function timelineSVG(events, here, era) {
+  const W = 388, H = 96, y0 = -2200, y1 = 110, X = y => 6 + (W - 12) * ((y - y0) / (y1 - y0));
+  const eras = [[-2166, -1805, 'Patriarchs'], [-1805, -1446, 'Egypt'], [-1446, -1050, 'Judges'], [-1050, -931, 'Kingdom'], [-931, -586, 'Divided'], [-586, -538, ''], [-538, -400, 'Return'], [-400, -5, 'Between'], [-5, 100, '']];
+  let s = `<svg class="timeline" viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of Bible history${era !== null ? `, this chapter c. ${yearLabel(era)}` : ''}">`;
+  eras.forEach((e, i) => { const x = X(e[0]) + .5, w = X(e[1]) - X(e[0]) - 1; s += `<rect class="band${i % 2 ? ' alt' : ''}" x="${x.toFixed(1)}" y="40" width="${w.toFixed(1)}" height="18" rx="4"/>`; if (e[2] && w > e[2].length * 5.2 + 6) s += `<text class="band-l" x="${(x + w / 2).toFixed(1)}" y="52.5" text-anchor="middle">${e[2]}</text>`; });
+  Object.entries(events).forEach(([id, e]) => { const y = +e.y; if (isNaN(y) || y < y0) return; const h = here.has(+id) || here.has(id); const x = X(y).toFixed(1); s += `<line class="ev${h ? ' here' : ''}" x1="${x}" x2="${x}" y1="${h ? 60 : 62}" y2="${h ? 70 : 67}"/>`; });
+  [[-2000, '2000 BC'], [-1500, '1500'], [-1000, '1000'], [-500, '500'], [0, 'AD 1']].forEach(([y, l]) => { s += `<text class="ax" x="${X(y).toFixed(1)}" y="86" text-anchor="middle">${l}</text>`; });
+  if (era !== null) { const x = X(+era); const anchor = x > W - 70 ? 'end' : 'middle'; s += `<line class="mk" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="20" y2="70"/><circle class="mk-dot" cx="${x.toFixed(1)}" cy="20" r="4.5"/><text class="mk-l" x="${(anchor === 'end' ? x - 9 : x).toFixed(1)}" y="${anchor === 'end' ? 24 : 10}" text-anchor="${anchor}">${esc(bk(S.b).short)} ${S.c} · c. ${yearLabel(era)}</text>`; }
+  return s + '</svg>';
+}
+async function expandPerson(li, id) {
+  const btn = $('.cell', li), box = $('.expand-in', li);
+  if (li.classList.contains('open')) { li.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); return; }
+  if (!box.dataset.loaded) {
+    const [people, places] = await Promise.all([D.people(), D.places()]); const p = people[id], nm = i => people[i]?.t || people[i]?.n;
+    const rel = []; if (p.fa?.length) rel.push('Father ' + p.fa.map(nm).join(', ')); if (p.mo?.length) rel.push('Mother ' + p.mo.map(nm).join(', ')); if (p.pt?.length) rel.push('Partner ' + p.pt.map(nm).join(', ')); if (p.ch?.length) rel.push('Children ' + p.ch.slice(0, 8).map(nm).join(', ') + (p.ch.length > 8 ? ` +${p.ch.length - 8}` : '')); if (p.bp?.length) rel.push('Born ' + p.bp.map(i => places[i]?.n).join(', ')); if (p.dp?.length) rel.push('Died ' + p.dp.map(i => places[i]?.n).join(', '));
+    box.innerHTML = `${rel.length ? `<p class="rel">${esc(rel.join(' · '))}</p>` : ''}${p.dict ? `<p class="dict">${esc(p.dict.replace(/\n\s*/g, '\n'))}</p>${p.dict.length > 420 ? '<button class="link" data-more-dict style="margin-top:4px;font-size:13px">More</button>' : ''}` : '<p class="dict">No dictionary entry.</p>'}<div class="actions"><button class="btn btn-tinted sm" data-search="${esc(p.n)}">${I('search')}Find “${esc(p.n)}”</button></div>`;
+    box.dataset.loaded = '1';
+  }
+  void li.offsetWidth; li.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+}
+async function expandPlace(li, id) {
+  const btn = $('.cell', li), box = $('.expand-in', li);
+  if (li.classList.contains('open')) { li.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); return; }
+  const places = await D.places(), p = places[id];
+  if (!box.dataset.loaded) { box.innerHTML = `${p.lat != null ? `<p class="rel" style="color:var(--label-2)">${p.lat.toFixed(3)}°, ${p.lon.toFixed(3)}°${p.prec ? ' · ' + esc(p.prec) : ''}</p>` : ''}${p.dict ? `<p class="dict">${esc(p.dict.replace(/\n\s*/g, '\n'))}</p>${p.dict.length > 420 ? '<button class="link" data-more-dict style="margin-top:4px;font-size:13px">More</button>' : ''}` : '<p class="dict">No dictionary entry.</p>'}<div class="actions"><button class="btn btn-tinted sm" data-search="${esc(p.kjv || p.n)}">${I('search')}Find “${esc(p.kjv || p.n)}”</button></div>`; box.dataset.loaded = '1'; }
+  void li.offsetWidth; li.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+  miniMap.focus(id);
+}
+
+// Original language
+async function tabOrig() {
+  const b = S.b, c = S.c, v = S.sel, heb = isHeb(b);
+  if (S.strong) return await strongView(S.strong);
+  if (!v) return `<div class="empty"><span class="tile-i blue">${I('alpha')}</span><h4>Read it in ${heb ? 'Hebrew' : 'Greek'}</h4><p>Select a verse to see it word by word. Turn on <b>Original</b> in the toolbar to show the interlinear under every verse.</p></div>`;
+  const [orig, text] = await Promise.all([D.orig(b), previewText(b, c, v)]); const words = orig[`${c}:${v}`] || [];
+  if (!words.length) return `<blockquote class="vq sm">${esc(text)}</blockquote><div class="empty"><h4>No original-language data</h4></div>`;
+  return `<blockquote class="vq sm">${esc(text)}</blockquote>
+    <p class="lang-eyebrow">${heb ? 'Hebrew · Leningrad Codex' : 'Greek · all major editions'}</p>
+    <p class="orig-line ${heb ? 'heb' : 'grk'}" lang="${heb ? 'he' : 'grc'}" dir="${heb ? 'rtl' : 'ltr'}">${words.map((w, i) => `<button class="ow${isVariant(w[6]) ? ' variant' : ''}${S.word === i ? ' on' : ''}" data-i="${i}" aria-label="${esc(w[1] + ': ' + w[2])}">${esc(w[0])}</button>`).join(' ')}</p>
+    <div class="lh"><h3>Word by word</h3><span>${words.length} words</span></div>
+    <ul class="group words">${words.map((w, i) => { const [o, tl, gl, s, m, lemma, typ] = w; const wt = isVariant(typ) ? wordTypeLabel(typ) : ''; return `<li class="${isVariant(typ) ? 'variant' : ''}${S.word === i ? ' focus' : ''}" id="w${i}" data-i="${i}">
+      <div class="w-o ${heb ? 'heb' : 'grk'}" lang="${heb ? 'he' : 'grc'}">${esc(o)}<span class="w-tl" lang="en">${esc(tl)}</span></div>
+      <div class="w-g"><span class="w-gl">${esc(gl)}</span><span class="w-m">${esc(decodeMorph(m, heb))}</span>${wt ? `<span class="w-var">${esc(wt)}</span>` : ''}</div>
+      ${s ? `<button class="strong" data-strong="${esc(s)}" aria-label="Strong's ${esc(s)}${lemma ? ', ' + esc(lemma) : ''}">${esc(s)}</button>` : '<span></span>'}</li>`; }).join('')}</ul>
+    <p class="foot-note">${heb ? 'STEPBible TAHOT' : 'STEPBible TAGNT'} (CC BY 4.0). ${heb ? '' : 'Amber words are textual variants between the Textus Receptus (KJV) and modern critical editions.'}</p>`;
+}
+async function strongView(s) {
+  const heb = s[0] === 'H'; const [dict, occ] = await Promise.all([D.strongs(s[0]), D.conc(s)]); const e = dict[s] || {};
+  const counts = new Map(); occ.forEach(n => { const b = Math.floor(n / 1e6); counts.set(b, (counts.get(b) || 0) + 1); });
+  const top = [...counts.entries()].sort((a, z) => z[1] - a[1]).slice(0, 8), mx = top[0]?.[1] || 1;
+  return `<div class="navbar"><button class="back" data-back-orig>${I('chev-left')}${esc(S.sel ? refLabel(S.b, S.c, S.sel) : 'Back')}</button></div>
+    <div class="lex"><div class="lex-lemma ${heb ? 'heb' : 'grk'}" lang="${heb ? 'he' : 'grc'}">${esc(e.l || s)}</div><div class="lex-meta"><i>${esc(e.x || '')}</i>${e.p ? `<span>${esc(e.p)}</span>` : ''}<span class="strong static">${esc(s)}</span></div></div>
+    <ul class="group kvg">${e.s ? `<li><dl><dt>Definition</dt><dd>${esc(e.s.trim())}</dd></dl></li>` : ''}${e.k ? `<li><dl><dt>KJV renders as</dt><dd>${esc(e.k)}</dd></dl></li>` : ''}${e.d ? `<li><dl><dt>Derivation</dt><dd>${esc(e.d)}</dd></dl></li>` : ''}</ul>
+    <div class="lh"><h3>${plural(occ.length, 'occurrence')}</h3><span>${heb ? 'Hebrew OT' : 'Greek NT'}</span></div>
+    <div class="dist" role="img" aria-label="Occurrences by book">${top.map(([b, n]) => `<div class="dist-row"><span>${esc(bk(b).name)}</span><span class="dist-t"><i style="width:${Math.max(3, Math.round(100 * n / mx))}%"></i></span><span class="dist-v">${n}</span></div>`).join('')}</div>
+    <ul class="group occ" data-strong="${esc(s)}" data-shown="0"></ul><button class="btn btn-gray btn-wide" data-more-occ>Show more</button>`;
+}
+async function renderOcc(ul, page = 20) {
+  const occ = await D.conc(ul.dataset.strong), shown = +ul.dataset.shown, next = occ.slice(shown, shown + page);
+  const refs = next.map(n => ({ b: Math.floor(n / 1e6), c: Math.floor(n / 1000) % 1000, v: n % 1000 }));
+  const texts = await Promise.all(refs.map(r => previewText(r.b, r.c, r.v).catch(() => '')));
+  ul.insertAdjacentHTML('beforeend', refs.map((r, i) => `<li><button class="cell" data-go="${r.b}.${r.c}.${r.v}"><span class="cell-body"><span class="cell-title">${esc(refLabel(r.b, r.c, r.v))}</span><span class="cell-sub serif">${esc(clip(texts[i], 150))}</span></span>${I('chev-right', 'chev')}</button></li>`).join(''));
+  ul.dataset.shown = String(shown + next.length); const more = $('[data-more-occ]', ul.parentElement); if (more) more.hidden = shown + next.length >= occ.length;
+}
+
+// Notes (in memory only)
+function tabNotes() {
+  const b = S.b, c = S.c, v = S.sel, k = keyOf(b, c, v), n = NOTES[k] || { text: '', highlight: '', tags: [], videos: [] };
+  const inCh = Object.entries(NOTES).filter(([x]) => x === `${b}.${c}` || x.startsWith(`${b}.${c}.`)).sort((a, z) => (+a[0].split('.')[2] || 0) - (+z[0].split('.')[2] || 0));
+  const all = Object.entries(NOTES).sort((a, z) => (z[1].updated || 0) - (a[1].updated || 0));
+  const prev = S.mode === 'preview' && n.text;
+  return `<div class="scope"><span>${v ? 'Verse note' : 'Chapter note'}</span><button class="link" data-scope>${v ? 'Switch to chapter note' : S.hist.length || S.sel ? 'Select a verse for a verse note' : 'Select a verse for a verse note'}</button></div>
+    <section class="card note-card">
+      ${v ? `<div class="hl-row"><span id="hl-l">Highlight</span><div class="swatches" role="radiogroup" aria-labelledby="hl-l">${HL.map(x => `<button class="sw sw-${x}" role="radio" data-hl="${x}" aria-checked="${n.highlight === x}" aria-label="${x[0].toUpperCase() + x.slice(1)}" title="${x[0].toUpperCase() + x.slice(1)}">${I('check')}</button>`).join('')}<button class="sw sw-none" role="radio" data-hl="" aria-checked="${!n.highlight}" aria-label="No highlight" title="No highlight">${I('slash')}</button></div></div>` : ''}
+      <div class="editor"><div class="editor-top"><span>Markdown</span><div class="segmented sm" id="md-mode" role="radiogroup" aria-label="Editor mode"><span class="seg-ind"></span><button role="radio" data-mode="write" aria-checked="${!prev}">Write</button><button role="radio" data-mode="preview" aria-checked="${!!prev}" ${n.text ? '' : 'disabled'}>Preview</button></div></div>
+        ${prev ? `<div class="md" data-md>${renderMd(n.text)}</div>` : `<textarea id="note-text" class="note-text" aria-label="Note" placeholder="Write your note… Link verses like [[Romans 5:8]].">${esc(n.text)}</textarea>`}</div>
+      <div class="tokens" id="tokens">${I('tag')}${(n.tags || []).map(t => `<span class="token">#${esc(t)}<button type="button" data-untag="${esc(t)}" aria-label="Remove tag ${esc(t)}">${I('xmark')}</button></span>`).join('')}<input id="note-tags" placeholder="${(n.tags || []).length ? 'Add tag' : 'Add tags'}" aria-label="Add a tag, then press Enter"></div>
+    </section>
+    <div class="lh"><h3>Notes in ${esc(bk(b).name)} ${c}</h3><span>${inCh.length}</span></div>
+    <ul class="group">${inCh.map(noteRow).join('') || '<li class="cell"><span class="cell-sub">None yet.</span></li>'}</ul>
+    <details class="disclosure"><summary>All notes <span style="display:flex;align-items:center;gap:8px;font:400 13px var(--sans);color:var(--label-2)">${all.length}${I('chev-right', 'chev')}</span></summary>
+      <label class="field" style="margin-bottom:10px">${I('search')}<input id="notes-filter" placeholder="Filter by text or #tag" aria-label="Filter notes"></label>
+      <ul class="group" id="all-notes">${all.map(noteRow).join('')}</ul></details>
+    <div class="export-row"><button class="btn btn-tinted sm" data-export="obsidian">${I('export')}Export for Obsidian</button><button class="btn btn-tinted sm" data-export="json">${I('export')}Export JSON</button><button class="btn btn-tinted sm" data-export="import">${I('import')}Import JSON</button></div>
+    <p class="foot-note">Mock: edits stay in this page and are never saved.</p>`;
+}
+function noteRow([k, x]) {
+  const p = k.split('.').map(Number); const snip = (x.text || '').replace(/[*_#>[\]]/g, '').replace(/\s+/g, ' ').slice(0, 90);
+  return `<li><button class="cell" data-go="${k}"><span class="hdot ${x.highlight || ''}" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(refLabel(p[0], p[1], p[2]))}</span><span class="cell-sub">${esc(snip || (x.highlight ? 'Highlighted' : ''))}${x.tags?.length ? ' · ' + esc(x.tags.map(t => '#' + t).join(' ')) : ''}${x.videos?.length ? ' · ' + plural(x.videos.length, 'video') : ''}</span></span>${I('chev-right', 'chev')}</button></li>`;
+}
+function renderMd(text) {
+  let h = esc(text || '');
+  h = h.replace(/\[\[([^\]]+)\]\]/g, (m, r) => `<a class="vlink" data-ref="${r}" tabindex="0">${r}</a>`);
+  h = h.replace(/^### (.*)$/gm, '<h4>$1</h4>').replace(/^## (.*)$/gm, '<h3>$1</h3>').replace(/^# (.*)$/gm, '<h2>$1</h2>');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|\W)\*(.+?)\*(?=\W|$)/g, '$1<i>$2</i>').replace(/`(.+?)`/g, '<code>$1</code>');
+  h = h.replace(/^(?:- |\* )(.*)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`).replace(/^&gt; (.*)$/gm, '<blockquote>$1</blockquote>');
+  return h.split(/\n{2,}/).map(p => (/^<(h\d|ul|blockquote)/.test(p) ? p : `<p>${p.replace(/\n/g, '<br>')}</p>`)).join('');
+}
+function noteFor(k, create) { if (!NOTES[k] && create) NOTES[k] = { text: '', highlight: '', tags: [], videos: [], updated: Date.now() }; return NOTES[k]; }
+function touch(k) { const n = NOTES[k]; if (!n) return; n.updated = Date.now(); if (!n.text && !n.highlight && !(n.tags || []).length && !(n.videos || []).length) delete NOTES[k]; if (S.sel) refreshMarker(S.sel); setSave(); }
+function setSave() { const el = $('#save-status'); el.innerHTML = `${I('check')}Not saved · mock`; el.title = 'This mock keeps edits in memory only'; clearTimeout(setSave.t); setSave.t = setTimeout(() => { el.innerHTML = ''; }, 2600); }
+
+// Video
+function parseYouTube(url) {
+  try { const u = new URL(url.trim()); let id = '';
+    if (/youtu\.be$/.test(u.hostname)) id = u.pathname.slice(1).split('/')[0];
+    else if (/youtube(-nocookie)?\.com$/.test(u.hostname)) { if (u.searchParams.get('v')) id = u.searchParams.get('v'); else { const m = u.pathname.match(/\/(embed|shorts|live|v)\/([\w-]{6,})/); if (m) id = m[2]; } }
+    if (!/^[\w-]{6,}$/.test(id)) return null; let start = 0; const t = u.searchParams.get('t') || u.searchParams.get('start');
+    if (t) { const m = t.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/); start = m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : parseInt(t) || 0; }
+    return { id, start }; } catch (e) { return null; }
+}
+const fmtTs = s => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '');
+function tabMedia() {
+  const b = S.b, c = S.c, v = S.sel, k = keyOf(b, c, v), groups = [];
+  const collect = (label, pred) => { const items = []; Object.entries(NOTES).forEach(([kk, n]) => { if (pred(kk)) (n.videos || []).forEach((vid, i) => items.push({ k: kk, i, ...vid })); }); if (items.length) groups.push({ label, items }); };
+  if (v) collect('This verse', x => x === k);
+  collect('This chapter', x => (x === `${b}.${c}` || x.startsWith(`${b}.${c}.`)) && (!v || x !== k));
+  collect(`Rest of ${bk(b).name}`, x => x.startsWith(`${b}.`) && !(x === `${b}.${c}` || x.startsWith(`${b}.${c}.`)));
+  collect('Everything else', x => !x.startsWith(`${b}.`));
+  return `<div id="player" class="player" hidden></div>
+    <form id="video-form" class="card form-card" novalidate>
+      <label class="field" id="url-field">${I('link')}<input name="url" placeholder="YouTube link — watch, youtu.be, shorts" aria-label="YouTube link" autocomplete="off"></label>
+      <p class="field-msg" id="url-msg" hidden>That doesn’t look like a YouTube link.</p>
+      <div class="field-row"><label class="field"><input name="title" placeholder="Title (optional)" aria-label="Title"></label><label class="field"><input name="ts" placeholder="0:00" aria-label="Start time, minutes and seconds" inputmode="numeric"></label></div>
+      <button class="btn btn-primary btn-wide" type="submit">${I('plus')}Add to ${esc(refLabel(b, c, v))}</button>
+    </form>
+    ${groups.map(g => `<div class="lh"><h3>${esc(g.label)}</h3><span>${g.items.length}</span></div><ul class="group">${g.items.map(x => { const p = x.k.split('.').map(Number); return `<li class="video" data-k="${x.k}" data-i="${x.i}">
+      <button class="cell" data-play="${esc(x.id)}" data-start="${x.start || 0}"><span class="thumb"><img src="https://i.ytimg.com/vi/${esc(x.id)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()"><span class="play">${I('play', 'f')}</span></span><span class="cell-body"><span class="cell-title">${esc(x.title || x.url)}</span><span class="cell-sub">${esc(refLabel(p[0], p[1], p[2]))}${x.start ? ' · from ' + fmtTs(x.start) : ''}</span></span></button>
+      <button class="more-btn" data-menu aria-haspopup="menu" aria-label="More actions for ${esc(x.title || 'video')}">${I('ellipsis')}</button></li>`; }).join('')}</ul>`).join('') || `<div class="empty"><span class="tile-i blue">${I('play-rect')}</span><h4>No videos yet</h4><p>Paste a YouTube link above — it plays right here, next to the text.</p></div>`}`;
+}
+
+// After-render wiring for each tab
+function after(o) {
+  const root = $('#drawer-body');
+  if (S.tab === 'xref') {
+    fillPreviews(root);
+    const cm = $('#canon-mini', root); if (cm) D.xref(S.b).then(xr => drawCanonMini(cm, xr[`${S.c}:${S.sel}`] || []));
+    const seg = $('#xfilter', root); if (seg) { seg.classList.add('no-anim'); moveInd(seg); requestAnimationFrame(() => seg.classList.remove('no-anim')); }
+    if (S.expand) { const [b, c, v] = S.expand.split('.').map(Number); const li = $$('.xref', root).find(l => +l.dataset.b === b && +l.dataset.c === c && +l.dataset.v === v); S.expand = null; if (li) { if (li.hidden) { S.filter = 'all'; applyFilter(); } expandXref(li).then(() => setTimeout(() => li.scrollIntoView({ block: 'center', behavior: behavior() }), 80)); } }
+  }
+  if (S.tab === 'context') {
+    const mm = $('#mini-map', root); if (mm) miniMap.mount(mm);
+    if (o.intro) setTimeout(() => $('#intro-card', root)?.scrollIntoView({ block: 'start', behavior: behavior() }), 120);
+  }
+  if (S.tab === 'orig') {
+    const occ = $('.occ', root); if (occ) renderOcc(occ);
+    if (S.word != null) setTimeout(() => $('#w' + S.word, root)?.scrollIntoView({ block: 'center', behavior: behavior() }), 60);
+  }
+  if (S.tab === 'notes') {
+    const k = keyOf(S.b, S.c, S.sel), ta = $('#note-text', root);
+    const md = $('#md-mode', root); if (md) { md.classList.add('no-anim'); moveInd(md); requestAnimationFrame(() => md.classList.remove('no-anim')); }
+    if (ta) { const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.max(140, ta.scrollHeight + 2) + 'px'; }; ta.addEventListener('input', () => { const n = noteFor(k, true); n.text = ta.value; touch(k); const p = $('[data-mode=preview]', root); if (p) p.disabled = !ta.value; fit(); }); fit(); if (o.focus) ta.focus(); }
+    const tin = $('#note-tags', root);
+    tin?.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ',') && tin.value.trim()) { e.preventDefault(); const n = noteFor(k, true); const t = tin.value.trim().replace(/^#/, '').replace(/,/g, ''); if (t && !n.tags.includes(t)) n.tags.push(t); touch(k); renderDrawer({ keepScroll: true }).then(() => $('#note-tags')?.focus()); }
+      else if (e.key === 'Backspace' && !tin.value) { const n = NOTES[k]; if (n?.tags?.length) { n.tags.pop(); touch(k); renderDrawer({ keepScroll: true }).then(() => $('#note-tags')?.focus()); } }
+    });
+    $('#tokens', root)?.addEventListener('click', e => { if (e.target.id === 'tokens') tin?.focus(); });
+    $('#notes-filter', root)?.addEventListener('input', e => { const q = e.target.value.toLowerCase(); $$('#all-notes li', root).forEach(li => { li.hidden = !!q && !li.textContent.toLowerCase().includes(q); }); });
+  }
+  if (S.tab === 'media') {
+    $('#video-form', root)?.addEventListener('submit', e => {
+      e.preventDefault(); const fd = new FormData(e.target), f = $('#url-field', root), msg = $('#url-msg', root); const yt = parseYouTube(String(fd.get('url') || ''));
+      if (!yt) { f.classList.remove('bad'); void f.offsetWidth; f.classList.add('bad'); msg.hidden = false; $('input', f).focus(); return; }
+      let start = yt.start; const ts = String(fd.get('ts') || '').trim(); if (ts) { const p = ts.split(':').map(Number); start = p.length === 2 ? p[0] * 60 + p[1] : p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : +ts || 0; }
+      const k = keyOf(S.b, S.c, S.sel), n = noteFor(k, true); n.videos.push({ url: String(fd.get('url')).trim(), id: yt.id, start, title: String(fd.get('title') || '').trim(), added: Date.now() }); touch(k); renderDrawer({ keepScroll: true }); toast('Video added — mock only, not saved.');
+    });
+    $('#url-field input', root)?.addEventListener('input', () => { $('#url-field', root).classList.remove('bad'); $('#url-msg', root).hidden = true; });
+  }
+}
+
+// ------------------------------------------------------------ menu (video actions)
+let menuEl = null;
+function closeMenu() { if (menuEl) { const opener = menuEl._opener; menuEl.remove(); menuEl = null; opener?.focus({ preventScroll: true }); } }
+function openMenu(btn) {
+  closeMenu(); const li = btn.closest('.video'), n = NOTES[li.dataset.k], vid = n.videos[+li.dataset.i];
+  const m = document.createElement('div'); m.className = 'menu'; m.setAttribute('role', 'menu'); m._opener = btn;
+  m.innerHTML = `<button role="menuitem" data-mi="go">Go to passage${I('arrow-right')}</button><a role="menuitem" href="${esc(vid.url)}" target="_blank" rel="noopener">Open on YouTube${I('external')}</a><hr><button role="menuitem" class="danger" data-mi="del">Remove${I('trash')}</button>`;
+  document.body.appendChild(m); menuEl = m; const r = btn.getBoundingClientRect(), mr = m.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.right - mr.width, innerWidth - mr.width - 8)) + 'px'; m.style.top = (r.bottom + mr.height + 8 > innerHeight ? r.top - mr.height - 6 : r.bottom + 6) + 'px';
+  m.querySelector('[role=menuitem]').focus();
+  m.addEventListener('click', e => {
+    const it = e.target.closest('[data-mi]'); if (!it) { if (e.target.closest('a')) closeMenu(); return; }
+    if (it.dataset.mi === 'go') { closeMenu(); const p = li.dataset.k.split('.').map(Number); navigate(p[0], p[1], p[2] || 0); }
+    if (it.dataset.mi === 'del') { closeMenu(); const idx = +li.dataset.i, removed = n.videos.splice(idx, 1)[0]; touch(li.dataset.k); renderDrawer({ keepScroll: true }); toast('Video removed.', { label: 'Undo', run: () => { const nn = noteFor(li.dataset.k, true); nn.videos.splice(idx, 0, removed); touch(li.dataset.k); renderDrawer({ keepScroll: true }); } }); }
+  });
+  m.addEventListener('keydown', e => { const items = $$('[role=menuitem]', m), i = items.indexOf(document.activeElement); if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); } if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); } if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); closeMenu(); } });
+}
+
+// ------------------------------------------------------------ search
+let allText = null;
+async function runSearch(qRaw) {
+  const q = qRaw.trim(); if (!q) return; $('#topbar').classList.remove('searching');
+  const strong = q.match(/^([HG])\s?0*(\d{1,4})$/i);
+  if (strong) { openTab('orig', { strong: strong[1].toUpperCase() + strong[2] }); return; }
+  const ref = parseReference(q); if (ref && /\d/.test(q)) { navigate(ref.b, ref.c, ref.v); if (ref.v) select(ref.v); return; }
+  S.search = { html: `<div class="empty"><h4>Searching…</h4></div>` }; openTab('search');
+  const [topics] = await Promise.all([D.topics()]); const tHits = topics.filter(t => t.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+  const tr = pvTr(); allText = allText || await Promise.all(S.books.map(b => D.bible(tr, b.n)));
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean), rx = new RegExp(terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'gi'), hits = [];
+  outer: for (let bi = 0; bi < 66; bi++) for (const [c, vs] of Object.entries(allText[bi])) for (let i = 0; i < vs.length; i++) { const t = vs[i].toLowerCase(); if (terms.every(x => t.includes(x))) { hits.push({ b: bi + 1, c: +c, v: i + 1, t: vs[i], exact: t.includes(q.toLowerCase()) }); if (hits.length >= 400) break outer; } }
+  hits.sort((a, z) => (z.exact ? 1 : 0) - (a.exact ? 1 : 0));
+  S.search = { html: `${tHits.length ? `<div class="lh"><h3>Topics</h3><span>${tHits.length}</span></div><div class="topic-chips">${tHits.map(t => `<button class="chip" data-topic="${esc(t.name)}">${I('sparkle')}${esc(t.name)}</button>`).join('')}</div>` : ''}
+    <div class="lh"><h3>“${esc(q)}”</h3><span>${hits.length}${hits.length >= 400 ? '+' : ''} verses · ${tr.toUpperCase()}</span></div>
+    ${hits.length ? `<ul class="group">${hits.slice(0, 150).map(h => `<li><button class="cell" data-go="${h.b}.${h.c}.${h.v}"><span class="cell-body"><span class="cell-title">${esc(refLabel(h.b, h.c, h.v))}</span><span class="cell-sub serif" style="-webkit-line-clamp:3">${esc(h.t).replace(rx, m => `<mark>${m}</mark>`)}</span></span>${I('chev-right', 'chev')}</button></li>`).join('')}</ul>` : `<div class="empty"><h4>No verses found</h4><p>Try fewer words, a reference like <i>rom 8:28</i>, or a Strong's number like <i>G26</i>.</p></div>`}` };
+  if (S.tab === 'search') renderDrawer();
+}
+async function showTopic(name) {
+  const topics = await D.topics(), t = topics.find(x => x.name === name); if (!t) return;
+  const rows = await Promise.all(t.verses.slice(0, 60).map(async x => { const p = await previewText(x[0], x[1], x[2], x[3]); return `<li><button class="cell" data-go="${x[0]}.${x[1]}.${x[2]}"><span class="cell-body"><span class="cell-title">${esc(refLabel(x[0], x[1], x[2], x[3]))}</span><span class="cell-sub serif">${esc(clip(p, 150))}</span></span><span class="cell-trail"><span class="vn">${x[4].toLocaleString()}</span>${I('chev-right', 'chev')}</span></button></li>`; }));
+  S.search = { html: `<div class="lh"><h3>${esc(name)}</h3><span>${t.votes.toLocaleString()} votes · OpenBible.info</span></div><ul class="group">${rows.join('')}</ul>` }; openTab('search');
+}
+
+// ------------------------------------------------------------ stage panels
+async function renderPanel() {
+  const wrap = $('#panel'), st = $('#stage'), on = !!S.panel;
+  wrap.classList.toggle('open', on); wrap.inert = !on; wrap.setAttribute('aria-hidden', String(!on)); updateBar();
+  if (!on) { tip.hide(); return; }
+  const B = bk(S.b), tok = (st.dataset.tok = String(Math.random()));
+  if (S.panel === 'arcs') {
+    const xr = await D.xref(S.b); if (st.dataset.tok !== tok) return; const links = chapterLinks(xr, S.c), mv = Math.max(...links.map(l => l.votes), 1);
+    st.innerHTML = `<div class="stage-head"><div><h2 class="stage-title">Cross-reference arcs</h2><div class="stage-sub">Every link leaving ${esc(B.name)} ${S.c}${S.sel ? ` — verse ${S.sel} highlighted` : ''}. Click an arc to go there.</div><div class="legend" style="justify-content:flex-start;margin-top:8px"><span class="key ot"><i></i>Old Testament</span><span class="key"><i></i>New Testament</span></div></div><span class="spacer"></span>
+      <label class="range-ctl">Minimum votes <input type="range" id="arc-min" min="0" max="${Math.min(300, mv)}" value="${S.minVotes}"><output id="arc-min-v">${S.minVotes}</output></label>
+      <button class="close-btn" data-close-panel aria-label="Close arcs">${I('xmark')}</button></div>
+      <div class="stage-body"><div class="arc-host" id="stage-arcs" style="--arc-surface:var(--bg-elev)"></div></div>`;
+    const host = $('#stage-arcs'), body = $('.stage-body', st);
+    const draw = anim => drawArcs(host, { links, H: Math.max(200, body.clientHeight - 40), k: .62, minVotes: S.minVotes, animate: anim, aria: 'Cross-reference arcs', onPick: l => navigate(l.b, l.c, l.tv) });
+    requestAnimationFrame(() => draw(true));
+    const r = $('#arc-min'); const setP = () => r.style.setProperty('--p', (100 * r.value / r.max) + '%'); setP();
+    r.oninput = () => { S.minVotes = +r.value; $('#arc-min-v').textContent = r.value; setP(); draw(false); };
+  } else if (S.panel === 'graph') {
+    const xr = await D.xref(S.b); if (st.dataset.tok !== tok) return;
+    let v = S.sel; if (!v) { let best = 0; Object.entries(xr).forEach(([k, l]) => { if (k.startsWith(S.c + ':') && l.length > best) { best = l.length; v = +k.split(':')[1]; } }); }
+    const list = (xr[`${S.c}:${v}`] || []).slice(0, 18);
+    st.innerHTML = `<div class="stage-head"><div><h2 class="stage-title">Link graph</h2><div class="stage-sub">${esc(refLabel(S.b, S.c, v))} and its ${list.length} strongest links${S.sel ? '' : ' (most-linked verse in this chapter)'}. Size shows votes; click a node to study it.</div><div class="legend" style="justify-content:flex-start;margin-top:8px"><span class="key ot"><i></i>Old Testament</span><span class="key"><i></i>New Testament</span></div></div><span class="spacer"></span><button class="close-btn" data-close-panel aria-label="Close graph">${I('xmark')}</button></div><div class="stage-body" id="graph-body"></div>`;
+    requestAnimationFrame(() => drawGraph($('#graph-body'), v, list));
+  } else if (S.panel === 'map') {
+    st.innerHTML = `<div class="stage-head"><div><h2 class="stage-title">Places</h2><div class="stage-sub">Locations named in ${esc(B.name)} ${S.c}. Click a pin to highlight its verses.</div></div><span class="spacer"></span><button class="close-btn" data-close-panel aria-label="Close map">${I('xmark')}</button></div><div class="stage-body"><div class="leaf" id="big-map"></div></div>`;
+    const pts = await chapterPlaces(); if (st.dataset.tok !== tok) return; mountMap($('#big-map'), pts, true);
+  }
+}
+function drawGraph(host, v, list) {
+  const W = host.clientWidth, H = host.clientHeight, cx = W / 2, cy = H / 2, ry = Math.max(60, H / 2 - 34), rx = Math.max(90, Math.min(W / 2 - 120, ry * 1.9)), R = rx, max = list[0]?.[4] || 1;
+  const nodes = list.map((x, i) => { const a = -Math.PI / 2 + (i / list.length) * Math.PI * 2, t = x[4] / max; return { x, i, t, px: cx + Math.cos(a) * rx, py: cy + Math.sin(a) * ry, a }; });
+  let s = `<svg class="graph-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Link graph for ${esc(refLabel(S.b, S.c, v))}"><ellipse cx="${cx}" cy="${cy}" rx="${rx * .5}" ry="${ry * .5}" fill="none" stroke="var(--sep)"/><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="var(--sep)"/>`;
+  nodes.forEach(n => { const mx = (cx + n.px) / 2 + Math.cos(n.a + Math.PI / 2) * 14, my = (cy + n.py) / 2 + Math.sin(n.a + Math.PI / 2) * 14; s += `<path class="arc ${n.x[0] <= 39 ? 'ot' : 'nt'}" d="M${cx} ${cy}Q${mx.toFixed(1)} ${my.toFixed(1)} ${n.px.toFixed(1)} ${n.py.toFixed(1)}" pathLength="1" style="--o:${(.25 + .6 * n.t).toFixed(2)};--w:${(1 + 2 * n.t).toFixed(1)}px;stroke-dasharray:1;stroke-dashoffset:1;animation:draw .9s var(--ease-out) ${120 + n.i * 35}ms forwards"/>`; });
+  nodes.forEach(n => { const r = 4 + 12 * n.t, ca = Math.cos(n.a), sa = Math.sin(n.a), vert = Math.abs(ca) < .3, right = ca >= 0, lx = vert ? n.px : n.px + (right ? r + 7 : -r - 7), ly = vert ? n.py + (sa < 0 ? -r - 8 : r + 16) : n.py + 4; s += `<g class="gn" data-i="${n.i}" style="cursor:pointer;transform-origin:${n.px}px ${n.py}px;animation:pop .7s var(--spring) ${160 + n.i * 35}ms both"><circle cx="${n.px.toFixed(1)}" cy="${n.py.toFixed(1)}" r="${r.toFixed(1)}" fill="var(--${n.x[0] <= 39 ? 'ot' : 'nt'})" stroke="var(--bg-elev)" stroke-width="2"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${vert ? 'middle' : right ? 'start' : 'end'}" style="font:500 12px var(--sans);fill:var(--label-2)">${esc(bk(n.x[0]).short)} ${n.x[1]}:${n.x[2]}${n.x[3] ? '–' + n.x[3] : ''}</text></g>`; });
+  s += `<g style="transform-origin:${cx}px ${cy}px;animation:pop .6s var(--spring) both"><circle cx="${cx}" cy="${cy}" r="30" fill="var(--accent)" stroke="var(--bg-elev)" stroke-width="3"/><text x="${cx}" y="${cy + 4.5}" text-anchor="middle" style="font:600 13px var(--sans);fill:#fff">${esc(bk(S.b).short)} ${S.c}:${v}</text></g></svg>`;
+  host.innerHTML = s;
+  host.onpointermove = e => { const g = e.target.closest('.gn'); if (!g) { tip.hide(); return; } const x = list[+g.dataset.i], tk = ++tip.tok; const head = `<div class="tt">${esc(refLabel(x[0], x[1], x[2], x[3]))}</div><div class="tm"><i class="${x[0] <= 39 ? 'ot' : ''}"></i>${x[4].toLocaleString()} votes</div>`; tip.show(e.clientX, e.clientY, head); previewText(x[0], x[1], x[2], x[3]).then(t => { if (tk === tip.tok) tip.show(e.clientX, e.clientY, head + `<div class="tx">${esc(clip(t, 200))}</div>`); }); };
+  host.onpointerleave = () => tip.hide();
+  host.onclick = e => { const g = e.target.closest('.gn'); if (!g) return; const x = list[+g.dataset.i]; tip.hide(); select(v, { tab: 'xref', expand: `${x[0]}.${x[1]}.${x[2]}` }); };
+}
+
+// ------------------------------------------------------------ maps (Leaflet from cdnjs, lazily; SVG fallback)
+let leafletP = null;
+function ensureLeaflet() {
+  if (window.L) return Promise.resolve(true); if (leafletP) return leafletP;
+  leafletP = new Promise(res => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(l); const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); setTimeout(() => res(!!window.L), 6000); });
+  return leafletP;
+}
+async function chapterPlaces() {
+  const [ctx, places] = await Promise.all([D.ctx(S.b), D.places()]); const ch = ctx[String(S.c)] || { v: {} }, m = new Map();
+  Object.entries(ch.v).forEach(([vv, x]) => (x.pl || []).forEach(i => { if (!m.has(i)) m.set(i, { id: i, ...places[i], verses: [] }); m.get(i).verses.push(+vv); }));
+  return [...m.values()].filter(p => p.lat != null);
+}
+function fallbackMap(el, pts) {
+  if (!pts.length) { el.innerHTML = '<div class="stage-empty">No mapped places in this chapter.</div>'; return; }
+  const W = el.clientWidth || 380, H = el.clientHeight || 180; const lats = pts.map(p => p.lat), lons = pts.map(p => p.lon);
+  const la0 = Math.min(...lats) - .3, la1 = Math.max(...lats) + .3, lo0 = Math.min(...lons) - .3, lo1 = Math.max(...lons) + .3;
+  const X = lo => 30 + (W - 60) * (lo - lo0) / (lo1 - lo0 || 1), Y = la => H - 24 - (H - 48) * (la - la0) / (la1 - la0 || 1);
+  let s = `<svg class="map-fallback" viewBox="0 0 ${W} ${H}">`; for (let i = 1; i < 6; i++) { s += `<line class="grid" x1="${W * i / 6}" x2="${W * i / 6}" y1="0" y2="${H}"/><line class="grid" y1="${H * i / 6}" y2="${H * i / 6}" x1="0" x2="${W}"/>`; }
+  pts.forEach(p => { s += `<circle class="pf" cx="${X(p.lon)}" cy="${Y(p.lat)}" r="7"/><text x="${X(p.lon) + 12}" y="${Y(p.lat) + 4}">${esc(p.n)}</text>`; }); el.innerHTML = s + '</svg>';
+}
+async function mountMap(el, pts, interactive) {
+  const ok = await ensureLeaflet(); if (!el.isConnected) return null;
+  if (!ok || !pts.length) { fallbackMap(el, pts); return null; }
+  const L = window.L, map = L.map(el, { zoomControl: interactive, attributionControl: true, scrollWheelZoom: interactive, dragging: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 13, attribution: '© OpenStreetMap' }).addTo(map);
+  const icon = L.divIcon({ className: '', html: '<span class="pin"></span>', iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -12] }); const markers = new Map();
+  pts.forEach(p => { const mk = L.marker([p.lat, p.lon], { icon, keyboard: true, title: p.n }).addTo(map); mk.bindPopup(`<b>${esc(p.n)}</b>${p.ft ? ' · ' + esc(p.ft) : ''}<br><span style="color:var(--label-2)">${p.verses ? 'Verse ' + p.verses.join(', ') : ''}</span>`); if (p.verses) mk.on('click', () => flashVerses(p.verses)); markers.set(+p.id, mk); });
+  const b = L.latLngBounds(pts.map(p => [p.lat, p.lon])); map.fitBounds(b.pad(.6), { maxZoom: interactive ? 9 : 8 }); setTimeout(() => map.invalidateSize(), 400);
+  return { map, markers };
+}
+const miniMap = { cur: null, async mount(el) { this.cur = null; const pts = await chapterPlaces(); this.cur = await mountMap(el, pts, false); }, focus(id) { const m = this.cur?.markers.get(+id); if (m) { this.cur.map.setView(m.getLatLng(), 9, { animate: !RM.matches }); m.openPopup(); } } };
+
+// ------------------------------------------------------------ picker
+function buildPicker() {
+  const cols = { OT: new Map(), NT: new Map() }; S.books.forEach(b => { const m = cols[b.test]; if (!m.has(b.div)) m.set(b.div, []); m.get(b.div).push(b); });
+  $('#picker-books').innerHTML = ['OT', 'NT'].map(t => `<section class="pcol"><h3>${t === 'OT' ? 'Old Testament' : 'New Testament'}</h3>${[...cols[t].entries()].map(([d, list]) => `<div class="pgroup"><h4><i class="${t === 'OT' ? 'ot' : ''}"></i>${esc(d)}</h4><div class="pbooks">${list.map(b => `<button class="pbook" data-b="${b.n}" data-name="${esc(b.name.toLowerCase())}">${esc(b.name)}</button>`).join('')}</div></div>`).join('')}</section>`).join('');
+}
+function showChapters(b) {
+  const B = bk(b), max = Math.max(1, ...Object.values(B.xo)); const noted = new Set(Object.keys(NOTES).filter(k => k.startsWith(b + '.')).map(k => +k.split('.')[1]));
+  $('#picker-chapters').innerHTML = `<h3 class="pc-title">${esc(B.name)}</h3><p class="pc-sub">${plural(B.chapters.length, 'chapter')} · ${esc(B.div)}</p><div class="chgrid">${B.chapters.map((n, i) => { const c = i + 1, h = Math.sqrt((B.xo[c] || 0) / max); return `<button class="pch${h > .55 ? ' hot' : ''}${b === S.b && c === S.c ? ' cur' : ''}${noted.has(c) ? ' noted' : ''}" data-b="${b}" data-c="${c}" style="--h:${h.toFixed(2)}" title="${n} verses · ${(B.xo[c] || 0).toLocaleString()} links" aria-label="Chapter ${c}, ${n} verses, ${(B.xo[c] || 0)} links">${c}</button>`; }).join('')}</div><div class="heat-legend"><span>Fewer links</span><i></i><span>More</span></div>`;
+  $$('#picker-books .pbook').forEach(x => x.classList.toggle('on', +x.dataset.b === b));
+}
+function openPicker() { const d = $('#picker'); $('#picker-filter').value = ''; $$('#picker-books .pbook').forEach(x => (x.hidden = false)); showChapters(S.b); d.showModal(); setTimeout(() => $(`#picker-books .pbook[data-b="${S.b}"]`)?.focus({ preventScroll: false }), 30); }
+
+// ------------------------------------------------------------ dialogs
+function closeDialog(d) { if (!d.open) return; d.classList.add('closing'); setTimeout(() => { d.close(); d.classList.remove('closing'); }, RM.matches ? 0 : 180); }
+function setTheme(t) { S.theme = t; document.documentElement.dataset.theme = t === 'auto' ? '' : t; $$('#theme [role=radio]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.themeOpt === t))); moveInd($('#theme')); if (S.panel === 'map') renderPanel(); }
+
+// ------------------------------------------------------------ bindings
+function bind() {
+  // reader
+  const rd = $('#reader');
+  rd.addEventListener('click', e => {
+    const t = e.target;
+    const chip = t.closest('.chip'); if (chip) { if (chip.dataset.tab === 'xref' && !S.sel) { openTab('xref'); } else openTab(chip.dataset.tab, { intro: !!chip.dataset.intro }); return; }
+    if (t.closest('[data-open-settings]')) { openSettings(); return; }
+    if (t.closest('[data-dismiss-notice]')) { S.notice = null; t.closest('.notice').remove(); return; }
+    const nav = t.closest('[data-nav]'); if (nav) { step(+nav.dataset.nav); return; }
+    const w = t.closest('.iw'); if (w) { select(+w.dataset.v, { tab: 'orig', word: +w.dataset.i }); return; }
+    const xc = t.closest('.xc'); if (xc) { select(+xc.dataset.v, { tab: 'xref' }); return; }
+    const verse = t.closest('.verse'); if (verse) { if (getSelection().toString().length > 2) return; select(+verse.dataset.v); }
+  });
+  rd.addEventListener('dblclick', e => { const v = e.target.closest('.verse'); if (v) select(+v.dataset.v, { tab: 'notes', focus: true }); });
+  rd.addEventListener('keydown', e => { const v = e.target.closest?.('.verse'); if (v && e.target === v && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(+v.dataset.v); } });
+
+  // top bar
+  $('#btn-prev').onclick = () => step(-1); $('#btn-next').onclick = () => step(1);
+  $('#btn-back').onclick = () => { const h = S.hist.pop(); if (!h) return; S.fut.push({ b: S.b, c: S.c, v: S.sel }); navigate(h.b, h.c, h.v, { noHistory: true }); };
+  $('#btn-fwd').onclick = () => { const f = S.fut.pop(); if (!f) return; S.hist.push({ b: S.b, c: S.c, v: S.sel }); navigate(f.b, f.c, f.v, { noHistory: true }); };
+  $('#cur-ref').onclick = openPicker; $('#btn-pick').onclick = openPicker;
+  $('#btn-orig').onclick = () => { S.orig = !S.orig; updateBar(); renderReader(); };
+  $$('[data-panel-btn]').forEach(b => (b.onclick = () => showPanel(b.dataset.panelBtn)));
+  $('#btn-drawer').onclick = () => { if (S.open) closeDrawer(); else { openDrawer(true); renderDrawer(); } };
+  $('#btn-settings').onclick = openSettings; $('#btn-help').onclick = () => $('#help').showModal();
+  const sf = $('#search-form'), si = $('#search');
+  sf.onsubmit = e => { e.preventDefault(); runSearch(si.value); si.blur(); };
+  si.addEventListener('input', () => sf.classList.toggle('has-value', !!si.value));
+  $('.search-open').onclick = () => { $('#topbar').classList.add('searching'); si.focus(); };
+  $('.search .cancel').onclick = () => { $('#topbar').classList.remove('searching'); si.blur(); };
+  si.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== si && !si.value) $('#topbar').classList.remove('searching'); }, 150));
+  const onTr = (sel, which) => sel.addEventListener('change', () => {
+    const t = trInfo(sel.value);
+    if (t.kind === 'external') { sel.value = S[which]; toast(`${t.abbr} has no free API — the app opens this chapter on ${t.id === 'lsb' ? 'read.lsbible.org' : 'BibleGateway'} in a new tab.`); return; }
+    if (t.kind === 'api') { sel.value = S[which]; S.notice = { title: `${t.abbr} needs an API key`, body: `Add a free ${t.abbr} key in Settings and the text is fetched a chapter at a time, then cached.` }; renderReader(); return; }
+    S[which] = sel.value; updateBar(); renderReader(); if (S.open) renderDrawer({ keepScroll: true });
+  });
+  onTr($('#tr'), 'tr'); onTr($('#tr2'), 'tr2');
+
+  // drawer
+  $('#drawer-close').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
+  const tabs = $('#drawer-tabs');
+  tabs.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) openTab(b.dataset.tab); });
+  tabs.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault(); const list = $$('[role=tab]', tabs).filter(b => !b.hidden); let i = list.findIndex(b => b.dataset.tab === S.tab); i = e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + list.length) % list.length; openTab(list[i].dataset.tab); list[i].focus(); });
+  new ResizeObserver(() => moveInd(tabs)).observe(tabs);
+  new ResizeObserver(() => moveInd($('#theme'))).observe($('#theme'));
+  const body = $('#drawer-body');
+  body.addEventListener('scroll', () => $('#drawer').classList.toggle('scrolled', body.scrollTop > 2), { passive: true });
+  body.addEventListener('click', e => {
+    const t = e.target;
+    const f = t.closest('#xfilter [data-f]'); if (f) { S.filter = f.dataset.f; applyFilter(); return; }
+    const md = t.closest('#md-mode [data-mode]'); if (md && !md.disabled) { S.mode = md.dataset.mode; renderDrawer({ keepScroll: true, focus: S.mode === 'write' }); return; }
+    if (t.closest('[data-md]') && !t.closest('.vlink, a')) { S.mode = 'write'; renderDrawer({ keepScroll: true, focus: true }); return; }
+    const go = t.closest('[data-go]'); if (go) { const p = go.dataset.go.split('.').map(Number); navigate(p[0], p[1], p[2] || 0); if (!wide()) closeDrawer(); return; }
+    const sel = t.closest('[data-select]'); if (sel) { select(+sel.dataset.select); return; }
+    const vl = t.closest('.vlink'); if (vl) { const r = parseReference(vl.dataset.ref); if (r) navigate(r.b, r.c, r.v); return; }
+    const gr = t.closest('[data-graph]'); if (gr) { showPanel('graph', true); window.scrollTo({ top: 0, behavior: behavior() }); return; }
+    const add = t.closest('[data-addnote]'); if (add) { const k = keyOf(S.b, S.c, S.sel), n = noteFor(k, true); n.text = (n.text ? n.text.replace(/\s*$/, '\n') : '') + `[[${add.dataset.addnote}]] `; touch(k); S.mode = 'write'; openTab('notes', { focus: true }); return; }
+    const xr = t.closest('.xref'); if (xr && t.closest('.cell')) { expandXref(xr); return; }
+    const topic = t.closest('[data-topic]'); if (topic) { showTopic(topic.dataset.topic); return; }
+    const ev = t.closest('[data-event]'); if (ev) { D.events().then(evs => { const x = evs[ev.dataset.event]; if (!x) return; const here = x.v.filter(r => r[0] === S.b && r[1] === S.c).map(r => r[2]); if (here.length) { flashVerses(here); if (!wide()) closeDrawer(); } else if (x.v.length) navigate(x.v[0][0], x.v[0][1], x.v[0][2]); }); return; }
+    const pr = t.closest('[data-person]'); if (pr) { expandPerson(pr.closest('li'), pr.dataset.person); return; }
+    const pl = t.closest('[data-place]'); if (pl) { expandPlace(pl.closest('li'), pl.dataset.place); return; }
+    const md2 = t.closest('[data-more-dict]'); if (md2) { const d = md2.previousElementSibling; d.classList.toggle('full'); md2.textContent = d.classList.contains('full') ? 'Less' : 'More'; return; }
+    const pn = t.closest('[data-panel]'); if (pn) { showPanel(pn.dataset.panel, true); window.scrollTo({ top: 0, behavior: behavior() }); if (!wide()) closeDrawer(); return; }
+    const gc = t.closest('[data-goch]'); if (gc) { navigate(S.b, Math.min(+gc.dataset.goch, bk(S.b).chapters.length), 0); return; }
+    const sr = t.closest('[data-search]'); if (sr) { $('#search').value = sr.dataset.search; runSearch(sr.dataset.search); return; }
+    const st = t.closest('[data-strong]'); if (st && !st.classList.contains('static')) { S.strong = st.dataset.strong; renderDrawer({ push: true }); return; }
+    if (t.closest('[data-back-orig]')) { S.strong = null; renderDrawer({ pop: true }); return; }
+    const more = t.closest('[data-more-occ]'); if (more) { renderOcc($('.occ', body)); return; }
+    const ow = t.closest('.ow'); if (ow) { S.word = +ow.dataset.i; $$('.ow', body).forEach(x => x.classList.toggle('on', x === ow)); $$('.words > li', body).forEach(r => r.classList.toggle('focus', +r.dataset.i === S.word)); $('#w' + S.word, body)?.scrollIntoView({ block: 'center', behavior: behavior() }); return; }
+    const sc = t.closest('[data-scope]'); if (sc) { if (S.sel) { S.sel = null; updateSelection(); updateBar(); } renderDrawer(); return; }
+    const hl = t.closest('[data-hl]'); if (hl) { const k = keyOf(S.b, S.c, S.sel), n = noteFor(k, true); n.highlight = hl.dataset.hl; touch(k); $$('.sw', body).forEach(s => s.setAttribute('aria-checked', String(s.dataset.hl === n.highlight))); return; }
+    const ut = t.closest('[data-untag]'); if (ut) { const k = keyOf(S.b, S.c, S.sel), n = NOTES[k]; if (n) { n.tags = n.tags.filter(x => x !== ut.dataset.untag); touch(k); renderDrawer({ keepScroll: true }); } return; }
+    const ex = t.closest('[data-export]'); if (ex) { toast(ex.dataset.export === 'import' ? 'Import is disabled in this mock.' : 'Export is disabled in this mock — nothing leaves the page.'); return; }
+    const play = t.closest('[data-play]'); if (play) { const p = $('#player', body); p.hidden = false; p.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(play.dataset.play)}?start=${+play.dataset.start || 0}&autoplay=1&rel=0" title="Video player" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`; body.scrollTo({ top: 0, behavior: behavior() }); return; }
+    const mn = t.closest('[data-menu]'); if (mn) { openMenu(mn); return; }
+  });
+  document.addEventListener('pointerdown', e => { const t = e.target; if (menuEl && !(t instanceof Element && (menuEl.contains(t) || t.closest('[data-menu]')))) closeMenu(); });
+
+  // bottom-sheet drag to dismiss (narrow screens)
+  const dr = $('#drawer'); let drag = null;
+  const startDrag = e => { if (innerWidth >= 700 || e.button > 0 || e.target.closest('button, input, textarea, select, a')) return; drag = { y: e.clientY, t: performance.now(), dy: 0 }; dr.classList.add('dragging'); e.currentTarget.setPointerCapture?.(e.pointerId); };
+  const moveDrag = e => { if (!drag) return; drag.dy = Math.max(0, e.clientY - drag.y); dr.style.setProperty('--drag', drag.dy + 'px'); };
+  const endDrag = () => { if (!drag) return; const v = drag.dy / Math.max(1, performance.now() - drag.t); dr.classList.remove('dragging'); if (drag.dy > 120 || v > .7) closeDrawer(); else dr.style.setProperty('--drag', '0px'); drag = null; };
+  [$('.grabber', dr), $('.sheet-top', dr)].forEach(h => { h.addEventListener('pointerdown', startDrag); h.addEventListener('pointermove', moveDrag); h.addEventListener('pointerup', endDrag); h.addEventListener('pointercancel', endDrag); });
+
+  // stage
+  $('#stage').addEventListener('click', e => { if (e.target.closest('[data-close-panel]')) showPanel(S.panel); });
+
+  // picker
+  $('#picker-books').onclick = e => { const b = e.target.closest('.pbook'); if (b) showChapters(+b.dataset.b); };
+  $('#picker-chapters').onclick = e => { const c = e.target.closest('.pch'); if (c) { closeDialog($('#picker')); navigate(+c.dataset.b, +c.dataset.c, 0); } };
+  $('#picker-filter').addEventListener('input', e => { const q = e.target.value.toLowerCase().trim(); let first = null; $$('#picker-books .pbook').forEach(x => { const hit = !q || x.dataset.name.includes(q); x.hidden = !hit; if (hit && !first) first = x; }); $$('#picker-books .pgroup').forEach(g => (g.hidden = !$$('.pbook', g).some(x => !x.hidden))); if (q && first) showChapters(+first.dataset.b); });
+  $('#picker-filter').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#picker-chapters .pch')?.focus(); } });
+
+  // settings (mock: nothing is saved)
+  $$('#theme [role=radio]').forEach(b => (b.onclick = () => setTheme(b.dataset.themeOpt)));
+  const fs = $('#fontsize'); const setFs = () => { document.documentElement.style.setProperty('--read-size', fs.value + 'px'); fs.style.setProperty('--p', (100 * (fs.value - fs.min) / (fs.max - fs.min)) + '%'); }; fs.oninput = setFs; setFs();
+  $('#settings-form').onsubmit = e => { e.preventDefault(); $('#esv-key').value = ''; $('#nlt-key').value = ''; closeDialog($('#settings')); toast('Mock — API keys are not saved.'); };
+
+  // all dialogs: click backdrop, [data-close], animated Esc
+  $$('dialog').forEach(d => { d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-close]')) closeDialog(d); }); d.addEventListener('cancel', e => { e.preventDefault(); closeDialog(d); }); });
+
+  // keyboard
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if ((t.matches && t.matches('input, textarea, select')) || e.metaKey || e.ctrlKey || e.altKey) { if (e.key === 'Escape' && t.blur) { t.blur(); $('#topbar').classList.remove('searching'); } return; }
+    if ($('dialog[open]') || menuEl) return;
+    const inSheet = t.closest && t.closest('#drawer');
+    if (e.key === 'ArrowLeft' && !inSheet) step(-1); else if (e.key === 'ArrowRight' && !inSheet) step(1);
+    else if (e.key === 'j' || (e.key === 'ArrowDown' && !inSheet && t === document.body)) { const n = bk(S.b).chapters[S.c - 1]; const v = Math.min(n, (S.sel || 0) + 1); select(v); $('#v' + v)?.focus({ preventScroll: true }); e.preventDefault(); }
+    else if (e.key === 'k' || (e.key === 'ArrowUp' && !inSheet && t === document.body)) { const v = Math.max(1, (S.sel || 2) - 1); select(v); $('#v' + v)?.focus({ preventScroll: true }); e.preventDefault(); }
+    else if (e.key === 'Escape') { if (S.panel) showPanel(S.panel); else closeDrawer(); }
+    else if (e.key === '/') { e.preventDefault(); $('#topbar').classList.add('searching'); $('#topbar').classList.remove('hide'); $('#search').focus(); }
+    else if (e.key === 'n' && S.sel) { S.mode = 'write'; openTab('notes', { focus: true }); }
+    else if (e.key === 'o') { S.orig = !S.orig; updateBar(); renderReader(); }
+    else if (e.key === 'a') showPanel('arcs'); else if (e.key === 'g') showPanel('graph'); else if (e.key === 'm') showPanel('map');
+    else if (e.key === '?') $('#help').showModal();
+  });
+
+  // resize + scroll
+  let rt; addEventListener('resize', () => { syncOverlay(); clearTimeout(rt); rt = setTimeout(() => { redrawSig(); if (S.panel === 'arcs' || S.panel === 'graph') renderPanel(); const cm = $('#canon-mini'); if (cm && S.sel) D.xref(S.b).then(xr => drawCanonMini(cm, xr[`${S.c}:${S.sel}`] || [])); }, 160); });
+  let lastY = scrollY; addEventListener('scroll', () => { const y = scrollY, bar = $('#topbar'); if (innerWidth < 700 && !bar.classList.contains('searching')) bar.classList.toggle('hide', y > 160 && y > lastY + 2 ? true : (y < lastY - 2 ? false : bar.classList.contains('hide'))); lastY = y; }, { passive: true });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.panel === 'map') renderPanel(); });
+}
+function redrawSig() { const h = $('#sig-arcs'); if (h && h._o) drawArcs(h, { ...h._o, animate: false }); }
+function showPanel(p, force) { S.panel = force ? p : (S.panel === p ? null : p); renderPanel(); }
+function openSettings() { const d = $('#settings'), t = $('#theme'); d.showModal(); t.classList.add('no-anim'); setTheme(S.theme); setTimeout(() => t.classList.remove('no-anim'), 50); }
+
+// ------------------------------------------------------------ boot
+async function boot() {
+  const meta = await D.meta(); S.books = meta.books; S.trs = meta.translations;
+  const opt = t => `<option value="${t.id}">${esc(t.abbr)}</option>`;
+  const g = kind => S.trs.filter(t => t.kind === kind);
+  $('#tr').innerHTML = `<optgroup label="Bundled">${g('bundled').map(opt).join('')}</optgroup><optgroup label="With API key">${g('api').map(opt).join('')}</optgroup><optgroup label="Opens a website">${g('external').map(opt).join('')}</optgroup>`;
+  $('#tr2').innerHTML = `<option value="">Parallel</option><optgroup label="Bundled">${g('bundled').map(opt).join('')}</optgroup><optgroup label="With API key">${g('api').map(opt).join('')}</optgroup>`;
+  readHash(); buildPicker(); bind(); syncOverlay(); updateBar();
+  await renderReader();
+  if (S.sel) { openDrawer(true); renderDrawer(); }
+  // warm the caches the sheet needs
+  (window.requestIdleCallback || setTimeout)(() => { D.people(); D.places(); D.events(); D.orig(S.b); });
+}
+boot().catch(e => { console.error(e); $('#reader').innerHTML = `<div class="notice"><p>Failed to start: ${esc(e.message)}<small>Run python3 serve.py and open http://localhost:8765/mock/pro.html</small></p></div>`; });
+})();
+</script>
+</body>
+</html>

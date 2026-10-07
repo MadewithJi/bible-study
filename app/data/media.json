@@ -1,0 +1,26 @@
+{
+  "about": "Study videos shown beside these verses (media.js). id: our name; yt: the YouTube id; title: the label on the icon and the player; by: the channel; at: [book, chapter, verse] for each verse that shows the icon, the primary verse first; note (optional): a line under the player.",
+  "videos": [
+    {
+      "id": "tabernacle",
+      "yt": "MMEQ-WlsWsc",
+      "title": "The Tabernacle Built in the Time of Moses",
+      "by": "Messages of Christ",
+      "at": [[2, 25, 8], [2, 40, 17]]
+    },
+    {
+      "id": "solomon",
+      "yt": "Xt6lQAe8ues",
+      "title": "Solomon’s Temple Explained",
+      "by": "Messages of Christ",
+      "at": [[11, 6, 1], [14, 3, 1]]
+    },
+    {
+      "id": "herod",
+      "yt": "QQQyNVw8Pf4",
+      "title": "Jerusalem Temple at the Time of Jesus",
+      "by": "Messages of Christ",
+      "at": [[41, 13, 1], [40, 24, 1], [42, 21, 5], [43, 2, 20]]
+    }
+  ]
+}

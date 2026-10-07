@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<base href="/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>APP-JS harness (dry run only)</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#reader">Skip to the text</a>
+
+<header id="topbar" class="gnav flat">
+  <div class="gnav-left">
+    <button id="btn-pick" class="ib" type="button" aria-label="Browse books" title="Browse books"><svg class="i" aria-hidden="true"><use href="#i-books"/></svg></button>
+    <button id="cur-ref" class="refbtn" type="button" aria-haspopup="dialog" aria-controls="picker" title="Choose book and chapter"><span id="cur-ref-text">John 3</span><svg class="i" aria-hidden="true"><use href="#i-chev-down"/></svg></button>
+    <span class="pair">
+      <button id="btn-prev" class="ib" type="button" aria-label="Previous chapter" title="Previous chapter (←)"><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <button id="btn-next" class="ib" type="button" aria-label="Next chapter" title="Next chapter (→)"><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+    </span>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <span class="pair">
+      <button id="btn-back" class="ib" type="button" aria-label="Back" title="Back to where you came from" disabled><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
+      <button id="btn-fwd" class="ib" type="button" aria-label="Forward" title="Forward" disabled><svg class="i" aria-hidden="true"><use href="#i-fwd"/></svg></button>
+    </span>
+  </div>
+  <form id="search-form" class="search" role="search">
+    <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+    <input id="search" type="search" placeholder="Search verses, words, G26, topics" autocomplete="off" spellcheck="false" aria-label="Search: a reference, words, a Strong's number or a topic">
+    <kbd aria-hidden="true">/</kbd>
+    <button type="button" class="cancel">Cancel</button>
+  </form>
+  <button class="ib search-open" type="button" aria-label="Search" title="Search (/)"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
+  <div class="gnav-right">
+    <label class="pill-select" title="Primary translation"><span class="sr">Primary translation</span><select id="tr"></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <label class="pill-select lead par" title="Parallel translation"><span class="sr">Parallel translation</span><svg class="i lead-i" aria-hidden="true"><use href="#i-columns"/></svg><select id="tr2"></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <button id="btn-orig" class="toggle" type="button" aria-pressed="false" title="Show Hebrew / Greek under each verse (o)"><svg class="i" aria-hidden="true"><use href="#i-alpha"/></svg><span class="lbl">Original</span><span class="sr"> language interlinear</span></button>
+    <div class="tools" role="group" aria-label="Visualisations">
+      <button type="button" data-panel-btn="arcs" aria-pressed="false" aria-label="Cross-reference arcs" title="Arcs (a)"><svg class="i" aria-hidden="true"><use href="#i-arcs"/></svg></button>
+      <button type="button" data-panel-btn="graph" aria-pressed="false" aria-label="Link graph" title="Graph (g)"><svg class="i" aria-hidden="true"><use href="#i-graph"/></svg></button>
+      <button type="button" data-panel-btn="map" aria-pressed="false" aria-label="Map of places" title="Map (m)"><svg class="i" aria-hidden="true"><use href="#i-map"/></svg></button>
+    </div>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <button id="btn-drawer" class="ib" type="button" aria-label="Study panel" aria-controls="drawer" aria-expanded="false" title="Study panel"><svg class="i" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    <button id="btn-settings" class="ib" type="button" aria-label="Settings" aria-haspopup="dialog" title="Settings and API keys"><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg></button>
+    <button id="btn-help" class="ib" type="button" aria-label="Keyboard shortcuts" aria-haspopup="dialog" title="Keyboard shortcuts (?)"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="page" id="page">
+  <section id="panel" aria-labelledby="stage-title" aria-hidden="true" inert><div class="stage-clip"><div class="stage" id="stage"></div></div></section>
+  <main id="layout"><section id="reader" class="reader" tabindex="-1" aria-label="Chapter text"></section></main>
+</div>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<aside id="drawer" class="drawer" role="dialog" aria-labelledby="drawer-title" aria-modal="false" aria-hidden="true" inert>
+  <button class="grabber" id="grabber" type="button" aria-label="Expand study sheet"></button>
+  <header class="sheet-top" id="sheet-top">
+    <div class="sheet-head">
+      <div class="sheet-title">
+        <p class="sheet-kicker" id="drawer-kicker"></p>
+        <h2 id="drawer-title" tabindex="-1">John 3</h2>
+        <p id="drawer-sub"></p>
+      </div>
+      <span id="save-status" class="save" role="status" aria-live="polite"></span>
+      <button id="verse-prev" class="close-btn plain" type="button" aria-label="Previous verse" title="Previous verse (k)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <button id="verse-next" class="close-btn plain" type="button" aria-label="Next verse" title="Next verse (j)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+      <button id="drawer-close" class="close-btn" type="button" aria-label="Close study panel" title="Close (Esc)"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+    </div>
+    <nav id="drawer-tabs" class="segmented" role="tablist" aria-label="Study panel sections">
+      <span class="seg-ind" aria-hidden="true"></span>
+      <button role="tab" type="button" id="tab-xref" data-tab="xref" aria-selected="true" aria-controls="drawer-body">Links<span class="count" id="cnt-xref"></span></button>
+      <button role="tab" type="button" id="tab-context" data-tab="context" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Context</button>
+      <button role="tab" type="button" id="tab-orig" data-tab="orig" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Original</button>
+      <button role="tab" type="button" id="tab-notes" data-tab="notes" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Notes<span class="pip" id="pip-notes" hidden></span></button>
+      <button role="tab" type="button" id="tab-media" data-tab="media" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Video<span class="count" id="cnt-media"></span></button>
+      <button role="tab" type="button" id="tab-search" data-tab="search" aria-selected="false" aria-controls="drawer-body" tabindex="-1" hidden>Search</button>
+    </nav>
+  </header>
+  <div id="drawer-body" class="sheet-body" role="tabpanel" aria-labelledby="tab-xref" tabindex="-1"></div>
+</aside>
+
+<dialog id="picker" class="modal picker" aria-labelledby="picker-title">
+  <div class="modal-head">
+    <h2 id="picker-title" class="modal-title">Books</h2>
+    <label class="mini-search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="picker-filter" placeholder="Filter" autocomplete="off" spellcheck="false" aria-label="Filter books"></label>
+    <button class="close-btn" type="button" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+  </div>
+  <div class="picker-body">
+    <div id="picker-books" class="picker-books"></div>
+    <div id="picker-chapters" class="picker-chapters"></div>
+  </div>
+</dialog>
+
+<dialog id="settings" class="modal" aria-labelledby="settings-title">
+  <form id="settings-form" class="modal-form" method="dialog">
+    <div class="modal-head"><h2 id="settings-title" class="modal-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+    <div class="modal-body">
+      <h3 class="group-h">Appearance</h3>
+      <ul class="group frows">
+        <li class="frow"><span id="theme-l">Theme</span><div id="theme" class="segmented sm" role="radiogroup" aria-labelledby="theme-l"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-theme-opt="auto" aria-checked="true">Auto</button><button type="button" role="radio" data-theme-opt="light" aria-checked="false" tabindex="-1">Light</button><button type="button" role="radio" data-theme-opt="dark" aria-checked="false" tabindex="-1">Dark</button></div></li>
+        <li class="frow"><label for="fontsize">Reading size</label><div class="size-ctl"><span class="a1" aria-hidden="true">A</span><input id="fontsize" type="range" min="15" max="26" step="1" value="20"><span class="a2" aria-hidden="true">A</span></div></li>
+      </ul>
+      <h3 class="group-h">Licensed translations</h3>
+      <ul class="group frows">
+        <li class="frow"><label for="esv-key">ESV API key</label><input id="esv-key" autocomplete="off" spellcheck="false" placeholder="Paste key"></li>
+        <li class="frow"><label for="nlt-key">NLT API key</label><input id="nlt-key" autocomplete="off" spellcheck="false" placeholder="Paste key"></li>
+      </ul>
+      <p class="group-foot">Free for personal use at <a href="https://api.esv.org/" target="_blank" rel="noopener">api.esv.org</a> and <a href="https://api.nlt.to/" target="_blank" rel="noopener">api.nlt.to</a>. Text is fetched a chapter at a time and cached on this computer. NIV, NKJV and LSB have no free API, so choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="help" class="modal" aria-labelledby="help-title">
+  <div class="modal-head"><h2 id="help-title" class="modal-title">Keyboard shortcuts</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body">
+    <dl class="keys">
+      <dt><kbd class="k">←</kbd><kbd class="k">→</kbd></dt><dd>Previous / next chapter (also <kbd class="k">[</kbd> <kbd class="k">]</kbd>)</dd>
+      <dt><kbd class="k">j</kbd><kbd class="k">k</kbd></dt><dd>Next / previous verse</dd>
+      <dt><kbd class="k">↑</kbd><kbd class="k">↓</kbd></dt><dd>Move between verses when a verse has focus</dd>
+      <dt><kbd class="k">return</kbd></dt><dd>Open the focused verse in the study panel</dd>
+      <dt><kbd class="k">/</kbd></dt><dd>Search: a reference (<i>rom 8:28</i>), words, a Strong's number (<i>G26</i>) or a topic</dd>
+      <dt><kbd class="k">o</kbd></dt><dd>Hebrew / Greek interlinear</dd>
+      <dt><kbd class="k">a</kbd><kbd class="k">g</kbd><kbd class="k">m</kbd></dt><dd>Arcs · Graph · Map</dd>
+      <dt><kbd class="k">n</kbd></dt><dd>Note for the selected verse (or double-click a verse)</dd>
+      <dt><kbd class="k">?</kbd></dt><dd>This list</dd>
+      <dt><kbd class="k">esc</kbd></dt><dd>Close the study panel or the visual panel</dd>
+    </dl>
+    <p class="credits">KJV &amp; BSB (public domain) · OpenBible.info cross-references &amp; topics (CC BY) · STEPBible TAHOT/TAGNT (CC BY 4.0) · Strong's via OpenScriptures (CC BY-SA) · Theographic Bible Metadata (CC BY-SA 4.0) · Easton's Bible Dictionary (1897) · Map tiles © OpenStreetMap contributors © CARTO.</p>
+  </div>
+  <div class="modal-foot"><button type="button" class="btn btn-primary" data-close>Done</button></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="tip" class="tip" role="tooltip" aria-hidden="true"></div>
+<script type="module">
+  // Dry run only: without ?dry the app shell would send tracker events and write the real bs-* keys. A static
+  // <script src> would still run before a redirect lands, so main.js loads only once the URL says dry.
+  if (new URLSearchParams(location.search).has('dry')) import('./js/main.js');
+  else location.replace(location.pathname + (location.search ? location.search + '&' : '?') + 'dry' + location.hash);
+</script>
+</body>
+</html>

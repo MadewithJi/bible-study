@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Bible Study</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z'/%3E%3Cpath d='M12 6.8v13.4'/%3E%3C/svg%3E">
+<script>/* the saved theme, reading size and words-of-Jesus colour before the first paint (main.js applies them again) */
+try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f = +localStorage.getItem('bs-font');
+  if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
+  if (f >= 12 && f <= 32) d.style.setProperty('--read-size', f + 'px');
+  if (localStorage.getItem('bs-woc') === '0') d.classList.add('woc-off'); } catch (e) { /* storage blocked */ }</script>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/art.css">
+</head>
+<body>
+<a class="skip" href="#reader">Skip to the text</a>
+
+<header id="topbar" class="gnav flat">
+  <div class="gnav-left">
+    <button id="btn-pick" class="ib" type="button" aria-label="Browse books" title="Browse books"><svg class="i" aria-hidden="true"><use href="#i-books"/></svg></button>
+    <button id="btn-library" class="ib" type="button" aria-label="Library" aria-haspopup="dialog" title="Library (l)"><svg class="i" aria-hidden="true"><use href="#i-library"/></svg></button>
+    <button id="cur-ref" class="refbtn" type="button" aria-haspopup="dialog" aria-controls="picker" title="Choose book and chapter"><span id="cur-ref-text">John 3</span><svg class="i" aria-hidden="true"><use href="#i-chev-down"/></svg></button>
+    <span class="pair">
+      <button id="btn-prev" class="ib" type="button" aria-label="Previous chapter" title="Previous chapter (←)"><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <button id="btn-next" class="ib" type="button" aria-label="Next chapter" title="Next chapter (→)"><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+    </span>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <span class="pair">
+      <button id="btn-back" class="ib" type="button" aria-label="Back" title="Back to where you came from" disabled><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
+      <button id="btn-fwd" class="ib" type="button" aria-label="Forward" title="Forward" disabled><svg class="i" aria-hidden="true"><use href="#i-fwd"/></svg></button>
+    </span>
+  </div>
+  <form id="search-form" class="search" role="search">
+    <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+    <input id="search" type="search" placeholder="Search verses, words, G26, topics" autocomplete="off" spellcheck="false" aria-label="Search: a reference, words, a Strong’s number or a topic">
+    <kbd aria-hidden="true">/</kbd>
+    <button type="button" class="cancel">Cancel</button>
+  </form>
+  <button class="ib search-open" type="button" aria-label="Search" title="Search (/)"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
+  <div class="gnav-right">
+    <label class="pill-select" title="Primary translation"><span class="sr">Primary translation</span><select id="tr"></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <label class="pill-select lead par" title="Parallel translation"><span class="sr">Parallel translation</span><svg class="i lead-i" aria-hidden="true"><use href="#i-columns"/></svg><select id="tr2"></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <button id="btn-orig" class="toggle" type="button" aria-pressed="false" aria-label="Original language interlinear" title="Show Hebrew / Greek under each verse (o)"><svg class="i" aria-hidden="true"><use href="#i-alpha"/></svg><span class="lbl">Original</span><span class="sr"> language interlinear</span></button>
+    <div class="tools" role="group" aria-label="Visualisations">
+      <button type="button" data-panel-btn="arcs" aria-pressed="false" aria-label="Cross-reference arcs" title="Arcs (a)"><svg class="i" aria-hidden="true"><use href="#i-arcs"/></svg></button>
+      <button type="button" data-panel-btn="graph" aria-pressed="false" aria-label="Link graph" title="Graph (g)"><svg class="i" aria-hidden="true"><use href="#i-graph"/></svg></button>
+      <button type="button" data-panel-btn="map" aria-pressed="false" aria-label="Map of places" title="Map (m)"><svg class="i" aria-hidden="true"><use href="#i-map"/></svg></button>
+      <button type="button" data-panel-btn="art" aria-pressed="false" aria-label="Bible art" title="Bible art (i)"><svg class="i" aria-hidden="true"><use href="#i-photo"/></svg></button>
+    </div>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <button id="btn-drawer" class="ib" type="button" aria-label="Study panel" aria-controls="drawer" aria-expanded="false" title="Study panel"><svg class="i" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    <button id="btn-theme" class="ib" type="button" aria-label="Switch to dark mode" title="Dark mode (t)"><svg class="i" aria-hidden="true"><use href="#i-moon"/></svg></button>
+    <button id="btn-settings" class="ib" type="button" aria-label="Settings" aria-haspopup="dialog" title="Settings and API keys"><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg></button>
+    <button id="btn-help" class="ib" type="button" aria-label="Keyboard shortcuts" aria-haspopup="dialog" title="Keyboard shortcuts (?)"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+    <button id="btn-account" class="acct-btn" type="button" aria-haspopup="dialog" aria-label="Sign in" title="Sign in" hidden><svg class="i" aria-hidden="true"><use href="#i-person"/></svg></button>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="page" id="page">
+  <section id="panel" aria-labelledby="stage-title" aria-hidden="true" inert><div class="stage-clip"><div class="stage" id="stage"></div></div></section>
+  <main id="layout"><section id="reader" class="reader" tabindex="-1" aria-label="Chapter text"></section></main>
+</div>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<aside id="drawer" class="drawer" role="dialog" aria-labelledby="drawer-title" aria-modal="false" aria-hidden="true" inert>
+  <button class="grabber" id="grabber" type="button" aria-label="Expand study sheet"></button>
+  <header class="sheet-top" id="sheet-top">
+    <div class="sheet-head">
+      <div class="sheet-title">
+        <p class="sheet-kicker" id="drawer-kicker"></p>
+        <h2 id="drawer-title" tabindex="-1">John 3</h2>
+        <p id="drawer-sub"></p>
+      </div>
+      <span id="save-status" class="save" role="status" aria-live="polite"></span>
+      <button id="btn-bookmark" class="close-btn plain bm-btn" type="button" aria-pressed="false" aria-label="Bookmark John 3" title="Bookmark (b)"><svg class="i" aria-hidden="true"><use href="#i-bookmark"/></svg></button>
+      <button id="verse-prev" class="close-btn plain" type="button" aria-label="Previous verse" title="Previous verse (k)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <button id="verse-next" class="close-btn plain" type="button" aria-label="Next verse" title="Next verse (j)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+      <button id="drawer-close" class="close-btn" type="button" aria-label="Close study panel" title="Close (Esc)"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+    </div>
+    <nav id="drawer-tabs" class="segmented" role="tablist" aria-label="Study panel sections">
+      <span class="seg-ind" aria-hidden="true"></span>
+      <button role="tab" type="button" id="tab-xref" data-tab="xref" aria-selected="true" aria-controls="drawer-body">Links<span class="count" id="cnt-xref"></span></button>
+      <button role="tab" type="button" id="tab-context" data-tab="context" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Context</button>
+      <button role="tab" type="button" id="tab-orig" data-tab="orig" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Original</button>
+      <button role="tab" type="button" id="tab-notes" data-tab="notes" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Notes<span class="pip" id="pip-notes" hidden></span><span class="count" id="cnt-notes"></span></button>
+      <button role="tab" type="button" id="tab-media" data-tab="media" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Video<span class="count" id="cnt-media"></span></button>
+      <button role="tab" type="button" id="tab-mine" data-tab="mine" aria-selected="false" aria-controls="drawer-body" tabindex="-1" aria-label="My links" title="My links (c to link from here)" hidden>Mine<span class="count" id="cnt-mine"></span></button>
+      <button role="tab" type="button" id="tab-search" data-tab="search" aria-selected="false" aria-controls="drawer-body" tabindex="-1" hidden>Search</button>
+    </nav>
+  </header>
+  <div id="drawer-body" class="sheet-body" role="tabpanel" aria-labelledby="tab-xref" tabindex="-1"></div>
+</aside>
+
+<dialog id="picker" class="modal picker" aria-labelledby="picker-title">
+  <div class="modal-head">
+    <h2 id="picker-title" class="modal-title">Books</h2>
+    <label class="mini-search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="picker-filter" placeholder="Filter" autocomplete="off" spellcheck="false" aria-label="Filter books"></label>
+    <button class="close-btn" type="button" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+  </div>
+  <div class="picker-body">
+    <div id="picker-books" class="picker-books"></div>
+    <div id="picker-chapters" class="picker-chapters"></div>
+  </div>
+</dialog>
+
+<dialog id="settings" class="modal" aria-labelledby="settings-title">
+  <form id="settings-form" class="modal-form" method="dialog">
+    <div class="modal-head"><h2 id="settings-title" class="modal-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+    <div class="modal-body">
+      <h3 class="group-h">Appearance</h3>
+      <ul class="group frows">
+        <li class="frow"><span id="theme-l">Theme</span><div id="theme" class="segmented sm" role="radiogroup" aria-labelledby="theme-l"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-theme-opt="auto" aria-checked="true">Auto</button><button type="button" role="radio" data-theme-opt="light" aria-checked="false" tabindex="-1">Light</button><button type="button" role="radio" data-theme-opt="dark" aria-checked="false" tabindex="-1">Dark</button></div></li>
+        <li class="frow"><label for="fontsize">Reading size</label><div class="size-ctl"><span class="a1" aria-hidden="true">A</span><input id="fontsize" type="range" min="15" max="26" step="1" value="20"><span class="a2" aria-hidden="true">A</span></div></li>
+        <li class="frow"><label for="woc-on">Words of Jesus in blue<small class="frow-sub">Bold blue text for Christ’s words in the New Testament (KJV and BSB)</small></label><input id="woc-on" type="checkbox" class="switch" role="switch" checked></li>
+        <li class="frow" id="art-float-row"><label for="art-float">Show Doré engravings in the text<small class="frow-sub">Plates appear in the text just before the verses they depict, with a small card while you read on</small></label><input id="art-float" type="checkbox" class="switch" role="switch" checked></li>
+      </ul>
+      <h3 class="group-h">Licensed translations</h3>
+      <ul class="group frows" id="key-rows">
+        <li class="frow"><label for="esv-key">ESV API key</label><input id="esv-key" autocomplete="off" spellcheck="false" placeholder="Paste key"><button type="button" class="btn btn-plain sm" data-key-remove="esv" aria-label="Remove the ESV API key" hidden>Remove</button></li>
+        <li class="frow"><label for="nlt-key">NLT API key</label><input id="nlt-key" autocomplete="off" spellcheck="false" placeholder="Paste key"><button type="button" class="btn btn-plain sm" data-key-remove="nlt" aria-label="Remove the NLT API key" hidden>Remove</button></li>
+      </ul>
+      <p class="group-foot" id="keys-owner" hidden>ESV and NLT are available to the site owner. NIV, NKJV and LSB have no free API, so choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
+      <p class="group-foot" id="keys-foot">Free for personal use at <a href="https://api.esv.org/" target="_blank" rel="noopener">api.esv.org</a> and <a href="https://api.nlt.to/" target="_blank" rel="noopener">api.nlt.to</a>. Text is fetched a chapter at a time and cached on this computer. NIV, NKJV and LSB have no free API, so choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
+    </div>
+    <div class="modal-foot"><button type="submit" class="btn btn-primary" id="settings-done">Done</button></div>
+  </form>
+</dialog>
+
+<dialog id="help" class="modal" aria-labelledby="help-title">
+  <div class="modal-head"><h2 id="help-title" class="modal-title">Keyboard shortcuts</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body">
+    <dl class="keys">
+      <dt><kbd class="k">←</kbd><kbd class="k">→</kbd></dt><dd>Previous / next chapter (also <kbd class="k">[</kbd> <kbd class="k">]</kbd>)</dd>
+      <dt><kbd class="k">j</kbd><kbd class="k">k</kbd></dt><dd>Next / previous verse</dd>
+      <dt><kbd class="k">↑</kbd><kbd class="k">↓</kbd></dt><dd>Move between verses when a verse has focus</dd>
+      <dt><kbd class="k">return</kbd></dt><dd>Open the focused verse in the study panel</dd>
+      <dt><kbd class="k">/</kbd></dt><dd>Search: a reference (<i>rom 8:28</i>), words, a Strong’s number (<i>G26</i>) or a topic</dd>
+      <dt><kbd class="k">o</kbd></dt><dd>Hebrew / Greek interlinear</dd>
+      <dt><kbd class="k">a</kbd><kbd class="k">g</kbd><kbd class="k">m</kbd></dt><dd>Arcs · Graph · Map</dd>
+      <dt><kbd class="k">i</kbd></dt><dd>Bible art: Gustave Doré’s engravings</dd>
+      <dt><kbd class="k">t</kbd></dt><dd>Switch light / dark mode</dd>
+      <dt><kbd class="k">n</kbd></dt><dd>Note for the selected verse (or double-click a verse)</dd>
+      <dt><kbd class="k">b</kbd></dt><dd>Bookmark the selected verse (or the chapter)</dd>
+      <dt><kbd class="k">c</kbd></dt><dd>Link the selected verse to another verse</dd>
+      <dt><kbd class="k">shift</kbd><kbd class="k">→</kbd></dt><dd>Select words to highlight or comment (or drag across them), then <kbd class="k">tab</kbd> to the options. Click highlighted words, or the speech bubble beside a verse, to open them</dd>
+      <dt><kbd class="k">l</kbd></dt><dd>Library: bookmarks, progress and history</dd>
+      <dt><kbd class="k">r</kbd></dt><dd>Continue reading where you left off (while that prompt shows)</dd>
+      <dt><kbd class="k">z</kbd></dt><dd>Undo, or run the action of the notice at the bottom (Alt+Z in a text field)</dd>
+      <dt><kbd class="k">?</kbd></dt><dd>This list</dd>
+      <dt><kbd class="k">esc</kbd></dt><dd>Close the open highlight or comment, then the study panel or the visual panel</dd>
+    </dl>
+    <p class="credits">KJV &amp; BSB (public domain) · OpenBible.info cross-references &amp; topics (CC BY) · STEPBible TAHOT/TAGNT (CC BY 4.0) · Strong’s via OpenScriptures (CC BY-SA) · Theographic Bible Metadata (CC BY-SA 4.0) · Easton’s Bible Dictionary (1897) · Maps: MapLibre GL JS (BSD) · OpenFreeMap © OpenMapTiles © OpenStreetMap contributors (ODbL) · Terrain: Mapzen / AWS Terrain Tiles · Digital Atlas of the Roman Empire © Johan Åhlfeldt (CC BY 4.0) · Place records: Pleiades (CC BY), GeoNames (CC BY) · Engravings: Gustave Doré, 1866 (public domain), via Wikimedia Commons.</p>
+  </div>
+  <div class="modal-foot"><button type="button" class="btn btn-primary" data-close>Done</button></div>
+</dialog>
+
+<dialog id="auth" class="modal auth" aria-labelledby="auth-title">
+  <form id="auth-form" class="modal-form" novalidate>
+    <div class="modal-head"><h2 id="auth-title" class="modal-title">Sign in</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+    <div class="modal-body">
+      <p class="auth-lede"><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg><span id="auth-lede">Your notes, bookmarks and reading progress, saved to a profile on this computer.</span></p>
+      <div id="auth-mode" class="segmented" role="radiogroup" aria-label="Sign in or create a profile"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-mode="signin" aria-checked="true">Sign in</button><button type="button" role="radio" data-mode="signup" aria-checked="false" tabindex="-1">Create profile</button></div>
+      <p id="auth-off" class="auth-off" role="note" hidden></p>
+      <p id="auth-err" class="form-err" role="alert" hidden></p>
+      <ul class="group frows auth-fields">
+        <li class="frow" data-only="signup" hidden><label for="auth-name">Name</label><input id="auth-name" name="name" autocomplete="name" maxlength="60" spellcheck="false"></li>
+        <li class="frow"><label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254"></li>
+        <li class="frow"><label for="auth-password">Password</label><input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="256"><button type="button" id="auth-pw-eye" class="pw-eye" aria-label="Show password" title="Show password" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg></button></li>
+        <li class="frow" id="auth-invite-row" hidden><label for="auth-invite">Invite code</label><input id="auth-invite" name="invite" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="From your invitation" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></li>
+      </ul>
+      <p class="group-foot" id="auth-pw-help" data-only="signup" hidden>At least 8 characters. Stored only on this computer, and only as a secure hash.</p>
+      <ul class="group frows auth-opts">
+        <li class="frow"><label for="auth-remember">Keep me signed in<small class="frow-sub">For 30 days on this browser</small></label><input id="auth-remember" name="remember" type="checkbox" class="switch" role="switch" checked></li>
+        <li class="frow" id="auth-import-row" data-only="signup" hidden><label for="auth-import">Bring over guest data<small class="frow-sub" id="auth-import-meta"></small></label><input id="auth-import" name="importGuest" type="checkbox" class="switch" role="switch" checked></li>
+      </ul>
+      <p class="group-foot auth-foot" data-only="signin">Forgot your password? In Terminal run <code>python3 <span class="nw">~/bible-study/serve.py</span> <span class="nw">--reset-password</span> you@example.com</code></p>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-primary" id="auth-submit">Sign in</button></div>
+  </form>
+</dialog>
+
+<dialog id="profile" class="modal profile" aria-labelledby="profile-title">
+  <div class="modal-head"><h2 id="profile-title" class="modal-title">Profile</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body" id="profile-body"></div>
+  <div class="modal-foot"><button type="button" class="btn btn-primary" data-close>Done</button></div>
+</dialog>
+
+<dialog id="library" class="modal library" aria-labelledby="library-title">
+  <div class="modal-head">
+    <div class="lib-titles"><h2 id="library-title" class="modal-title">Library</h2><p class="lib-sub" id="library-sub"></p></div>
+    <button type="button" id="lib-more" class="close-btn plain" aria-haspopup="menu" aria-expanded="false" aria-label="Library options" title="Options"><svg class="i" aria-hidden="true"><use href="#i-ellipsis"/></svg></button>
+    <button type="button" id="lib-account" class="acct-btn" aria-haspopup="dialog" aria-label="Sign in" title="Sign in" hidden><svg class="i" aria-hidden="true"><use href="#i-person"/></svg></button>
+    <button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+  </div>
+  <div class="modal-body lib-body" id="library-body"></div>
+</dialog>
+
+<dialog id="confirm" class="modal confirm" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+  <form id="confirm-form" class="modal-form" novalidate>
+    <div class="modal-head"><h2 id="confirm-title" class="modal-title"></h2></div>
+    <div class="modal-body"><p id="confirm-body"></p><ul class="group frows" id="confirm-pw-row" hidden><li class="frow"><label for="confirm-pw">Password</label><input id="confirm-pw" type="password" autocomplete="current-password" maxlength="256"></li></ul><p id="confirm-err" class="form-err" role="alert" hidden></p></div>
+    <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-danger" id="confirm-ok">Delete</button></div>
+  </form>
+</dialog>
+
+<dialog id="video" class="modal video-modal" aria-labelledby="video-title" aria-describedby="video-sub">
+  <div class="modal-head"><div class="vm-head"><h2 id="video-title" class="modal-title"></h2><p id="video-sub" class="vm-sub"></p></div><button type="button" class="close-btn" data-close aria-label="Close" title="Close (Esc)"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body vm-body"><div id="video-frame" class="player vm-frame"></div><p id="video-note" class="vm-note" hidden></p></div>
+  <div class="modal-foot"><a id="video-yt" class="btn btn-plain vm-yt" href="https://www.youtube.com/" target="_blank" rel="noopener">Watch on YouTube<svg class="i" aria-hidden="true"><use href="#i-external"/></svg></a><button type="button" class="btn btn-primary" data-close>Close</button></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="link-pick" class="link-pick" hidden><svg class="i" aria-hidden="true"><use href="#i-link-node"/></svg><span id="link-pick-msg" class="lp-msg" role="status" aria-live="polite"></span><button id="link-pick-cancel" class="lp-x" type="button">Cancel</button></div>
+<div id="mark-bubble" class="mark-bubble" role="toolbar" aria-label="Selected words" hidden></div>
+<div id="mark-card" class="mark-card" role="dialog" aria-labelledby="mc-ref" hidden></div>
+<div id="mark-pop" class="mark-pop" role="dialog" aria-labelledby="mp-title" tabindex="-1" hidden></div>
+<p id="mark-say" class="sr" aria-live="polite"></p>
+<div id="resume" class="resume" role="region" aria-labelledby="resume-t" hidden>
+  <span class="tile-i blue" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span>
+  <div class="resume-body"><p class="resume-k">Continue reading</p><p class="resume-t" id="resume-t">John 3:16</p><p class="resume-s" id="resume-s">Where you left off</p></div>
+  <p id="resume-say" aria-live="polite" style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap"></p>
+  <button type="button" class="btn btn-primary sm" data-resume-go aria-keyshortcuts="R">Continue</button>
+  <button type="button" class="close-btn" data-resume-close aria-label="Dismiss" title="Dismiss"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+</div>
+<div id="tip" class="tip" role="tooltip" aria-hidden="true"></div>
+<script>
+/* A module the server dropped (a reset connection) stops the whole app from starting: reload once or twice,
+   then say so. Only fetch failures fire this; code errors do not, so it can never loop on a real bug. */
+window.__bsBootFail = function () {
+  var k = 'bs-boot-retry', n = 0;
+  try { n = +sessionStorage.getItem(k) || 0; } catch (e) { n = 2; }
+  if (n < 2) { try { sessionStorage.setItem(k, String(n + 1)); } catch (e) { /* ignore */ } setTimeout(function () { location.reload(); }, 300 * (n + 1)); return; }
+  var el = document.getElementById('reader');
+  if (el) el.innerHTML = '<div class="notice error" role="note"><p>The app could not finish loading<small>serve.py did not send every file. Check that it is running, then reload.</small></p><button class="btn btn-tinted sm" type="button" onclick="location.reload()">Reload</button></div>';
+};
+</script>
+<script type="module" src="js/main.js" onerror="window.__bsBootFail()"></script>
+</body>
+</html>

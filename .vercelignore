@@ -1,0 +1,11 @@
+# Vercel only serves app/ as static files (vercel.json sets it as the output directory). Everything else in the
+# repo (serve.py, accounts.py, build.py, tests/, tools/, src/, .design/ …) runs on Railway or locally, never here.
+/*
+!app
+!vercel.json
+
+# Design mocks and builder harnesses: serve.py only serves them with --dev (one runs the whole app shell outside
+# dry mode), so they are never deployed.
+app/mock
+# Dotfiles are never served either (app/.DS_Store names what is in app/).
+app/**/.*

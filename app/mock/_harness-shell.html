@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Bible Study</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z'/%3E%3Cpath d='M12 6.8v13.4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+<svg id="icon-sprite" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-books" viewBox="0 0 24 24"><rect x="3.5" y="4" width="4" height="16" rx="1"/><rect x="9.5" y="6.5" width="4" height="13.5" rx="1"/><path d="M15.4 7.9l3.2-.86 3.35 12.5-3.2.86z"/><path d="M3.5 8h4M9.5 10h4"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+    <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M8.5 13.5L4 9l4.5-4.5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H10"/></symbol>
+    <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M15.5 13.5L20 9l-4.5-4.5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20 20"/></symbol>
+    <symbol id="i-alpha" viewBox="0 0 24 24"><path d="M2.5 18.5L7 5.5l4.5 13M4.1 14h5.8"/><path d="M20.8 10.2c-.5 4-1.9 8.3-4.3 8.3-1.7 0-2.7-1.4-2.7-3.3 0-2.3 1.4-4.2 3.2-4.2 2.4 0 2.9 3.3 3.9 5.9.3.9.8 1.5 1.5 1.5"/></symbol>
+    <symbol id="i-arcs" viewBox="0 0 24 24"><path d="M3 18.5h18"/><path d="M4.5 18.5a7.5 7.5 0 0115 0"/><path d="M9 18.5a3 3 0 016 0"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="6.5" r="2.5"/><circle cx="12.5" cy="18" r="2.5"/><path d="M8.5 7l7-.4M7.1 9.3l4.3 6.4M17 8.9l-3.5 6.9"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4.5L3.5 6.5v13l5.5-2 6 2 5.5-2v-13l-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></symbol>
+    <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><path d="M14.5 4.5v15M17 8.5h1.5M17 11.5h1.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M18.88 9.87L21.02 10.17 21.02 13.83 18.88 14.13 18.37 15.36 19.67 17.08 17.08 19.67 15.36 18.37 14.13 18.88 13.83 21.02 10.17 21.02 9.87 18.88 8.64 18.37 6.92 19.67 4.33 17.08 5.63 15.36 5.12 14.13 2.98 13.83 2.98 10.17 5.12 9.87 5.63 8.64 4.33 6.92 6.92 4.33 8.64 5.63 9.87 5.12 10.17 2.98 13.83 2.98 14.13 5.12 15.36 5.63 17.08 4.33 19.67 6.92 18.37 8.64Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 014.9.6c0 1.7-2.5 2.1-2.5 3.8"/><path d="M12 17.1v.01" stroke-width="2.2"/></symbol>
+    <symbol id="i-xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1-1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.6" cy="9" r="2.6"/><path d="M16.2 14.1c2.3.2 3.9 1.8 4.4 4.4"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11.2a6.5 6.5 0 0113 0C18.5 15.4 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.3"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z"/><path d="M12 6.8v13.4"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M11 4.5H7a3 3 0 00-3 3v9.5a3 3 0 003 3h9.5a3 3 0 003-3V13"/><path d="M17.8 3.9a1.9 1.9 0 012.7 2.7l-8 8-3.5.9.9-3.5z"/></symbol>
+    <symbol id="i-play-rect" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10.3 9.4v5.2l4.4-2.6z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4a1 1 0 001.5.86l12-7.2a1 1 0 000-1.72l-12-7.2A1 1 0 007 4.8z"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.8 12.6V4.8a1 1 0 011-1h7.8l7.6 7.6a1.4 1.4 0 010 2l-6.2 6.2a1.4 1.4 0 01-2 0z"/><path d="M8.3 8.3v.01" stroke-width="2.6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-ellipsis" viewBox="0 0 24 24"><path d="M6 12h.01M12 12h.01M18 12h.01"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 6.5h15M9.5 6.5V4.8a1 1 0 011-1h3a1 1 0 011 1v1.7M6.5 6.5l.8 12.2a1.5 1.5 0 001.5 1.3h6.4a1.5 1.5 0 001.5-1.3l.8-12.2"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5"/><path d="M18 14v3.5a2.5 2.5 0 01-2.5 2.5h-9A2.5 2.5 0 014 17.5v-9A2.5 2.5 0 016.5 6H10"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8.5 10.5H7a2.5 2.5 0 00-2.5 2.5v5A2.5 2.5 0 007 20.5h10a2.5 2.5 0 002.5-2.5v-5a2.5 2.5 0 00-2.5-2.5h-1.5"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 3.5v11M8 10.5l4 4 4-4"/><path d="M8.5 7.5H7A2.5 2.5 0 004.5 10v8A2.5 2.5 0 007 20.5h10a2.5 2.5 0 002.5-2.5v-8A2.5 2.5 0 0017 7.5h-1.5"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-columns" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5"/><path d="M12 4.5v15"/></symbol>
+    <symbol id="i-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M7 17L17 7"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9z"/><path d="M18.5 16v4M16.5 18h4"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.01" stroke-width="2.2"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18H15a3 3 0 000-6H9a3 3 0 010-6h6.8"/></symbol></defs>
+</svg>
+<a class="skip" href="#reader">Skip to the text</a>
+
+<header id="topbar" class="gnav flat">
+  <div class="gnav-left">
+    <button id="btn-pick" class="ib" type="button" aria-label="Browse books" title="Browse books"><svg class="i" aria-hidden="true"><use href="#i-books"/></svg></button>
+    <button id="cur-ref" class="refbtn" type="button" aria-haspopup="dialog" aria-controls="picker" title="Choose book and chapter"><span id="cur-ref-text">John 3</span><svg class="i" aria-hidden="true"><use href="#i-chev-down"/></svg></button>
+    <span class="pair">
+      <button id="btn-prev" class="ib" type="button" aria-label="Previous chapter" title="Previous chapter (←)"><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <button id="btn-next" class="ib" type="button" aria-label="Next chapter" title="Next chapter (→)"><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+    </span>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <span class="pair">
+      <button id="btn-back" class="ib" type="button" aria-label="Back" title="Back to where you came from" disabled><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
+      <button id="btn-fwd" class="ib" type="button" aria-label="Forward" title="Forward" disabled><svg class="i" aria-hidden="true"><use href="#i-fwd"/></svg></button>
+    </span>
+  </div>
+  <form id="search-form" class="search" role="search">
+    <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+    <input id="search" type="search" placeholder="Search verses, words, G26, topics" autocomplete="off" spellcheck="false" aria-label="Search: a reference, words, a Strong's number or a topic">
+    <kbd aria-hidden="true">/</kbd>
+    <button type="button" class="cancel">Cancel</button>
+  </form>
+  <button class="ib search-open" type="button" aria-label="Search" title="Search (/)"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
+  <div class="gnav-right">
+    <label class="pill-select" title="Primary translation"><span class="sr">Primary translation</span><select id="tr"><optgroup label="Bundled"><option>KJV</option><option>BSB</option></optgroup><optgroup label="With API key"><option>ESV</option><option>NLT</option></optgroup><optgroup label="Opens a website"><option>NIV</option><option>NKJV</option><option>LSB</option></optgroup></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <label class="pill-select lead par" title="Parallel translation"><span class="sr">Parallel translation</span><svg class="i lead-i" aria-hidden="true"><use href="#i-columns"/></svg><select id="tr2"><option value="">Parallel</option><optgroup label="Bundled"><option>KJV</option><option>BSB</option></optgroup><optgroup label="With API key"><option>ESV</option><option>NLT</option></optgroup></select><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></label>
+    <button id="btn-orig" class="toggle" type="button" aria-pressed="false" title="Show Hebrew / Greek under each verse (o)"><svg class="i" aria-hidden="true"><use href="#i-alpha"/></svg><span class="lbl">Original</span><span class="sr"> language interlinear</span></button>
+    <div class="tools" role="group" aria-label="Visualisations">
+      <button type="button" data-panel-btn="arcs" aria-pressed="false" aria-label="Cross-reference arcs" title="Arcs (a)"><svg class="i" aria-hidden="true"><use href="#i-arcs"/></svg></button>
+      <button type="button" data-panel-btn="graph" aria-pressed="false" aria-label="Link graph" title="Graph (g)"><svg class="i" aria-hidden="true"><use href="#i-graph"/></svg></button>
+      <button type="button" data-panel-btn="map" aria-pressed="false" aria-label="Map of places" title="Map (m)"><svg class="i" aria-hidden="true"><use href="#i-map"/></svg></button>
+    </div>
+    <span class="vsep hide-m" aria-hidden="true"></span>
+    <button id="btn-drawer" class="ib" type="button" aria-label="Study panel" aria-controls="drawer" aria-expanded="false" title="Study panel"><svg class="i" aria-hidden="true"><use href="#i-sidebar"/></svg></button>
+    <button id="btn-settings" class="ib" type="button" aria-label="Settings" aria-haspopup="dialog" title="Settings and API keys"><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg></button>
+    <button id="btn-help" class="ib" type="button" aria-label="Keyboard shortcuts" aria-haspopup="dialog" title="Keyboard shortcuts (?)"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<div class="page" id="page">
+  <section id="panel" aria-labelledby="stage-title" aria-hidden="true" inert><div class="stage-clip"><div class="stage" id="stage"></div></div></section>
+  <main id="layout"><section id="reader" class="reader" tabindex="-1" aria-label="Chapter text"><header class="hero" data-div="gospels">
+<p class="eyebrow"><span class="t-dot nt" aria-hidden="true"></span>New Testament · Gospels</p>
+<h1 class="hero-title">John <span class="chnum">3</span></h1>
+<p class="hero-tag">Jesus teaches Nicodemus. <span class="soft">John the Baptist exalts Christ.</span></p>
+<p class="intro-line">Traditionally John the apostle, ‘the disciple whom Jesus loved’ · c. AD 85–95</p>
+<div class="chips" role="group"><button class="chip" type="button"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>c. AD 30</span><span class="era-track"><i style="left:97.3%"></i></span></button><button class="chip" type="button"><svg class="i" aria-hidden="true"><use href="#i-calendar"/></svg><span><b>2</b> events</span></button><button class="chip" type="button"><span class="monos"><span class="mono">JE</span><span class="mono">NI</span><span class="mono">JB</span></span><span><b>6</b> people</span></button><button class="chip" type="button"><svg class="i" aria-hidden="true"><use href="#i-pin"/></svg><span><b>5</b> places</span></button><button class="chip" type="button"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg><span><b>658</b> links</span></button><button class="chip more" type="button">About John <svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button></div>
+<figure class="sig"><div class="arc-host" id="sig-arcs" style="height:140px"></div><figcaption class="legend"><span class="key ot"><i></i>Old Testament · <b>130</b></span><span class="key nt"><i></i>New Testament · <b>528</b></span><span class="cap" id="sig-cap">Every link leaving John 3. Select an arc to study it.</span></figcaption></figure>
+</header>
+<div class="notice" role="note"><svg class="i" aria-hidden="true"><use href="#i-sparkle"/></svg><p>ESV needs an API key<small>Add a free ESV key in Settings and the text is fetched a chapter at a time, then cached.</small></p><button class="btn btn-tinted sm" type="button">Open Settings</button><button class="close-btn" type="button" aria-label="Dismiss"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+<div class="verses" role="list" lang="en"><div class="verse" id="v1" data-v="1" role="listitem" tabindex="-1"><span class="vnum"><span>1</span></span><span class="vtext">The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.</span><span class="vmeta"><button class="xc" type="button" data-v="1" tabindex="-1" aria-label="4 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>4</button><span class="badges"></span></span></div>
+<div class="verse" id="v2" data-v="2" role="listitem" tabindex="-1"><span class="vnum"><span>2</span></span><span class="vtext">Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.</span><span class="vmeta"><button class="xc" type="button" data-v="2" tabindex="-1" aria-label="5 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>5</button><span class="badges"></span></span></div>
+<div class="verse hl-yellow" id="v3" data-v="3" role="listitem" tabindex="-1"><span class="vnum"><span>3</span></span><span class="vtext">There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:</span><span class="vmeta"><button class="xc" type="button" data-v="3" tabindex="-1" aria-label="6 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>6</button><span class="badges"><span class="b-note" title="Has a note"><svg class="i" aria-hidden="true"><use href="#i-note"/></svg><span class="sr">Has a note</span></span><span class="b-video"><svg class="i" aria-hidden="true"><use href="#i-play-rect"/></svg></span></span></span></div>
+<div class="verse" id="v4" data-v="4" role="listitem" tabindex="-1"><span class="vnum"><span>4</span></span><span class="vtext">The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.</span><span class="vmeta"><span class="badges"></span></span></div>
+<div class="verse" id="v5" data-v="5" role="listitem" tabindex="-1"><span class="vnum"><span>5</span></span><span class="vtext">Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.</span><span class="vmeta"><button class="xc" type="button" data-v="5" tabindex="-1" aria-label="8 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>8</button><span class="badges"></span></span></div>
+<div class="verse" id="v6" data-v="6" role="listitem" tabindex="-1"><span class="vnum"><span>6</span></span><span class="vtext">There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:</span><span class="vmeta"><button class="xc" type="button" data-v="6" tabindex="-1" aria-label="9 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>9</button><span class="badges"></span></span></div>
+<div class="verse" id="v7" data-v="7" role="listitem" tabindex="-1"><span class="vnum"><span>7</span></span><span class="vtext">The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.</span><span class="vmeta"><button class="xc" type="button" data-v="7" tabindex="-1" aria-label="10 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>10</button><span class="badges"></span></span></div>
+<div class="verse" id="v8" data-v="8" role="listitem" tabindex="-1"><span class="vnum"><span>8</span></span><span class="vtext">Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.</span><span class="vmeta"><span class="badges"></span></span></div>
+<div class="verse" id="v9" data-v="9" role="listitem" tabindex="-1"><span class="vnum"><span>9</span></span><span class="vtext">There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:</span><span class="vmeta"><button class="xc" type="button" data-v="9" tabindex="-1" aria-label="12 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>12</button><span class="badges"></span></span></div>
+<div class="verse" id="v10" data-v="10" role="listitem" tabindex="-1"><span class="vnum"><span>10</span></span><span class="vtext">The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.</span><span class="vmeta"><button class="xc" type="button" data-v="10" tabindex="-1" aria-label="13 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>13</button><span class="badges"></span></span></div>
+<div class="verse" id="v11" data-v="11" role="listitem" tabindex="-1"><span class="vnum"><span>11</span></span><span class="vtext">Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.</span><span class="vmeta"><button class="xc" type="button" data-v="11" tabindex="-1" aria-label="14 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>14</button><span class="badges"></span></span></div>
+<div class="verse" id="v12" data-v="12" role="listitem" tabindex="-1"><span class="vnum"><span>12</span></span><span class="vtext">There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:</span><span class="vmeta"><span class="badges"></span></span></div>
+<div class="verse" id="v13" data-v="13" role="listitem" tabindex="-1"><span class="vnum"><span>13</span></span><span class="vtext">The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.</span><span class="vmeta"><button class="xc" type="button" data-v="13" tabindex="-1" aria-label="16 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>16</button><span class="badges"></span></span></div>
+<div class="verse" id="v14" data-v="14" role="listitem" tabindex="-1"><span class="vnum"><span>14</span></span><span class="vtext">Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.</span><span class="vmeta"><button class="xc" type="button" data-v="14" tabindex="-1" aria-label="17 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>17</button><span class="badges"></span></span></div>
+<div class="verse" id="v15" data-v="15" role="listitem" tabindex="-1"><span class="vnum"><span>15</span></span><span class="vtext">There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:</span><span class="vmeta"><button class="xc" type="button" data-v="15" tabindex="-1" aria-label="18 cross-references"><svg class="i" aria-hidden="true"><use href="#i-link"/></svg>18</button><span class="badges"></span></span></div>
+<div class="verse" id="v16" data-v="16" role="listitem" tabindex="0" aria-current="true"><span class="vnum"><span>16</span></span><span class="vtext">The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.</span><span class="vmeta"><span class="badges"><span class="b-note" title="Has a note"><svg class="i" aria-hidden="true"><use href="#i-note"/></svg><span class="sr">Has a note</span></span><span class="b-video"><svg class="i" aria-hidden="true"><use href="#i-play-rect"/></svg></span></span></span></div>
+</div>
+<nav class="foot-nav"><button class="foot-tile prev" type="button"><small>Previous</small><span><svg class="i" aria-hidden="true"><use href="#i-arrow-left"/></svg>John 2</span></button><button class="foot-tile next" type="button"><small>Next</small><span>John 4<svg class="i" aria-hidden="true"><use href="#i-arrow-right"/></svg></span></button></nav>
+<p class="copyright">King James Version · Public domain<br>Cross-references: OpenBible.info (CC BY)</p></section></main>
+</div>
+
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+<aside id="drawer" class="drawer" role="dialog" aria-labelledby="drawer-title" aria-modal="false" aria-hidden="true" inert>
+  <button class="grabber" id="grabber" type="button" aria-label="Expand study sheet"></button>
+  <header class="sheet-top" id="sheet-top">
+    <div class="sheet-head">
+      <div class="sheet-title">
+        <p class="sheet-kicker" id="drawer-kicker"></p>
+        <h2 id="drawer-title" tabindex="-1">John 3</h2>
+        <p id="drawer-sub"></p>
+      </div>
+      <span id="save-status" class="save" role="status" aria-live="polite"></span>
+      <button id="verse-prev" class="close-btn plain" type="button" aria-label="Previous verse" title="Previous verse (k)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+      <button id="verse-next" class="close-btn plain" type="button" aria-label="Next verse" title="Next verse (j)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
+      <button id="drawer-close" class="close-btn" type="button" aria-label="Close study panel" title="Close (Esc)"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+    </div>
+    <nav id="drawer-tabs" class="segmented" role="tablist" aria-label="Study panel sections">
+      <span class="seg-ind" aria-hidden="true"></span>
+      <button role="tab" type="button" id="tab-xref" data-tab="xref" aria-selected="true" aria-controls="drawer-body">Links<span class="count" id="cnt-xref"></span></button>
+      <button role="tab" type="button" id="tab-context" data-tab="context" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Context</button>
+      <button role="tab" type="button" id="tab-orig" data-tab="orig" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Original</button>
+      <button role="tab" type="button" id="tab-notes" data-tab="notes" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Notes<span class="pip" id="pip-notes" hidden></span></button>
+      <button role="tab" type="button" id="tab-media" data-tab="media" aria-selected="false" aria-controls="drawer-body" tabindex="-1">Video<span class="count" id="cnt-media"></span></button>
+      <button role="tab" type="button" id="tab-search" data-tab="search" aria-selected="false" aria-controls="drawer-body" tabindex="-1" hidden>Search</button>
+    </nav>
+  </header>
+  <div id="drawer-body" class="sheet-body" role="tabpanel" aria-labelledby="tab-xref" tabindex="-1"><div class="view"><blockquote class="vq">For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.</blockquote><div class="canon-mini" id="canon-mini"></div><div class="lh"><h3>Cross-references</h3><span>23 · ranked by votes</span></div><div class="filter-row"><div class="segmented sm" id="xfilter" role="radiogroup"><span class="seg-ind" style="width:33%"></span><button type="button" role="radio" aria-checked="true">All 23</button><button type="button" role="radio" aria-checked="false">Old 1</button><button type="button" role="radio" aria-checked="false">New 22</button></div></div><ol class="group xrefs"><li class="xref" data-i="0"><button class="cell" type="button" aria-expanded="false"><span class="xi">1</span><span class="cell-body"><span class="cell-title">Romans 5:8</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar ot"><i style="width:100%"></i></span><span class="vn">984</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="1"><button class="cell" type="button" aria-expanded="false"><span class="xi">2</span><span class="cell-body"><span class="cell-title">Romans 5:9</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar nt"><i style="width:91%"></i></span><span class="vn">904</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="2"><button class="cell" type="button" aria-expanded="false"><span class="xi">3</span><span class="cell-body"><span class="cell-title">Romans 5:10</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar nt"><i style="width:82%"></i></span><span class="vn">824</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="3"><button class="cell" type="button" aria-expanded="false"><span class="xi">4</span><span class="cell-body"><span class="cell-title">Romans 5:11</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar ot"><i style="width:73%"></i></span><span class="vn">744</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="4"><button class="cell" type="button" aria-expanded="false"><span class="xi">5</span><span class="cell-body"><span class="cell-title">Romans 5:12</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar nt"><i style="width:64%"></i></span><span class="vn">664</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="5"><button class="cell" type="button" aria-expanded="false"><span class="xi">6</span><span class="cell-body"><span class="cell-title">Romans 5:13</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar nt"><i style="width:55%"></i></span><span class="vn">584</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="6"><button class="cell" type="button" aria-expanded="false"><span class="xi">7</span><span class="cell-body"><span class="cell-title">Romans 5:14</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar ot"><i style="width:46%"></i></span><span class="vn">504</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li><li class="xref" data-i="7"><button class="cell" type="button" aria-expanded="false"><span class="xi">8</span><span class="cell-body"><span class="cell-title">Romans 5:15</span><span class="cell-sub serif">But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.</span></span><span class="cell-trail"><span class="votes"><span class="vbar nt"><i style="width:37%"></i></span><span class="vn">424</span></span><svg class="i chev" aria-hidden="true"><use href="#i-chev-right"/></svg></span></button><div class="expand"><div><div class="expand-in"></div></div></div></li></ol></div></div>
+</aside>
+
+<dialog id="picker" class="modal picker" aria-labelledby="picker-title">
+  <div class="modal-head">
+    <h2 id="picker-title" class="modal-title">Books</h2>
+    <label class="mini-search"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><input id="picker-filter" placeholder="Filter" autocomplete="off" spellcheck="false" aria-label="Filter books"></label>
+    <button class="close-btn" type="button" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+  </div>
+  <div class="picker-body">
+    <div id="picker-books" class="picker-books"></div>
+    <div id="picker-chapters" class="picker-chapters"></div>
+  </div>
+</dialog>
+
+<dialog id="settings" class="modal" aria-labelledby="settings-title">
+  <form id="settings-form" class="modal-form" method="dialog">
+    <div class="modal-head"><h2 id="settings-title" class="modal-title">Settings</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+    <div class="modal-body">
+      <h3 class="group-h">Appearance</h3>
+      <ul class="group frows">
+        <li class="frow"><span id="theme-l">Theme</span><div id="theme" class="segmented sm" role="radiogroup" aria-labelledby="theme-l"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-theme-opt="auto" aria-checked="true">Auto</button><button type="button" role="radio" data-theme-opt="light" aria-checked="false" tabindex="-1">Light</button><button type="button" role="radio" data-theme-opt="dark" aria-checked="false" tabindex="-1">Dark</button></div></li>
+        <li class="frow"><label for="fontsize">Reading size</label><div class="size-ctl"><span class="a1" aria-hidden="true">A</span><input id="fontsize" type="range" min="15" max="26" step="1" value="20"><span class="a2" aria-hidden="true">A</span></div></li>
+      </ul>
+      <h3 class="group-h">Licensed translations</h3>
+      <ul class="group frows">
+        <li class="frow"><label for="esv-key">ESV API key</label><input id="esv-key" autocomplete="off" spellcheck="false" placeholder="Paste key"></li>
+        <li class="frow"><label for="nlt-key">NLT API key</label><input id="nlt-key" autocomplete="off" spellcheck="false" placeholder="Paste key"></li>
+      </ul>
+      <p class="group-foot">Free for personal use at <a href="https://api.esv.org/" target="_blank" rel="noopener">api.esv.org</a> and <a href="https://api.nlt.to/" target="_blank" rel="noopener">api.nlt.to</a>. Text is fetched a chapter at a time and cached on this computer. NIV, NKJV and LSB have no free API, so choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="help" class="modal" aria-labelledby="help-title">
+  <div class="modal-head"><h2 id="help-title" class="modal-title">Keyboard shortcuts</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body">
+    <dl class="keys">
+      <dt><kbd class="k">←</kbd><kbd class="k">→</kbd></dt><dd>Previous / next chapter (also <kbd class="k">[</kbd> <kbd class="k">]</kbd>)</dd>
+      <dt><kbd class="k">j</kbd><kbd class="k">k</kbd></dt><dd>Next / previous verse</dd>
+      <dt><kbd class="k">↑</kbd><kbd class="k">↓</kbd></dt><dd>Move between verses when a verse has focus</dd>
+      <dt><kbd class="k">return</kbd></dt><dd>Open the focused verse in the study panel</dd>
+      <dt><kbd class="k">/</kbd></dt><dd>Search: a reference (<i>rom 8:28</i>), words, a Strong's number (<i>G26</i>) or a topic</dd>
+      <dt><kbd class="k">o</kbd></dt><dd>Hebrew / Greek interlinear</dd>
+      <dt><kbd class="k">a</kbd><kbd class="k">g</kbd><kbd class="k">m</kbd></dt><dd>Arcs · Graph · Map</dd>
+      <dt><kbd class="k">n</kbd></dt><dd>Note for the selected verse (or double-click a verse)</dd>
+      <dt><kbd class="k">?</kbd></dt><dd>This list</dd>
+      <dt><kbd class="k">esc</kbd></dt><dd>Close the study panel or the visual panel</dd>
+    </dl>
+    <p class="credits">KJV &amp; BSB (public domain) · OpenBible.info cross-references &amp; topics (CC BY) · STEPBible TAHOT/TAGNT (CC BY 4.0) · Strong's via OpenScriptures (CC BY-SA) · Theographic Bible Metadata (CC BY-SA 4.0) · Easton's Bible Dictionary (1897) · Map tiles © OpenStreetMap contributors © CARTO.</p>
+  </div>
+  <div class="modal-foot"><button type="button" class="btn btn-primary" data-close>Done</button></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="tip" class="tip" role="tooltip" aria-hidden="true"></div>
+<script>
+/* SHELL harness: static markup + the real stylesheet. No app JS, no network writes. */
+const q=new URLSearchParams(location.search), d=document.getElementById('drawer'), b=document.body;
+const mode=()=>innerWidth>=1100?'side':innerWidth<700?'sheet':'overlay';
+function sync(){const open=q.has('open'); b.classList.remove('mode-side','mode-overlay','mode-sheet'); b.classList.add('mode-'+mode()); d.classList.toggle('open',open); d.inert=!open; b.classList.toggle('drawer-open',open); d.classList.toggle('full',q.has('full')); b.classList.toggle('sheet-modal',open&&(mode()==='overlay'||(mode()==='sheet'&&q.has('full'))));
+ const t=document.querySelector('#drawer-tabs [aria-selected=true]'), ind=document.querySelector('#drawer-tabs .seg-ind'); ind.style.width=t.offsetWidth+'px'; ind.style.transform='translateX('+t.offsetLeft+'px)';}
+if(q.get('theme')) document.documentElement.dataset.theme=q.get('theme');
+if(q.has('panel')){const p=document.getElementById('panel'); p.classList.add('open'); p.inert=false; document.getElementById('stage').innerHTML='<div class="stage-head"><div class="stage-titles"><h2 class="stage-title" id="stage-title">Cross-reference arcs</h2><p class="stage-sub">658 links leaving John 3. Click an arc to go there.</p><div class="legend"><span class="key ot"><i></i>Old Testament</span><span class="key nt"><i></i>New Testament</span></div></div><span class="spacer"></span><div class="stage-tools"><label class="range-ctl">Minimum votes <input type="range" id="arc-min" min="0" max="300" value="40" style="--p:13%"><output id="arc-min-v">40</output></label></div><button class="close-btn" type="button" aria-label="Close arcs"><svg class="i"><use href="#i-xmark"/></svg></button></div><div class="stage-body"><div class="stage-empty">Canvas here</div></div>';}
+document.getElementById('drawer-kicker').textContent='Verse 16 of 36'; document.getElementById('drawer-title').textContent='John 3:16'; document.getElementById('drawer-sub').textContent='King James Version';
+document.getElementById('cnt-xref').textContent='23'; document.getElementById('pip-notes').hidden=false;
+document.getElementById('verse-prev').hidden=false; document.getElementById('verse-next').hidden=false;
+document.getElementById('cur-ref-text').textContent=q.get('ref')||'John 3:16';
+addEventListener('resize',sync); sync();
+</script>
+</body>
+</html>
