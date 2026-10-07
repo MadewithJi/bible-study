@@ -6,7 +6,7 @@
   "outputDirectory": "app",
   "cleanUrls": false,
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://RAILWAY_HOST/api/:path*" }
+    { "source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*" }
   ],
   "headers": [
     {
