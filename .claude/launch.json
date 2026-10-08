@@ -10,6 +10,19 @@
         "8765"
       ],
       "port": 8765
+    },
+    {
+      "name": "bible-lantern-mocks",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "serve.py",
+        "--dev",
+        "--port",
+        "8890",
+        "--data-dir",
+        ".design/linkstest/mockview"
+      ],
+      "port": 8890
     }
   ]
 }

@@ -7,7 +7,7 @@
    ===================================================================== */
 
 :root {
-  --art-paper: #f7f4ee;                              /* passe-partout */
+  --art-paper: #fbf9f4;                              /* passe-partout: a shade lighter than the paper page */
   --art-paper-edge: rgba(92, 70, 32, .13);
   --art-ph: #ece7dc;                                 /* image box before the file arrives */
   --art-img: none;                                   /* filter on engravings */

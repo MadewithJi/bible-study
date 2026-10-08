@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Bible Lantern</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308080a'/%3E%3Cg fill='none' stroke='%23f5f5f7' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M27 14a5 5 0 0110 0'/%3E%3Cpath d='M22.5 20l3-6h13l3 6'/%3E%3Crect x='19' y='20' width='26' height='29' rx='6'/%3E%3Cpath d='M23 54h18'/%3E%3C/g%3E%3Cpath d='M32 27c4 4.4 5.8 7.6 5.8 10.4a5.8 5.8 0 01-11.6 0c0-2.8 1.8-6 5.8-10.4z' fill='%23ffa94d'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+/* =====================================================================
+   Home mock-up C: editorial with Doré (brief: .design/home-brief.md)
+   Tokens come from ../css/styles.css; this file only adds the lamp
+   (a warm accent for light and glow, never for controls) and the night
+   surfaces that stay dark in both themes.
+   ===================================================================== */
+:root {
+  --lamp: #ff9f2e;                         /* glow, flame, read wash (decorative) */
+  --lamp-ink: #9a4f00;                     /* warm text on --bg: 5.8:1 */
+  --wash-max: 40%;                         /* a fully read book */
+  --gutter: clamp(16px, 4vw, 56px); --wrap: 1240px;
+  --ink-night: #08080a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --lamp: #ffa94d; --lamp-ink: #ffb35c; --wash-max: 36%; }
+}
+:root[data-theme="dark"] { --lamp: #ffa94d; --lamp-ink: #ffb35c; --wash-max: 36%; }
+
+/* Night surfaces: the hero, the continue band, the feature previews and the
+   colophon are dark in both themes (like the app's night stage). */
+.dk {
+  --label: #f5f5f7; --label-2: #a1a1a6; --label-3: #98989d; --label-4: #636366; --read: #e6e6eb;
+  --sep: rgba(255,255,255,.1); --sep-2: rgba(255,255,255,.16);
+  --fill: rgba(118,118,128,.3); --fill-2: rgba(118,118,128,.2); --fill-3: rgba(118,118,128,.12);
+  --accent: #2997ff; --link: #2997ff; --focus: #2997ff; --accent-on-tint: #74b9ff;
+  --ot: #e36a10; --nt: #1fa99b; --bg-elev: #1c1c1e;
+  --lamp: #ffa94d; --lamp-ink: #ffb35c;
+  color-scheme: dark; color: var(--label);
+}
+
+/* ---------- base ---------- */
+body { background: var(--bg); overflow-x: hidden; }
+.wrap { width: 100%; max-width: calc(var(--wrap) + 2 * var(--gutter)); margin-inline: auto; padding-inline: var(--gutter); }
+.sc { font-variant-caps: small-caps; }
+.mark { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.mark .fl { fill: var(--lamp); stroke: none; filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--lamp) 85%, transparent)); }
+main:focus { outline: none; }
+h1, h2, h3, p, ol, ul, blockquote, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+
+.lbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: var(--r-pill); font: 600 16px/1 var(--sans); letter-spacing: -.01em; white-space: nowrap; transition: background-color var(--d-1), box-shadow var(--d-1), transform var(--d-2) var(--ease); }
+.lbtn:hover { text-decoration: none; }
+.lbtn:active { transform: scale(.97); }
+.lbtn .i { width: 17px; height: 17px; }
+.btn-fill { background: var(--accent-fill); color: #fff; }
+.btn-fill:hover { background: var(--accent-fill-hover); }
+.btn-glass { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 0 0 0 .5px rgba(255,255,255,.3); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.btn-glass:hover { background: rgba(255,255,255,.22); }
+.kick { font: 600 13px/1.3 var(--sans); letter-spacing: .01em; color: var(--lamp-ink); }
+
+/* ---------- masthead (over the hero; not sticky) ---------- */
+.mast { position: absolute; z-index: 20; inset: 0 0 auto; display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(0, 420px) minmax(max-content, 1fr); align-items: center; gap: 12px 20px; min-height: 68px; padding: 10px var(--gutter); }
+.brand { justify-self: start; display: inline-flex; white-space: nowrap; align-items: center; gap: 9px; color: var(--label); font: 600 19px/1 var(--serif); letter-spacing: -.005em; border-radius: 8px; }
+.brand:hover { text-decoration: none; }
+.brand .mark { width: 26px; height: 26px; margin-top: -3px; }
+.finder { position: relative; display: flex; align-items: center; }
+.finder .i { position: absolute; z-index: 1; left: 13px; width: 17px; height: 17px; color: rgba(255,255,255,.75); pointer-events: none; }
+.finder input { width: 100%; height: 38px; padding: 0 14px 0 38px; border: 0; border-radius: var(--r-pill); background: rgba(22,22,26,.42); color: #fff; box-shadow: inset 0 0 0 .5px rgba(255,255,255,.26); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); font-size: 15px; outline: none; transition: background-color var(--d-1), box-shadow var(--d-1); -webkit-appearance: none; appearance: none; }
+.finder input::placeholder { color: rgba(255,255,255,.72); }
+.finder input:hover { background: rgba(22,22,26,.54); }
+.finder input:focus-visible { background: rgba(22,22,26,.62); box-shadow: 0 0 0 2px var(--focus); }
+.finder input::-webkit-search-cancel-button { filter: invert(1); }
+.mast-end { grid-column: -2; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 10px; }
+.me { width: 34px; height: 34px; border-radius: 50%; background: var(--av-grad); color: #fff; font: 600 14px/34px var(--sans); text-align: center; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
+.mast-link { height: 34px; padding: 0 16px; border-radius: var(--r-pill); font: 600 14px/34px var(--sans); color: #fff; background: rgba(22,22,26,.42); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.26); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.mast-link:hover { background: rgba(22,22,26,.6); }
+body[data-state="guest"] [data-only="today"], body[data-state="today"] [data-only="guest"] { display: none !important; }
+
+/* ---------- hero: a Doré plate full bleed, with lamplight falling across it ---------- */
+@property --sway { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.cover { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end; min-height: clamp(580px, 78vh, 860px); padding: 128px 0 clamp(36px, 6vh, 64px); overflow: hidden; background: var(--ink-night); }
+.cover-g { min-height: clamp(640px, 100svh, 1000px); }
+.plate { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+.plate img { width: 100%; height: 100%; object-fit: cover; object-position: var(--pos, 50% 30%); filter: sepia(.14) contrast(1.05) brightness(.9); opacity: 0; transform: scale(1.045); transform-origin: var(--lx, 50%) var(--ly, 30%); transition: opacity 1.4s var(--ease-out), transform 3.2s var(--ease-out); }
+.plate.is-on img { opacity: 1; transform: none; }
+.plate > span { position: absolute; inset: 0; pointer-events: none; }
+/* warm the engraving where its own light is (soft light keeps the hatching) */
+.plate .glow { background: radial-gradient(circle at var(--lx, 50%) var(--ly, 25%), rgba(255,186,104,.95) 0, rgba(255,160,72,.5) 9%, rgba(255,140,56,.18) 26%, transparent 48%); mix-blend-mode: soft-light; }
+/* a little halation at the source, breathing very slowly */
+.plate .halo { background: radial-gradient(circle at var(--lx, 50%) var(--ly, 25%), rgba(255,206,150,.34) 0, rgba(255,184,110,.12) 6%, transparent 15%); mix-blend-mode: screen; animation: breathe 7s var(--ease-io) infinite alternate; }
+/* a faint shaft of light falling from the source towards the words */
+.plate .beam { background: conic-gradient(from calc(var(--ba, 200deg) - 15deg + var(--sway)) at var(--lx, 50%) var(--ly, 25%), transparent 0deg, rgba(255,214,160,.17) 7deg, rgba(255,214,160,.05) 13deg, rgba(255,214,160,.13) 19deg, transparent 30deg, transparent 360deg); -webkit-mask-image: radial-gradient(circle at var(--lx, 50%) var(--ly, 25%), #000 0, rgba(0,0,0,.6) 40%, transparent 85%); mask-image: radial-gradient(circle at var(--lx, 50%) var(--ly, 25%), #000 0, rgba(0,0,0,.6) 40%, transparent 85%); mix-blend-mode: screen; filter: blur(5px); animation: sway 22s var(--ease-io) infinite alternate; }
+.plate .shade { background:
+  linear-gradient(180deg, rgba(8,8,10,.7) 0, rgba(8,8,10,.3) 90px, rgba(8,8,10,0) 170px),
+  linear-gradient(0deg, rgba(8,8,10,.94) 0, rgba(8,8,10,.74) 26%, rgba(8,8,10,.22) 52%, rgba(8,8,10,0) 70%),
+  linear-gradient(90deg, rgba(8,8,10,.6) 0, rgba(8,8,10,.18) 46%, rgba(8,8,10,0) 70%); }
+@keyframes breathe { from { opacity: .72; } to { opacity: 1; } }
+@keyframes sway { from { --sway: -3deg; } to { --sway: 3deg; } }
+.hero-in { position: relative; }
+.hero-in > * { animation: rise .9s var(--ease-out) both; }
+.hero-in > :nth-child(2) { animation-delay: .08s; } .hero-in > :nth-child(3) { animation-delay: .16s; } .hero-in > :nth-child(4) { animation-delay: .24s; } .hero-in > :nth-child(5) { animation-delay: .32s; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.dateline { display: flex; align-items: center; gap: 10px; font: 600 15px/1.2 var(--sans); color: var(--label); letter-spacing: 0; margin-bottom: clamp(20px, 4vh, 40px); }
+.dateline .dl-k { color: var(--lamp-ink); }
+.dateline .dl-k::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 9px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 10px 2px color-mix(in srgb, var(--lamp) 70%, transparent); vertical-align: 2px; }
+.dateline .dl-sep { width: 18px; height: 1px; background: rgba(255,255,255,.4); }
+.vod-k { font: 600 13px/1 var(--sans); color: var(--label-2); margin-bottom: 14px; }
+.vod { display: block; color: var(--label); border-radius: 12px; max-width: 1040px; }
+.vod:hover { text-decoration: none; }
+.vod-t { position: relative; display: block; font: 400 clamp(34px, 4.6vw, 68px)/1.08 var(--serif); letter-spacing: -.015em; text-wrap: balance; max-width: 15.5em; text-shadow: 0 1px 30px rgba(0,0,0,.55); }
+.vod-t.long { font-size: clamp(27px, 3.3vw, 48px); line-height: 1.14; max-width: 20em; }
+.vod-t::before { content: '\201C'; position: absolute; left: -.48em; top: -.06em; color: var(--lamp); opacity: .9; font-size: 1.2em; line-height: 1; text-shadow: 0 0 22px color-mix(in srgb, var(--lamp) 60%, transparent); }
+.vod-r { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-top: clamp(18px, 3vh, 28px); }
+.vod-ref { font: 600 17px/1.2 var(--sans); }
+.vod-go { display: inline-flex; align-items: center; gap: 5px; font: 500 15px/1.2 var(--sans); color: var(--label-2); transition: color var(--d-1); }
+.vod-go .i { width: 15px; height: 15px; transition: transform var(--d-2) var(--ease); }
+.vod:hover .vod-go { color: var(--label); }
+.vod:hover .vod-go .i { transform: translateX(3px); }
+.plate-cap { position: absolute; right: var(--gutter); bottom: clamp(36px, 6vh, 64px); z-index: 2; display: inline-flex; align-items: center; gap: 8px; max-width: 320px; padding: 6px 10px; margin-right: -10px; border-radius: 10px; font: 500 12.5px/1.35 var(--sans); color: var(--label-2); text-align: left; transition: color var(--d-1), background-color var(--d-1); }
+.plate-cap:hover { color: var(--label); background: rgba(255,255,255,.08); }
+.plate-cap .i { width: 16px; height: 16px; }
+.plate-cap b { font-weight: 600; color: var(--label); }
+
+/* guest cover */
+.wm { display: flex; align-items: center; gap: .2em; font: 600 clamp(46px, 7vw, 104px)/1 var(--serif); letter-spacing: -.025em; color: var(--label); margin-bottom: clamp(18px, 3.4vh, 30px); }
+.wm .mark { width: .7em; height: .7em; stroke-width: 1.3; margin-top: -.08em; }
+.half { display: inline-block; }
+.motto p { max-width: 26em; font: italic 400 clamp(22px, 2.4vw, 32px)/1.3 var(--serif); color: var(--label); text-wrap: balance; text-shadow: 0 1px 24px rgba(0,0,0,.5); }
+.motto footer { margin-top: 10px; font: 600 14px/1.2 var(--sans); color: var(--lamp-ink); }
+.motto footer span { color: var(--label-2); font-weight: 500; }
+.g-dek { max-width: 34em; margin-top: clamp(16px, 3vh, 26px); font-size: 17px; line-height: 1.5; color: var(--read); }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin-top: clamp(22px, 4vh, 34px); }
+.cta .btn-sub { font-weight: 500; opacity: .8; }
+.cta-link { height: 46px; padding: 0 8px; font: 600 15px/46px var(--sans); color: var(--label); border-radius: 10px; }
+.cta-link:hover { text-decoration: underline; text-underline-offset: .2em; }
+
+/* ---------- continue reading: the hero's lamp carries on into this band ---------- */
+.cont { position: relative; overflow: hidden; background: var(--ink-night); }
+.cont::before { content: ''; position: absolute; left: -12%; top: -70%; width: 62%; height: 240%; background: radial-gradient(closest-side, rgba(255,160,70,.11), transparent); pointer-events: none; }
+.cont-in { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px 56px; padding-block: 34px 40px; }
+.cont-in::before { content: ''; position: absolute; inset: 0 var(--gutter) auto; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.14), rgba(255,255,255,.06)); }
+.cont-t { margin-top: 6px; font: 600 clamp(34px, 3.4vw, 46px)/1 var(--serif); letter-spacing: -.02em; }
+.cont-t a { color: var(--label); border-radius: 8px; }
+.cont-at { margin-top: 8px; font-size: 14px; color: var(--label-2); }
+.cont-q { max-width: 36em; font: italic 400 19px/1.5 var(--serif); color: var(--read); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cont-q .vnumb { font: 600 12px/1 var(--sans); font-style: normal; color: var(--lamp-ink); margin-right: 6px; vertical-align: 3px; }
+.cont-b { display: flex; align-items: center; gap: 28px; }
+.cprog { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; width: 190px; font-size: 13px; color: var(--label-2); }
+.prog-n { font-weight: 600; color: var(--label); font-variant-numeric: tabular-nums; }
+.prog-bar { grid-column: 1 / -1; position: relative; height: 4px; border-radius: 2px; background: rgba(255,255,255,.14); overflow: hidden; }
+.prog-bar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--lamp) 55%, transparent), var(--lamp)); box-shadow: 0 0 10px var(--lamp); }
+
+/* ---------- paper: the light sections, with a faint lit path down the left ---------- */
+.paper { position: relative; }
+.paper::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(max(0px, (100% - var(--wrap) - 2 * var(--gutter)) / 2) + var(--gutter) - 30px); width: 1px; background: linear-gradient(180deg, color-mix(in srgb, var(--lamp) 60%, transparent) 0, color-mix(in srgb, var(--lamp) 22%, transparent) 40%, color-mix(in srgb, var(--lamp) 10%, transparent) 80%, transparent 100%); pointer-events: none; }
+.sec { position: relative; padding-block: clamp(56px, 7vw, 104px) 0; }
+.paper > .sec:last-child { padding-bottom: clamp(64px, 8vw, 120px); }
+.sec-h { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px 32px; padding-top: 16px; margin-bottom: clamp(26px, 3.4vw, 44px); border-top: 2px solid var(--label); }
+.sec-h::before { content: ''; position: absolute; left: -33.5px; top: -4.5px; width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 0 4px var(--bg), 0 0 12px 2px color-mix(in srgb, var(--lamp) 55%, transparent); }
+.sec-t { font: 600 clamp(28px, 3.2vw, 42px)/1.1 var(--serif); letter-spacing: -.018em; text-wrap: balance; }
+.sec-d { max-width: 30em; font-size: 15px; line-height: 1.5; color: var(--label-2); }
+
+/* ---------- your study, recently ---------- */
+.study-in { display: grid; grid-template-columns: minmax(0, 1fr) 288px; gap: 40px 64px; }
+.feed { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 44px; align-content: start; }
+.entry { padding: 24px 0 28px; border-top: 1px solid var(--sep); }
+.entry:first-child { grid-column: 1 / -1; padding-top: 0; border-top: 0; }
+.e-k { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; font: 600 12.5px/1.2 var(--sans); color: var(--label-2); }
+.e-k .i { width: 16px; height: 16px; color: var(--lamp-ink); }
+.e-k time { font-weight: 500; }
+.e-ref { font: 600 19px/1.3 var(--serif); letter-spacing: -.01em; margin-bottom: 8px; }
+.e-ref a { color: var(--label); border-radius: 4px; }
+.e-ref .to { color: var(--label-3); font-family: var(--sans); font-weight: 500; margin: 0 4px; }
+.e-v { font: italic 400 17px/1.55 var(--serif); color: var(--read); }
+.entry:first-child .e-ref { font-size: 22px; }
+.entry:first-child .e-v { font-size: clamp(22px, 2.1vw, 28px); line-height: 1.38; font-style: normal; max-width: 30em; text-wrap: pretty; }
+.e-v mark { color: inherit; padding: .04em .12em; margin: 0 -.12em; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.e-v mark.hl-yellow { background: var(--hl-yellow); } .e-v mark.hl-green { background: var(--hl-green); } .e-v mark.hl-blue { background: var(--hl-blue); }
+.e-n { margin-top: 12px; padding-left: 14px; border-left: 2px solid var(--lamp); font-size: 15px; line-height: 1.5; color: var(--label-2); max-width: 36em; }
+.e-n strong { color: var(--label); font-weight: 600; }
+.tally { display: flex; flex-direction: column; gap: 34px; padding-left: 40px; border-left: 1px solid var(--sep); }
+.stat-n { display: flex; align-items: center; gap: 12px; font: 400 clamp(64px, 6vw, 84px)/.9 var(--serif); letter-spacing: -.03em; font-variant-numeric: lining-nums; }
+.stat-n .mark { width: 34px; height: 34px; stroke-width: 1.2; color: var(--label-2); }
+.stat-l { margin-top: 10px; font: 600 15px/1.3 var(--sans); }
+.stat-s { margin-top: 3px; font-size: 13px; color: var(--label-2); }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 18px; }
+.week li { display: grid; grid-template-rows: 52px auto; gap: 6px; justify-items: center; font: 600 11px/1 var(--sans); color: var(--label-2); }
+.week .bar { align-self: end; width: 100%; max-width: 22px; height: var(--h); min-height: 4px; border-radius: 4px; background: color-mix(in srgb, var(--lamp) 45%, transparent); }
+.week .now .bar { background: var(--lamp); box-shadow: 0 0 10px color-mix(in srgb, var(--lamp) 60%, transparent); }
+.week .now { color: var(--label); }
+
+/* ---------- the whole Bible at a glance ---------- */
+.atlas-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px 64px; align-items: start; }
+.tst-t { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--sep-2); font: 600 13px/1.2 var(--sans); color: var(--label-2); }
+.tst-t span { font-weight: 500; font-variant-numeric: tabular-nums; }
+.dv { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px 16px; padding: 14px 0; border-bottom: 1px solid var(--sep); }
+.dv-n { padding-top: 6px; font: italic 400 16px/1.25 var(--serif); color: var(--label-2); }
+.books { display: flex; flex-wrap: wrap; gap: 5px; }
+.bk { --lit: 0; padding: 6px 10px 7px; border-radius: var(--r-sm); font: 400 15.5px/1.15 var(--serif); color: var(--label); background: color-mix(in srgb, var(--lamp) calc(var(--lit) * var(--wash-max)), transparent); box-shadow: inset 0 0 0 1px var(--sep); transition: box-shadow var(--d-1), background-color var(--d-1); }
+.bk:hover { box-shadow: inset 0 0 0 1px var(--sep-strong); }
+.bk[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.keyline { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--label-2); }
+.keyline i { display: block; width: 88px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--lamp) var(--wash-max), transparent)); box-shadow: inset 0 0 0 1px var(--sep); }
+.chs { grid-column: 1 / -1; margin-top: 6px; padding: 16px; border-radius: var(--r-md); background: var(--bg-2); animation: open .35s var(--ease-out); }
+@keyframes open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.chs-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-bottom: 12px; }
+.chs-t { font: 600 18px/1.2 var(--serif); }
+.chs-s { font-size: 13px; color: var(--label-2); flex: 1; }
+.chs-go { font-size: 14px; font-weight: 600; }
+.chs-x { width: 28px; height: 28px; margin: -4px -6px -4px 0; border-radius: 50%; display: grid; place-items: center; color: var(--label-2); }
+.chs-x:hover { background: var(--fill-2); color: var(--label); }
+.chs-x .i { width: 14px; height: 14px; stroke-width: 2; }
+.chs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 4px; }
+.ch { display: grid; place-items: center; height: 36px; border-radius: 7px; font: 500 13px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label); background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--sep); }
+.ch:hover { text-decoration: none; box-shadow: inset 0 0 0 1px var(--sep-strong); }
+.ch.is-read { background: color-mix(in srgb, var(--lamp) var(--wash-max), var(--bg-elev)); box-shadow: none; }
+.ch.is-here { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
+
+/* ---------- guest: four previews ---------- */
+.tiles { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 56px 32px; }
+.tile { grid-column: span 6; min-width: 0; }
+.tile:nth-child(4n+1), .tile:nth-child(4n) { grid-column: span 7; }
+.tile:nth-child(4n+2), .tile:nth-child(4n+3) { grid-column: span 5; }
+.tile-art { position: relative; height: clamp(260px, 24vw, 330px); border-radius: var(--r-xl); overflow: hidden; background: radial-gradient(120% 90% at 50% 0%, #1b1b22 0%, #0c0c10 62%), #0c0c10; box-shadow: 0 0 0 .5px rgba(255,255,255,.08), inset 0 1px 0 rgba(255,255,255,.07), 0 2px 8px rgba(0,0,0,.06), 0 18px 48px rgba(0,0,0,.14); }
+.tile-k { margin: 20px 0 6px; }
+.tile-k b { font-variant-numeric: tabular-nums; margin-right: 8px; }
+.tile h3 { font: 600 24px/1.2 var(--serif); letter-spacing: -.012em; margin-bottom: 8px; text-wrap: balance; }
+.tile p.tile-d { max-width: 34em; font-size: 15px; line-height: 1.5; color: var(--label-2); }
+.tile-a { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 15px; font-weight: 600; }
+.tile-a .i { width: 14px; height: 14px; }
+
+/* arcs */
+.arcfan { position: absolute; inset: 18px 18px 40px; }
+.arc-src { position: absolute; bottom: 0; width: 9px; height: 9px; margin: 0 0 -4.5px -4.5px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 0 5px color-mix(in srgb, var(--lamp) 22%, transparent), 0 0 18px 4px color-mix(in srgb, var(--lamp) 50%, transparent); }
+.arcfan svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.arcs-ax { position: absolute; left: 18px; right: 18px; bottom: 14px; height: 14px; font: 500 11px/14px var(--sans); color: var(--label-3); }
+.arcs-ax span { position: absolute; top: 0; white-space: nowrap; }
+.arcs-ax .src { color: var(--lamp-ink); font-weight: 600; transform: translateX(-50%); }
+.arcs-ax .mid { transform: translateX(-50%); }
+.arcs-ax .end { right: 0; }
+/* map + timeline */
+.ctx { position: absolute; inset: 0; display: flex; }
+.map { position: relative; flex: none; height: 100%; aspect-ratio: 300 / 372; }
+.map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map .pl { position: absolute; transform: translate(8px, -50%); font: 600 11px/1.2 var(--sans); color: var(--label); white-space: nowrap; text-shadow: 0 1px 4px #000; }
+.map .pl.l { transform: translate(calc(-100% - 8px), -50%); }
+.map .pl.l.up { transform: translate(calc(-100% - 7px), -100%); } .map .pl.l.dn { transform: translate(calc(-100% - 7px), 0); }
+.map .sea-l { position: absolute; font: italic 400 11px/1.2 var(--serif); color: #8fb1d1; opacity: .8; }
+.tline { flex: 1; min-width: 0; padding: 20px 22px 18px 10px; overflow: hidden; }
+.tl-h { display: flex; justify-content: space-between; gap: 8px; font: 600 13px/1.2 var(--sans); color: var(--label); margin-bottom: 12px; }
+.tl-h span { color: var(--lamp-ink); font-weight: 600; }
+.tline ol { position: relative; display: grid; gap: 9px; }
+.tline ol::before { content: ''; position: absolute; left: 3.5px; top: 6px; bottom: 6px; width: 1px; background: rgba(255,255,255,.18); }
+.tline li { position: relative; padding-left: 18px; font-size: 13px; line-height: 1.3; color: var(--read); }
+.tline li::before { content: ''; position: absolute; left: 0; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #3a3a3e; box-shadow: 0 0 0 2px #121216; }
+.tline li.is-on::before { background: var(--lamp); box-shadow: 0 0 0 2px #121216, 0 0 8px var(--lamp); }
+/* interlinear */
+.ilin-w { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 22px; padding: 22px; }
+.ilin { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.wd { display: grid; justify-items: center; gap: 3px; min-width: 76px; padding: 12px 12px 10px; border-radius: var(--r-md); background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.1); text-align: center; }
+.wo { font: 400 30px/1.25 var(--heb); color: var(--label); }
+.wt { font: italic 400 12.5px/1.2 var(--sans); color: var(--label-2); }
+.wg { font: 500 13px/1.25 var(--sans); color: var(--read); }
+.ws { font: 500 11px/1.2 var(--mono); color: var(--accent-on-tint); }
+.wd.lit { background: radial-gradient(120% 90% at 50% 20%, rgba(255,169,77,.2), rgba(255,169,77,.04)); box-shadow: inset 0 0 0 .5px rgba(255,180,100,.4); }
+.wd.lit .wo { text-shadow: 0 0 14px rgba(255,169,77,.65); }
+.ilin-en { text-align: center; font: italic 400 16px/1.4 var(--serif); color: var(--label-2); }
+.ilin-en em { color: var(--label); }
+/* engravings */
+.strip { position: absolute; inset: 18px; display: flex; gap: 10px; }
+.pl-b { position: relative; min-width: 0; border-radius: var(--r-sm); overflow: hidden; background: #000; box-shadow: 0 0 0 .5px rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.5); }
+.pl-b img { width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.1); transition: transform var(--d-4) var(--ease), filter var(--d-3); }
+.pl-b:hover img { transform: scale(1.04); filter: sepia(.1) brightness(1.08); }
+.pl-b:focus-visible { outline-offset: 2px; }
+.pl-b span { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 10px 9px; font: 600 12px/1.25 var(--sans); color: #fff; text-align: left; background: linear-gradient(0deg, rgba(0,0,0,.8), transparent); }
+
+/* ---------- colophon ---------- */
+.colo { position: relative; overflow: hidden; background: var(--ink-night); text-align: center; padding: clamp(64px, 8vw, 104px) 0 112px; }
+.colo::before { content: ''; position: absolute; left: 50%; top: 18px; width: 420px; height: 300px; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255,160,70,.13), transparent); pointer-events: none; }
+.colo-in { position: relative; display: grid; justify-items: center; gap: 18px; }
+.colo-b { display: inline-flex; align-items: center; gap: 10px; font: 600 22px/1 var(--serif); }
+.colo-b .mark { width: 30px; height: 30px; margin-top: -4px; }
+.colo-m p { max-width: 24em; font: italic 400 clamp(20px, 2vw, 24px)/1.4 var(--serif); color: var(--read); text-wrap: balance; }
+.colo-m footer { margin-top: 6px; font: 600 13px/1.2 var(--sans); color: var(--lamp-ink); }
+.colo-c { max-width: 44em; font-size: 12.5px; line-height: 1.5; color: var(--label-2); }
+.colo-d { font: 500 13px/1 var(--sans); color: var(--label-3); letter-spacing: .02em; }
+
+/* ---------- mock-up controls (fixed corner) ---------- */
+.mockctl { position: fixed; z-index: 80; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--r-pill); background: var(--glass-2); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: var(--sh-pop); }
+.mc-seg { display: flex; padding: 2px; border-radius: var(--r-pill); background: var(--fill-2); }
+.mc-seg button { height: 28px; padding: 0 12px; border-radius: var(--r-pill); font: 600 12.5px/28px var(--sans); color: var(--label-2); transition: background-color var(--d-1), color var(--d-1); }
+.mc-seg button[aria-pressed="true"] { background: var(--seg-thumb); color: var(--label); box-shadow: var(--sh-thumb); }
+.mc-theme { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--label); }
+.mc-theme:hover { background: var(--fill-2); }
+.mc-theme .i { width: 18px; height: 18px; }
+
+/* ---------- engraving viewer ---------- */
+.viewer { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(6,6,8,.96); color: var(--label); }
+.viewer::backdrop { background: rgba(0,0,0,.5); }
+.viewer[open] { animation: open .3s var(--ease-out); }
+.vw-in { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 18px; height: 100%; padding: 60px var(--gutter) 28px; }
+.vw-in img { justify-self: center; align-self: center; max-width: 100%; max-height: 100%; min-height: 0; object-fit: contain; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.vw-cap { max-width: 40em; margin: 0 auto; text-align: center; }
+.vw-t { font: 600 20px/1.25 var(--serif); }
+.vw-s { margin-top: 4px; font-size: 14px; line-height: 1.45; color: var(--label-2); }
+.vw-c { margin-top: 6px; font-size: 13px; color: var(--label-3); }
+.vw-x { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.12); color: #fff; }
+.vw-x:hover { background: rgba(255,255,255,.2); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1279px) { .paper::before, .sec-h::before { display: none; } }
+@media (max-width: 1099px) {
+  .study-in { grid-template-columns: minmax(0, 1fr); }
+  .tally { flex-direction: row; flex-wrap: wrap; gap: 28px 56px; padding: 28px 0 0; border-left: 0; border-top: 1px solid var(--sep); }
+  .tally > div { flex: 1 1 220px; }
+  .week { max-width: 320px; }
+  .atlas-in { grid-template-columns: minmax(0, 1fr); }
+  .tile, .tile:nth-child(n) { grid-column: 1 / -1; }
+  .tile-art { height: 320px; }
+}
+@media (max-width: 899px) {
+  .plate-cap { position: static; margin: 22px 0 0 calc(var(--gutter) - 10px); align-self: flex-start; }
+  .cover { padding-bottom: 28px; }
+  .cont-in { grid-template-columns: minmax(0, 1fr) auto; }
+  .cont-q { grid-column: 1 / -1; grid-row: 2; }
+  .cont-b { grid-column: 1 / -1; grid-row: 3; justify-content: space-between; }
+}
+@media (max-width: 819px) {
+  .mast { grid-template-columns: minmax(0, 1fr) auto; }
+  .finder { grid-column: 1 / -1; grid-row: 2; }
+  .cover { padding-top: 136px; }
+  body[data-state="guest"] .cover { padding-top: 96px; }
+}
+@media (max-width: 599px) {
+  .cover { min-height: min(760px, 92svh); }
+  .cover-g { min-height: max(100svh, 700px); }
+  .vod-t::before { position: static; display: block; height: .5em; font-size: 1.3em; }
+  .dateline { flex-wrap: wrap; font-size: 14px; }
+  .feed { grid-template-columns: minmax(0, 1fr); }
+  .entry:first-child .e-v { font-size: 21px; }
+  .dv { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .dv-n { padding-top: 0; }
+  .cont-in { grid-template-columns: minmax(0, 1fr); }
+  .cont-b { flex-wrap: wrap; gap: 18px; }
+  .cont-b .cprog { width: 100%; }
+  .cont-b .lbtn { width: 100%; }
+  .cta .lbtn { flex: 1 1 auto; }
+  .tile-art { height: auto; }
+  .tile-art.fixed { height: 250px; }
+  .ctx { position: static; }
+  .map { width: 44%; height: auto; align-self: flex-start; margin: 10px 0 10px 4px; }
+  .tline { padding: 16px 14px 16px 6px; }
+  .map .pl, .map .sea-l { font-size: 10px; }
+  .ilin-w { position: static; padding: 26px 16px; }
+  .wd { min-width: 0; padding: 10px 8px 8px; }
+  .wo { font-size: 26px; }
+  .strip { position: static; height: 240px; margin: 16px; }
+  .stat-n { font-size: 60px; }
+  .tally > div { flex: 1 1 140px; }
+}
+@media (hover: none) { .pl-b:hover img { transform: none; } }
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .plate img { transition: opacity .4s linear; transform: none; }
+  .plate .halo, .plate .beam, .hero-in > * , .chs, .viewer[open] { animation: none; }
+  .lbtn:active { transform: none; }
+}
+</style>
+</head>
+<body data-state="today">
+<svg aria-hidden="true" width="0" height="0" style="position:absolute">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20 20"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M11 4.5H7a3 3 0 00-3 3v9.5a3 3 0 003 3h9.5a3 3 0 003-3V13"/><path d="M17.8 3.9a1.9 1.9 0 012.7 2.7l-8 8-3.5.9.9-3.5z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1-1"/></symbol>
+  <symbol id="i-hl" viewBox="0 0 24 24"><path d="M14.6 4.6l4.8 4.8-8.2 8.2H6.4v-4.8z"/><path d="M12 7.2l4.8 4.8"/><path d="M4 20.5h16"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><circle cx="8.6" cy="9.4" r="1.7"/><path d="M3.4 17.2l4.9-4.5a1.3 1.3 0 011.75 0l2.45 2.25"/><path d="M10.9 16.6l4-3.9a1.3 1.3 0 011.8 0l3.9 3.75"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2.1M12 19.1v2.1M2.8 12h2.1M19.1 12h2.1M5.5 5.5l1.5 1.5M17 17l1.5 1.5M5.5 18.5L7 17M17 7l1.5-1.5"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.6 14.6A7.8 7.8 0 019.4 4.4a7.8 7.8 0 1010.2 10.2z"/></symbol>
+  <!-- The Bible Lantern mark: a monoline lantern on the app's 24px grid; the flame is the lamp colour. -->
+  <symbol id="i-lantern" viewBox="0 0 24 24"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path style="fill:var(--lamp);stroke:none" d="M12 10.1c1.55 1.7 2.25 2.95 2.25 4.05a2.25 2.25 0 01-4.5 0c0-1.1.7-2.35 2.25-4.05z"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="mast dk">
+  <a class="brand" href="#main"><svg class="mark" aria-hidden="true"><use href="#i-lantern"/></svg><span data-brand="name"></span></a>
+  <form class="finder" role="search" data-only="today" id="search">
+    <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+    <label class="sr" for="q">Search the Bible</label>
+    <input id="q" name="q" type="search" placeholder="John 3:16, love, G26" autocomplete="off" enterkeyhint="search" spellcheck="false">
+  </form>
+  <div class="mast-end">
+    <button class="me" type="button" data-only="today" data-act="profile" aria-label="Your profile" id="avatar"></button>
+    <button class="mast-link" type="button" data-only="guest" data-act="signin">Sign in</button>
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+  <!-- ================= Signed in: Today ================= -->
+  <div data-only="today">
+    <section class="cover dk" aria-labelledby="h-today">
+      <div class="plate" id="vod-plate"><img id="vod-img" alt="" decoding="async" fetchpriority="high"><span class="glow"></span><span class="halo"></span><span class="beam"></span><span class="shade"></span></div>
+      <div class="hero-in wrap">
+        <h1 id="h-today" class="dateline"><span class="dl-k">Today</span> <span class="dl-sep" aria-hidden="true"></span> <span id="today-date"></span></h1>
+        <p class="vod-k">Verse of the day</p>
+        <a class="vod" id="vod-link" href="../?dry">
+          <span class="vod-t" id="vod-text">&nbsp;</span>
+          <span class="vod-r"><span class="vod-ref" id="vod-ref"></span> <span class="vod-go">Open the verse<svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></span></span>
+        </a>
+      </div>
+      <button class="plate-cap" type="button" id="vod-cap" hidden><svg class="i" aria-hidden="true"><use href="#i-photo"/></svg><span><b id="vod-cap-t"></b><br>Gustave Doré, 1866</span></button>
+    </section>
+
+    <section class="cont dk" aria-labelledby="h-cont">
+      <div class="wrap cont-in">
+        <div>
+          <h2 id="h-cont" class="kick">Continue reading</h2>
+          <p class="cont-t"><a id="cont-link" href="../?dry"></a></p>
+          <p class="cont-at" id="cont-at"></p>
+        </div>
+        <blockquote class="cont-q" id="cont-q"></blockquote>
+        <div class="cont-b">
+          <div class="cprog">
+            <span>Chapter progress</span><span class="prog-n" id="cont-pct"></span>
+            <span class="prog-bar" role="progressbar" id="cont-bar" aria-valuemin="0" aria-valuemax="100"><span></span></span>
+          </div>
+          <a class="lbtn btn-fill" id="cont-resume" href="../?dry">Resume<svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= Guest ================= -->
+  <div data-only="guest">
+    <section class="cover cover-g dk" aria-labelledby="h-guest">
+      <div class="plate" id="g-plate"><img id="g-img" alt="" decoding="async"><span class="glow"></span><span class="halo"></span><span class="beam"></span><span class="shade"></span></div>
+      <div class="hero-in wrap">
+        <h1 id="h-guest" class="wm"><svg class="mark" aria-hidden="true"><use href="#i-lantern"/></svg><span data-brand="name"></span></h1>
+        <blockquote class="motto"><p data-brand="motto"></p><footer><cite data-brand="motto-ref"></cite> <span>· KJV</span></footer></blockquote>
+        <p class="g-dek">A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.</p>
+        <div class="cta">
+          <a class="lbtn btn-fill" href="../?dry#43/1">Start reading <span class="btn-sub">John 1</span></a>
+          <button class="lbtn btn-glass" type="button" data-act="signin">Sign in</button>
+          <button class="cta-link" type="button" data-act="invite">I have an invite</button>
+        </div>
+      </div>
+      <button class="plate-cap" type="button" id="g-cap" hidden><svg class="i" aria-hidden="true"><use href="#i-photo"/></svg><span><b id="g-cap-t"></b><br>Gustave Doré, 1866</span></button>
+    </section>
+  </div>
+
+  <div class="paper">
+    <section class="sec wrap" aria-labelledby="h-study" data-only="today">
+      <header class="sec-h"><h2 id="h-study" class="sec-t">Your study, recently</h2><p class="sec-d">Notes, highlights and links from the past week, each with its verse.</p></header>
+      <div class="study-in">
+        <ol class="feed" id="feed"></ol>
+        <aside class="tally" aria-labelledby="h-stats">
+          <h3 id="h-stats" class="sr">Your reading</h3>
+          <div>
+            <p class="stat-n"><span id="streak"></span><svg class="mark" aria-hidden="true"><use href="#i-lantern"/></svg></p>
+            <p class="stat-l">day reading streak</p>
+            <p class="stat-s">A chapter or more every day</p>
+          </div>
+          <div>
+            <p class="stat-n" id="week-n"></p>
+            <p class="stat-l">chapters this week</p>
+            <ol class="week" id="week" aria-label="Chapters read each day"></ol>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="sec wrap" aria-labelledby="h-feats" data-only="guest">
+      <header class="sec-h"><h2 id="h-feats" class="sec-t">What you’ll find beside the text</h2><p class="sec-d">Every chapter opens with these close at hand. A few real examples:</p></header>
+      <div class="tiles">
+        <article class="tile" aria-labelledby="t-arcs">
+          <div class="tile-art fixed dk" id="arcs-art"></div>
+          <p class="tile-k kick"><b>01</b>Cross-references</p>
+          <h3 id="t-arcs">See where a chapter echoes through Scripture</h3>
+          <p class="tile-d" id="arcs-d">Every cross-reference is drawn as an arc across the whole Bible, from Genesis to Revelation.</p>
+        </article>
+        <article class="tile" aria-labelledby="t-dore">
+          <div class="tile-art dk" id="dore-art"></div>
+          <p class="tile-k kick"><b>02</b>Doré’s engravings</p>
+          <h3 id="t-dore">Engravings beside the verses they show</h3>
+          <p class="tile-d" id="dore-d">Plates from Gustave Doré’s 1866 Bible, placed next to the passage each one illustrates.</p>
+        </article>
+        <article class="tile" aria-labelledby="t-ctx">
+          <div class="tile-art dk" id="ctx-art"></div>
+          <p class="tile-k kick"><b>03</b>Context</p>
+          <h3 id="t-ctx">The places on a map, the events in order</h3>
+          <p class="tile-d">In Matthew 2 the wise men come to Jerusalem, and Joseph takes the young child and his mother into Egypt, then home to Nazareth.</p>
+        </article>
+        <article class="tile" aria-labelledby="t-orig">
+          <div class="tile-art dk" id="orig-art"></div>
+          <p class="tile-k kick"><b>04</b>Hebrew and Greek</p>
+          <h3 id="t-orig">The original, word by word</h3>
+          <p class="tile-d">Each word with its transliteration, meaning and Strong’s number. Here is Psalm 119:105 in Hebrew.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="sec wrap" aria-labelledby="h-atlas">
+      <header class="sec-h"><h2 id="h-atlas" class="sec-t">The whole Bible at a glance</h2><p class="sec-d" id="atlas-d"></p></header>
+      <div class="atlas-in" id="atlas"></div>
+    </section>
+  </div>
+</main>
+
+<footer class="colo dk">
+  <div class="wrap colo-in">
+    <p class="colo-b"><svg class="mark" aria-hidden="true"><use href="#i-lantern"/></svg><span data-brand="name"></span></p>
+    <blockquote class="colo-m"><p data-brand="motto"></p><footer><cite data-brand="motto-ref"></cite></footer></blockquote>
+    <p class="colo-c" id="credit">Scripture from the King James Version.</p>
+    <p class="colo-d" data-brand="domain"></p>
+  </div>
+</footer>
+
+<div class="mockctl" role="group" aria-label="Mock-up controls">
+  <div class="mc-seg" role="group" aria-label="Who is looking">
+    <button type="button" data-state="today" aria-pressed="true">Signed in</button>
+    <button type="button" data-state="guest" aria-pressed="false">Guest</button>
+  </div>
+  <button class="mc-theme" type="button" id="theme-btn"><svg class="i" aria-hidden="true"><use href="#i-moon"/></svg></button>
+</div>
+
+<dialog class="viewer dk" id="viewer" aria-labelledby="vw-t">
+  <div class="vw-in">
+    <img id="vw-img" alt="">
+    <div class="vw-cap"><p class="vw-t" id="vw-t"></p><p class="vw-s" id="vw-s"></p><p class="vw-c" id="vw-c"></p></div>
+  </div>
+  <button class="vw-x" type="button" id="vw-x" aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+</dialog>
+<div class="sr" aria-live="polite" id="live"></div>
+
+<script type="module">
+// ---- Brand: the one place to change the name, the domain and the Psalm 119:105 line (KJV). ----
+const BRAND = {
+  name: 'Bible Lantern',
+  domain: 'biblelantern.com',
+  motto: 'Thy word is a lamp unto my feet, and a light unto my path.',
+  mottoRef: 'Psalm 119:105',
+};
+
+// ---- Verse of the day: well-known verses that have a Doré plate, picked by day of year (?day=N previews another).
+// pos = the plate's object-position in the hero (narrow = on a tall, narrow screen); light = where the engraving's own light is (% of the image).
+const VOD = [
+  { r: [1, 1, 3], plate: 'dore-001', pos: '50% 24%', light: [57, 30] },
+  { r: [1, 22, 8], plate: 'dore-016', pos: '50% 30%', light: [52, 26] },
+  { r: [40, 2, 2], plate: 'dore-163', pos: '50% 40%', narrow: '6% 40%', light: [15, 38] },
+  { r: [40, 5, 8], plate: 'dore-176', pos: '50% 34%', light: [50, 34] },
+  { r: [40, 17, 2], plate: 'dore-186', pos: '50% 16%', light: [50, 14] },
+  { r: [40, 28, 6], plate: 'dore-220', pos: '50% 48%', light: [56, 50] },
+  { r: [42, 2, 19], plate: 'dore-162', pos: '50% 44%', light: [42, 46] },
+  { r: [42, 5, 5], plate: 'dore-222', pos: '50% 6%', light: [46, 8] },
+  { r: [43, 6, 20], plate: 'dore-184', pos: '50% 40%', light: [68, 40] },
+  { r: [44, 2, 4], plate: 'dore-224', pos: '50% 4%', light: [50, 6] },
+];
+// The guest cover: The Creation of Light, the same engraving as the signed-in hero (Ji, 2026-10-07).
+const COVER = { plate: 'dore-001', pos: '50% 24%', light: [57, 30] };
+const SHOWCASE = ['dore-163', 'dore-186', 'dore-184'];        // the engravings tile (not dore-001, which is the cover)
+const CTX = { b: 40, c: 2, route: [636, 218, 362, 878] };      // Matthew 2: Jerusalem, Bethlehem, Egypt, Nazareth
+const ORIG = [19, 119, 105], LIT_WORDS = ['H5216', 'H216'];    // lamp, light
+const ARCS = [43, 1];                                           // John 1, where "Start reading" begins
+
+/* SAMPLE: the personal parts (continue reading, recent study, streak, the week and chapters read)
+   are plausible sample content for the mock-up, not anyone's data. */
+const SAMPLE = {
+  initial: 'J',
+  cont: [43, 3, 16],
+  recent: [
+    { kind: 'note', r: [45, 8, 28], ago: 0, note: 'Not that all things are good, but that God works all things together for good. Read beside Genesis 50:20.' },
+    { kind: 'highlight', r: [23, 40, 31], ago: 1, hl: 'yellow' },
+    { kind: 'link', r: [43, 1, 1], to: [1, 1, 1], ago: 2, label: 'Same words', note: 'Both open with “In the beginning”. John reads Genesis 1 in the light of the Word.' },
+    { kind: 'note', r: [19, 23, 4], ago: 3, note: 'The valley is walked through, not lived in. “Thou art with me” comes before the comfort.' },
+    { kind: 'highlight', r: [50, 4, 6], ago: 4, hl: 'green' },
+  ],
+  streak: 12,
+  week: [1, 1, 2, 1, 1, 2, 1],            // chapters on each of the last seven days, ending today
+  read: { 1: '1-50', 2: '1-24', 8: '1-4', 9: '1-17', 18: '1-3,38-42', 19: '1-42,46,51,84,90,91,100,103,119,121,139,145-150', 20: '1-31', 21: '1-12',
+    23: '40-55', 32: '1-4', 40: '1-28', 41: '1-16', 42: '1-14', 43: '1-2', 44: '1-12', 45: '1-16', 48: '1-6', 49: '1-6', 50: '1-4', 51: '1-4', 58: '11-12', 59: '1-5', 60: '1-2', 62: '1-5' },
+};
+
+const DIVS = [
+  ['Old Testament', [['Law', 1, 5], ['History', 6, 17], ['Wisdom', 18, 22], ['Prophets', 23, 39]]],
+  ['New Testament', [['Gospels and Acts', 40, 44], ['Letters', 45, 65], ['Revelation', 66, 66]]],
+];
+
+// ---------- helpers ----------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const smart = s => String(s ?? '').replace(/(^|[\s(\[—–-])"/g, '$1“').replace(/"/g, '”').replace(/(^|[\s(\[“—–-])'/g, '$1‘').replace(/'/g, '’');
+const T = s => smart(String(s ?? '').trim());
+const pad = n => String(n).padStart(2, '0');
+const range = (a, z) => Array.from({ length: z - a + 1 }, (_, i) => a + i);
+const DATA = '../data/';
+const memo = new Map();
+const json = p => {
+  if (!memo.has(p)) memo.set(p, fetch(DATA + p).then(r => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.json(); }));
+  return memo.get(p);
+};
+const verseText = async ([b, c, v]) => (await json(`bibles/kjv/${pad(b)}.json`))[c][v - 1] || '';
+// KJV small capitals for the divine name (LORD, GOD).
+const scripture = s => esc(s).replace(/\b(LORD|GOD)\b/g, m => `<span class="sc">${m[0]}${m.slice(1).toLowerCase()}</span>`);
+
+let BOOKS = [], OFF = [], TOTAL = 0, PLATES = new Map(), CREDIT = '';
+const bookName = b => BOOKS[b - 1].name;
+const refLabel = (b, c, v, v2) => `${b === 19 && c ? 'Psalm' : bookName(b)} ${c}${v ? `:${v}` : ''}${v2 && v2 > v ? `–${v2}` : ''}`;
+const appHref = (b, c, v) => `../?dry#${b}/${c}${v ? `/${v}` : ''}`;
+const imgUrl = (p, large = false) => `${DATA}art/${p.id}${large ? '' : '-s'}.jpg`;
+const altOf = p => { const s = T(p.scene); return T(p.title) + (s ? `. ${s}${/[.!?…]["'”’]?$/.test(s) ? '' : '.'}` : ''); };
+const plateRef = p => { const [b, c, v, v2] = p.ref; return refLabel(b, c, v, v2); };
+const parseRanges = s => { const out = new Set(); String(s || '').split(',').forEach(part => { const [a, z] = part.split('-').map(Number); if (a) range(a, z || a).forEach(n => out.add(n)); }); return out; };
+const READ = new Map();
+const sampleNow = new Date();
+const dayLabel = ago => {
+  if (ago === 0) return 'Today';
+  if (ago === 1) return 'Yesterday';
+  const d = new Date(sampleNow); d.setDate(d.getDate() - ago);
+  return d.toLocaleDateString('en-GB', { weekday: 'long' });
+};
+const icon = (name, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+
+function say(msg) {
+  const live = $('#live'); live.textContent = ''; setTimeout(() => { live.textContent = msg; }, 30);
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast';
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span>`;
+  document.body.append(t);
+  clearTimeout(say.t); say.t = setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 3200);
+}
+
+// ---------- brand ----------
+function fillBrand() {
+  const map = { name: BRAND.name, domain: BRAND.domain, motto: BRAND.motto, 'motto-ref': BRAND.mottoRef };
+  document.querySelectorAll('[data-brand]').forEach(el => { el.textContent = map[el.dataset.brand] ?? ''; });
+  // the line breaks, if it must, between its two halves
+  const [a, ...z] = BRAND.motto.split(', ');
+  if (z.length) document.querySelectorAll('[data-brand="motto"]').forEach(el => { el.innerHTML = `<span class="half">${esc(a)},</span> <span class="half">${esc(z.join(', '))}</span>`; });
+  document.title = BRAND.name;
+}
+
+// ---------- the lamp: light falling across a plate ----------
+const lit = [];
+function setPlate(fig, spec, capBtn, capT) {
+  const p = PLATES.get(spec.plate);
+  if (!p) { fig.hidden = true; return null; }
+  const img = fig.querySelector('img');
+  img.alt = altOf(p); img.width = p.w; img.height = p.h;
+  // As in the app: the small file first, then the large one once it has loaded (a failed large file keeps the small).
+  img.addEventListener('load', () => fig.classList.add('is-on'), { once: true });
+  img.src = imgUrl(p);
+  const big = new Image();
+  big.onload = () => { img.src = big.src; };
+  big.src = imgUrl(p, true);
+  const entry = { fig, spec, p }; lit.push(entry); placeLight(entry);
+  if (capBtn) {
+    capT.textContent = T(p.title);
+    capBtn.setAttribute('aria-label', `${T(p.title)}, by Gustave Doré. View the engraving`);
+    capBtn.onclick = () => openViewer(p, capBtn);
+    capBtn.hidden = false;
+  }
+  return p;
+}
+// Map the light's place in the image to the cropped hero, so the glow sits on the engraving's own light,
+// and aim the faint shaft at the words (lower left).
+function placeLight({ fig, spec, p }) {
+  const W = fig.clientWidth, H = fig.clientHeight; if (!W || !H) return;
+  const s = Math.max(W / p.w, H / p.h), iw = p.w * s, ih = p.h * s;
+  const pos = spec.narrow && W / H < .75 ? spec.narrow : spec.pos;
+  fig.style.setProperty('--pos', pos);
+  const [px, py] = pos.split(' ').map(parseFloat);
+  const lx = (W - iw) * px / 100 + iw * spec.light[0] / 100, ly = (H - ih) * py / 100 + ih * spec.light[1] / 100;
+  const tx = W * (W < 600 ? .45 : .28), ty = H * .8;
+  const a = Math.atan2(tx - lx, -(ty - ly)) * 180 / Math.PI;
+  fig.style.setProperty('--lx', `${Math.round(lx)}px`);
+  fig.style.setProperty('--ly', `${Math.round(ly)}px`);
+  fig.style.setProperty('--ba', `${a.toFixed(1)}deg`);
+}
+let rz;
+addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => lit.forEach(placeLight)); });
+
+// ---------- Today ----------
+async function renderToday() {
+  const q = new URLSearchParams(location.search);
+  const doy = Math.round((Date.UTC(sampleNow.getFullYear(), sampleNow.getMonth(), sampleNow.getDate()) - Date.UTC(sampleNow.getFullYear(), 0, 0)) / 864e5);
+  const day = Number.parseInt(q.get('day'), 10);
+  const i = Number.isFinite(day) ? day : doy, d = VOD[((i % VOD.length) + VOD.length) % VOD.length];
+  const [b, c, v] = d.r;
+  $('#today-date').textContent = sampleNow.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#avatar').textContent = SAMPLE.initial;
+  setPlate($('#vod-plate'), d, $('#vod-cap'), $('#vod-cap-t'));
+  const text = await verseText(d.r);
+  const vt = $('#vod-text');
+  vt.innerHTML = scripture(text);
+  vt.classList.toggle('long', text.length > 110);
+  $('#vod-ref').textContent = refLabel(b, c, v);
+  $('#vod-link').href = appHref(b, c, v);
+
+  // continue reading (sample position)
+  const [cb, cc, cv] = SAMPLE.cont, total = BOOKS[cb - 1].chapters[cc - 1], pct = Math.round(cv / total * 100);
+  const link = $('#cont-link'); link.textContent = refLabel(cb, cc); link.href = appHref(cb, cc, cv);
+  $('#cont-at').textContent = `Verse ${cv} of ${total}`;
+  $('#cont-q').innerHTML = `<span class="vnumb">${cv}</span>${scripture(await verseText(SAMPLE.cont))}`;
+  $('#cont-pct').textContent = `${pct}%`;
+  const bar = $('#cont-bar'); bar.setAttribute('aria-valuenow', pct); bar.setAttribute('aria-label', `${refLabel(cb, cc)} progress`);
+  bar.firstElementChild.style.width = `${pct}%`;
+  $('#cont-resume').href = appHref(cb, cc, cv);
+  $('#cont-resume').setAttribute('aria-label', `Resume ${refLabel(cb, cc, cv)}`);
+
+  renderStats();
+  await renderFeed();
+}
+
+function renderStats() {
+  $('#streak').textContent = SAMPLE.streak;
+  const week = SAMPLE.week, max = Math.max(...week);
+  $('#week-n').textContent = week.reduce((a, n) => a + n, 0);
+  $('#week').innerHTML = week.map((n, i) => {
+    const ago = week.length - 1 - i, d = new Date(sampleNow); d.setDate(d.getDate() - ago);
+    const day = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    return `<li class="${ago ? '' : 'now'}" aria-label="${esc(`${ago ? day : 'Today'}: ${n} chapter${n === 1 ? '' : 's'}`)}"><span class="bar" style="--h:${Math.round(n / max * 100)}%"></span><span aria-hidden="true">${day[0]}</span></li>`;
+  }).join('');
+}
+
+async function renderFeed() {
+  const items = await Promise.all(SAMPLE.recent.map(async e => ({ ...e, text: await verseText(e.r) })));
+  const KIND = { note: ['note', 'Note'], highlight: ['hl', 'Highlight'], link: ['link', 'Link'] };
+  $('#feed').innerHTML = items.map(e => {
+    const [ic, label] = KIND[e.kind];
+    const [b, c, v] = e.r;
+    let ref = `<a href="${appHref(b, c, v)}">${esc(refLabel(b, c, v))}</a>`;
+    if (e.to) ref += `<span class="to" aria-hidden="true">↔</span><span class="sr"> linked with </span><a href="${appHref(...e.to)}">${esc(refLabel(...e.to))}</a>`;
+    const verse = e.kind === 'highlight' ? `<mark class="hl-${e.hl}">${scripture(e.text)}</mark>` : scripture(e.text);
+    const note = e.kind === 'link' ? `<strong>${esc(e.label)}.</strong> ${esc(e.note)}` : esc(e.note || '');
+    return `<li class="entry"><p class="e-k">${icon(ic)}${label} <span aria-hidden="true">·</span> <time>${dayLabel(e.ago)}</time></p>`
+      + `<h3 class="e-ref">${ref}</h3><blockquote class="e-v">${verse}</blockquote>${note ? `<p class="e-n">${note}</p>` : ''}</li>`;
+  }).join('');
+}
+
+// ---------- the whole Bible at a glance ----------
+function renderAtlas(state) {
+  const read = state === 'today' ? READ : null;
+  $('#atlas-d').innerHTML = read
+    ? '<span class="keyline"><i aria-hidden="true"></i>Each book is lit by how much of it you’ve read. Choose one for its chapters.</span>'
+    : 'Choose a book for its chapters, then start anywhere.';
+  $('#atlas').innerHTML = DIVS.map(([t, divs], ti) => {
+    const all = divs.flatMap(([, a, z]) => range(a, z));
+    const done = read ? all.reduce((n, b) => n + (read.get(b)?.size || 0), 0) : 0, chs = all.reduce((n, b) => n + BOOKS[b - 1].chapters.length, 0);
+    const sub = read ? `${done.toLocaleString('en-GB')} of ${chs.toLocaleString('en-GB')} chapters read` : `${all.length} books · ${chs.toLocaleString('en-GB')} chapters`;
+    return `<div class="tst"><h3 class="tst-t">${t} <span>${sub}</span></h3>` + divs.map(([n, a, z], di) => {
+      const id = `chs-${ti}-${di}`;
+      return `<div class="dv"><p class="dv-n">${n}</p><ul class="books">${range(a, z).map(b => bookBtn(b, id, read)).join('')}</ul><div class="chs" id="${id}" hidden></div></div>`;
+    }).join('') + '</div>';
+  }).join('');
+}
+function bookBtn(b, panel, read) {
+  const n = BOOKS[b - 1].chapters.length, r = read ? (read.get(b)?.size || 0) : 0;
+  const lab = read ? `${bookName(b)}, ${r === n ? `all ${n} chapter${n === 1 ? '' : 's'} read` : r ? `${r} of ${n} chapters read` : 'not read yet'}` : `${bookName(b)}, ${n} chapter${n === 1 ? '' : 's'}`;
+  return `<li><button class="bk" type="button" data-b="${b}" aria-expanded="false" aria-controls="${panel}" aria-label="${esc(lab)}" style="--lit:${(r / n).toFixed(3)}">${esc(bookName(b))}</button></li>`;
+}
+function chaptersHtml(b, read) {
+  const n = BOOKS[b - 1].chapters.length, got = read?.get(b) || new Set(), here = read && SAMPLE.cont[0] === b ? SAMPLE.cont[1] : 0;
+  const next = read ? (here || range(1, n).find(c => !got.has(c)) || 1) : 1;
+  const sub = read ? (got.size === n ? `All ${n} chapters read` : `${got.size} of ${n} chapters read`) : `${n} chapter${n === 1 ? '' : 's'}`;
+  const go = read && next > 1 ? `Continue at chapter ${next}` : 'Start at chapter 1';
+  return `<div class="chs-h"><p class="chs-t">${esc(bookName(b))}</p><p class="chs-s">${sub}</p><a class="chs-go" href="${appHref(b, next)}">${go}</a>`
+    + `<button class="chs-x" type="button" data-close aria-label="Close ${esc(bookName(b))}">${icon('xmark')}</button></div>`
+    + `<ol class="chs-grid" aria-label="${esc(bookName(b))} chapters">${range(1, n).map(c => {
+      const cls = ['ch', got.has(c) ? 'is-read' : '', c === here ? 'is-here' : ''].filter(Boolean).join(' ');
+      const st = c === here ? ', reading now' : got.has(c) ? ', read' : '';
+      return `<li><a class="${cls}" href="${appHref(b, c)}" aria-label="${esc(`${refLabel(b, c)}${st}`)}">${c}</a></li>`;
+    }).join('')}</ol>`;
+}
+function closeBooks(focusBtn) {
+  const open = $('#atlas .bk[aria-expanded="true"]');
+  if (!open) return;
+  open.setAttribute('aria-expanded', 'false');
+  const panel = document.getElementById(open.getAttribute('aria-controls'));
+  panel.hidden = true; panel.innerHTML = '';
+  if (focusBtn) open.focus();
+}
+$('#atlas').addEventListener('click', e => {
+  const close = e.target.closest('[data-close]');
+  if (close) { closeBooks(true); return; }
+  const btn = e.target.closest('.bk'); if (!btn) return;
+  const was = btn.getAttribute('aria-expanded') === 'true';
+  closeBooks(false);
+  if (was) return;
+  btn.setAttribute('aria-expanded', 'true');
+  const panel = document.getElementById(btn.getAttribute('aria-controls'));
+  panel.innerHTML = chaptersHtml(+btn.dataset.b, document.body.dataset.state === 'today' ? READ : null);
+  panel.hidden = false;
+});
+$('#atlas').addEventListener('keydown', e => { if (e.key === 'Escape' && $('#atlas .bk[aria-expanded="true"]')) { e.preventDefault(); closeBooks(true); } });
+
+// ---------- Guest: the four previews (real data) ----------
+let guestDone = false;
+async function renderGuest() {
+  if (guestDone) return; guestDone = true;
+  setPlate($('#g-plate'), COVER, $('#g-cap'), $('#g-cap-t'));
+  await Promise.all([arcsTile(), doreTile(), ctxTile(), origTile()].map(p => p.catch(err => console.warn(err))));
+}
+
+async function arcsTile() {
+  const [ab, ac] = ARCS, x = await json(`xref/${pad(ab)}.json`);
+  const src = OFF[ab - 1] + ac - 1, agg = new Map(), books = new Set();
+  let refs = 0;
+  for (const [k, list] of Object.entries(x)) {
+    if (!k.startsWith(`${ac}:`)) continue;
+    for (const [b, c, , , votes] of list) { refs++; books.add(b); const t = OFF[b - 1] + c - 1; agg.set(t, (agg.get(t) || 0) + Math.max(1, votes)); }
+  }
+  const W = 1000, H = 300, X = t => t / (TOTAL - 1) * W;
+  const arcs = [...agg].filter(([t]) => Math.abs(X(t) - X(src)) > 1);
+  const maxR = Math.max(...arcs.map(([t]) => Math.abs(X(t) - X(src)) / 2)), maxW = Math.max(...arcs.map(([, w]) => w));
+  const otEnd = OFF[39], ot = [], nt = [];
+  for (const [t, w] of arcs.sort((a, z) => a[1] - z[1])) {
+    const x1 = Math.min(X(t), X(src)), x2 = Math.max(X(t), X(src)), rx = (x2 - x1) / 2, ry = rx * (H - 8) / maxR;
+    const op = (.14 + .62 * Math.sqrt(w / maxW)).toFixed(2);
+    (t < otEnd ? ot : nt).push(`<path d="M${x1.toFixed(1)} ${H}A${rx.toFixed(1)} ${ry.toFixed(1)} 0 0 1 ${x2.toFixed(1)} ${H}" stroke-opacity="${op}"/>`);
+  }
+  const ticks = BOOKS.map((bk, i) => `<path d="M${X(OFF[i]).toFixed(1)} ${H}v${i === 39 ? 10 : 5}"/>`).join('');
+  const sx = X(src);
+  $('#arcs-art').innerHTML = `<div class="arcfan"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">`
+    + `<g fill="none" stroke-width="1" vector-effect="non-scaling-stroke" style="stroke:var(--ot)">${ot.join('')}</g>`
+    + `<g fill="none" stroke-width="1" style="stroke:var(--nt)">${nt.join('')}</g>`
+    + `<g fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1">${ticks}<path d="M0 ${H}H${W}"/></g>`
+    + `</svg><i class="arc-src" style="left:${(sx / W * 100).toFixed(2)}%"></i></div><div class="arcs-ax" aria-hidden="true"><span style="left:0">Genesis</span><span class="src" style="left:${(sx / W * 100).toFixed(1)}%">${esc(refLabel(ab, ac))}</span><span class="end">Revelation</span></div>`;
+  // non-scaling strokes keep every arc hairline-thin when the SVG stretches to the tile
+  $('#arcs-art').querySelectorAll('path').forEach(p => p.setAttribute('vector-effect', 'non-scaling-stroke'));
+  $('#arcs-art').setAttribute('role', 'img');
+  $('#arcs-art').setAttribute('aria-label', `Arcs from ${refLabel(ab, ac)} to ${refs.toLocaleString('en-GB')} cross-references in ${books.size} books, from Genesis to Revelation`);
+  $('#arcs-d').textContent = `${refLabel(ab, ac)} alone reaches ${refs.toLocaleString('en-GB')} passages in ${books.size} books. Every cross-reference is drawn as an arc across the whole Bible.`;
+}
+
+function doreTile() {
+  const ps = SHOWCASE.map(id => PLATES.get(id)).filter(Boolean);
+  $('#dore-art').innerHTML = `<div class="strip">${ps.map(p => `<button class="pl-b" type="button" data-plate="${p.id}" style="flex:${(p.w / p.h).toFixed(3)}" aria-label="${esc(`${T(p.title)}, ${plateRef(p)}. View the engraving`)}">`
+    + `<img src="${imgUrl(p)}" width="${p.sw}" height="${p.sh}" alt="" loading="lazy" decoding="async"><span aria-hidden="true">${esc(T(p.title))}</span></button>`).join('')}</div>`;
+  $('#dore-art').addEventListener('click', e => { const b = e.target.closest('[data-plate]'); if (b) openViewer(PLATES.get(b.dataset.plate), b); });
+  $('#dore-d').textContent = `${PLATES.size} plates from Gustave Doré’s 1866 Bible, each placed beside the passage it illustrates. Choose one to see it full size.`;
+  return Promise.resolve();
+}
+
+// A stylised coastline (approximate, for the preview only); the places and events are real data.
+const GEO = { lat0: 25.6, lat1: 33.75, lon0: 29.1, lon1: 36.7, W: 300, H: 372 };
+const MED = [[33.75, 35.6], [33.56, 35.37], [33.27, 35.2], [32.92, 35.07], [32.83, 34.96], [32.5, 34.89], [32.08, 34.77], [31.8, 34.64], [31.52, 34.44], [31.32, 34.22], [31.13, 33.8], [31.05, 33.2], [31.2, 32.5], [31.27, 32.3], [31.45, 31.8], [31.5, 31.3], [31.47, 30.8], [31.45, 30.35], [31.2, 29.9], [31.0, 29.1], [33.75, 29.1]];
+const RED = [[29.95, 32.55], [29.0, 32.65], [28.0, 33.3], [27.2, 33.85], [26.2, 34.3], [25.6, 34.55], [25.6, 36.7], [26.5, 36.05], [27.3, 35.5], [28.0, 34.82], [28.9, 34.72], [29.52, 34.98], [29.45, 34.88], [28.9, 34.62], [28.0, 34.43], [27.75, 34.25], [28.2, 33.6], [29.0, 33.1], [29.9, 32.62]];
+const NILE = [[25.6, 32.6], [26.2, 31.9], [27.2, 31.2], [28.1, 30.75], [29.0, 31.1], [30.1, 31.25], [30.6, 31.0], [31.45, 30.35]];
+const NILE_E = [[30.6, 31.0], [31.45, 31.8]];
+const JORDAN = [[32.7, 35.57], [32.3, 35.55], [31.76, 35.55]];
+const proj = ([lat, lon]) => [(lon - GEO.lon0) / (GEO.lon1 - GEO.lon0) * GEO.W, (GEO.lat1 - lat) / (GEO.lat1 - GEO.lat0) * GEO.H];
+const pts = a => a.map(p => proj(p).map(n => n.toFixed(1)).join(' ')).join(' ');
+async function ctxTile() {
+  const [ctx, places, events] = await Promise.all([json(`context/${pad(CTX.b)}.json`), json('places.json'), json('events.json')]);
+  const evIds = new Set(); Object.values(ctx[CTX.c]?.v || {}).forEach(d => (d.e || []).forEach(id => evIds.add(id)));
+  const evs = [...evIds].map(id => ({ id, ...events[id] })).filter(e => e.t).sort((a, z) => (a.sk ?? a.y) - (z.sk ?? z.y) || a.id - z.id);
+  const route = CTX.route.map(id => ({ id, ...places[id] })).filter(p => p.n);
+  const xy = route.map(p => proj([p.lat, p.lon]));
+  const pctL = x => (x / GEO.W * 100).toFixed(2), pctT = y => (y / GEO.H * 100).toFixed(2);
+  const sideOf = { Jerusalem: 'l up', Bethlehem: 'l dn', Nazareth: 'l', Egypt: '' };
+  const [sx, sy] = proj([32.75, 29.55]), [rx, ry] = proj([27.4, 34.6]);
+  const svg = `<svg viewBox="0 0 ${GEO.W} ${GEO.H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">`
+    + `<polygon points="${pts(MED)}" fill="#0f1822"/><polygon points="${pts(RED)}" fill="#0f1822"/>`
+    + `<polyline points="${pts(MED.slice(0, -2))}" fill="none" stroke="#35526e" stroke-width="1"/>`
+    + `<polyline points="${pts(RED)}" fill="none" stroke="#35526e" stroke-width="1"/>`
+    + `<g fill="none" stroke="#3c5f82" stroke-width="1.2" stroke-linecap="round"><polyline points="${pts(NILE)}"/><polyline points="${pts(NILE_E)}"/><polyline points="${pts(JORDAN)}"/></g>`
+    + `<g fill="#3c5f82"><ellipse cx="${proj([32.82, 35.59])[0]}" cy="${proj([32.82, 35.59])[1]}" rx="2" ry="3.4"/><ellipse cx="${proj([31.5, 35.5])[0]}" cy="${proj([31.5, 35.5])[1]}" rx="2.2" ry="8"/></g>`
+    + `<polyline points="${xy.map(p => p.map(n => n.toFixed(1)).join(' ')).join(' ')}" fill="none" stroke="var(--lamp)" stroke-width="1.6" stroke-dasharray="1 5" stroke-linecap="round" opacity=".95"/>`
+    + xy.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="var(--lamp)" opacity=".18"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--lamp)"/>`).join('')
+    + '</svg>';
+  const labels = route.map((p, i) => `<span class="pl ${sideOf[p.n] ?? ''}" style="left:${pctL(xy[i][0])}%;top:${pctT(xy[i][1])}%">${esc(p.n)}</span>`).join('')
+    + `<span class="sea-l" style="left:${pctL(sx)}%;top:${pctT(sy)}%">Great Sea</span><span class="sea-l" style="left:${pctL(rx)}%;top:${pctT(ry)}%">Red Sea</span>`;
+  const yr = evs[0]?.y, era = yr == null ? '' : yr < 0 ? `c. ${-yr} BC` : `AD ${yr}`;
+  $('#ctx-art').innerHTML = `<div class="ctx"><div class="map">${svg}${labels}</div><div class="tline"><p class="tl-h">${esc(refLabel(CTX.b, CTX.c))}<span>${esc(era)}</span></p>`
+    + `<ol>${evs.slice(0, 7).map((e, i) => `<li class="${i === 0 ? 'is-on' : ''}">${esc(T(e.t))}</li>`).join('')}</ol></div></div>`;
+  $('#ctx-art').setAttribute('role', 'group');
+  $('#ctx-art').setAttribute('aria-label', `Map of ${route.map(p => p.n).join(', ')}, and the events of ${refLabel(CTX.b, CTX.c)} in order`);
+}
+
+async function origTile() {
+  const [b, c, v] = ORIG, o = await json(`orig/${pad(b)}.json`), words = o[`${c}:${v}`] || [];
+  $('#orig-art').innerHTML = `<div class="ilin-w"><div class="ilin" dir="rtl">${words.map(([w, tr, gl, s]) => `<span class="wd${LIT_WORDS.includes(s) ? ' lit' : ''}" dir="ltr">`
+    + `<span class="wo" lang="he" dir="rtl">${esc(w)}</span><span class="wt">${esc(String(tr).replace(/-$/, '').replace(/'/g, 'ʼ'))}</span><span class="wg">${esc(gl)}</span><span class="ws">${esc(s)}</span></span>`).join('')}</div>`
+    + `<p class="ilin-en">${esc(BRAND.motto).replace('lamp', '<em>lamp</em>').replace('light', '<em>light</em>')}</p></div>`;
+}
+
+// ---------- the engraving viewer (a native modal dialog; focus returns to the opener) ----------
+let viewerFrom = null;
+function openViewer(p, from) {
+  if (!p) return;
+  const dlg = $('#viewer'), img = $('#vw-img');
+  viewerFrom = from || document.activeElement;
+  img.src = imgUrl(p, true); img.alt = altOf(p); img.width = p.w; img.height = p.h;
+  $('#vw-t').textContent = T(p.title);
+  $('#vw-s').textContent = T(p.scene);
+  const [b, c, v] = p.ref;
+  $('#vw-c').innerHTML = `Gustave Doré, 1866 · <a href="${appHref(b, c, v)}">${esc(plateRef(p))}</a>`;
+  dlg.showModal();
+  $('#vw-x').focus();
+}
+$('#vw-x').addEventListener('click', () => $('#viewer').close());
+$('#viewer').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.classList.contains('vw-in')) e.currentTarget.close(); });
+$('#viewer').addEventListener('close', () => { viewerFrom?.focus?.(); viewerFrom = null; });
+
+// ---------- search (the mock opens a reference in the app; anything else says what the app would do) ----------
+function parseRef(q) {
+  const m = q.trim().match(/^((?:[1-3]\s*)?[a-z][a-z .]*?)\s*(\d+)(?:\s*[:.]\s*(\d+))?$/i); if (!m) return null;
+  const key = m[1].replace(/[\s.]/g, '').toLowerCase(), flat = s => s.replace(/\s/g, '').toLowerCase();
+  const bk = BOOKS.find(b => flat(b.name) === key || b.short.toLowerCase() === key || b.osis.toLowerCase() === key)
+    || (key === 'songofsolomon' && BOOKS[21]) || (key.length >= 3 && BOOKS.find(b => flat(b.name).startsWith(key)));
+  const c = +m[2], v = m[3] ? +m[3] : 0;
+  if (!bk || c < 1 || c > bk.chapters.length || v > bk.chapters[c - 1]) return null;
+  return [bk.n, c, v];
+}
+$('#search').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if (!q) return;
+  const r = parseRef(q);
+  if (r) { location.href = appHref(...r); return; }
+  say(`In the app, this searches for “${q}”.`);
+});
+
+// ---------- actions that belong to the real app ----------
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  say({ signin: 'Sign-in is not part of this mock-up.', invite: 'Here you would enter your invite code.', profile: 'Your profile and library open here in the app.' }[a.dataset.act] || '');
+});
+
+// ---------- mock-up controls: who is looking, and the appearance ----------
+const mq = matchMedia('(prefers-color-scheme: dark)');
+const sysTheme = () => (mq.matches ? 'dark' : 'light');
+function setParam(k, v) { const u = new URL(location.href); if (v) u.searchParams.set(k, v); else u.searchParams.delete(k); history.replaceState(null, '', u); }
+function themeNow() { return document.documentElement.dataset.theme || sysTheme(); }
+function syncThemeBtn() {
+  const next = themeNow() === 'dark' ? 'light' : 'dark', btn = $('#theme-btn');
+  btn.setAttribute('aria-label', `Switch to ${next} appearance`);
+  btn.title = `Switch to ${next} appearance`;
+  btn.querySelector('use').setAttribute('href', next === 'dark' ? '#i-moon' : '#i-sun');
+}
+function applyTheme(t) {
+  // An override that matches the system is dropped, so the page follows the system again.
+  if (t && t !== sysTheme()) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  setParam('theme', document.documentElement.dataset.theme || null);
+  syncThemeBtn();
+}
+$('#theme-btn').addEventListener('click', () => applyTheme(themeNow() === 'dark' ? 'light' : 'dark'));
+mq.addEventListener('change', () => { if (document.documentElement.dataset.theme === sysTheme()) applyTheme(null); else syncThemeBtn(); });
+
+async function setState(state, push = true) {
+  state = state === 'guest' ? 'guest' : 'today';
+  document.body.dataset.state = state;
+  document.querySelectorAll('.mc-seg [data-state]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.state === state)));
+  if (push) setParam('state', state === 'guest' ? 'guest' : null);
+  closeBooks(false);
+  renderAtlas(state);
+  if (state === 'guest') await renderGuest(); else await todayOnce();
+  requestAnimationFrame(() => lit.forEach(placeLight));
+}
+let todayP = null;
+const todayOnce = () => (todayP ||= renderToday());
+document.querySelector('.mc-seg').addEventListener('click', e => { const b = e.target.closest('[data-state]'); if (b) setState(b.dataset.state); });
+
+// ---------- boot ----------
+async function boot() {
+  fillBrand();
+  const q = new URLSearchParams(location.search);
+  const t = q.get('theme');
+  if (t === 'light' || t === 'dark') applyTheme(t); else syncThemeBtn();
+  const [meta, art] = await Promise.all([json('meta.json'), json('art.json')]);
+  BOOKS = meta.books;
+  let n = 0; OFF = BOOKS.map(b => { const o = n; n += b.chapters.length; return o; }); TOTAL = n;
+  art.plates.forEach(p => PLATES.set(p.id, p));
+  CREDIT = T(art.credit);
+  $('#credit').textContent = `Scripture from the King James Version. Engravings: ${CREDIT}. Visualization inspired by Chris Harrison & Christoph Römhild (2007). Cross-reference data: OpenBible.info.`;
+  Object.entries(SAMPLE.read).forEach(([b, s]) => READ.set(+b, parseRanges(s)));
+  await setState(q.get('state'), false);
+  document.documentElement.dataset.ready = '1';
+}
+boot().catch(err => { console.error(err); say('The mock-up could not load the app’s data.'); });
+</script>
+</body>
+</html>

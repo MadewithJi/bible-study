@@ -20,7 +20,7 @@ META_PATH = os.path.join(APP, "data", "meta.json")
 # ------------------------------------------------------------------ configuration (set by configure())
 DATA = PROFILES = DELETED = USERS = SESSIONS = None
 AUTH_LOCKFILE = SERVER_LOCKFILE = GUEST_NOTES = GUEST_LIBRARY = GUEST_LINKS = GUEST_MARKS = CONFIG = CACHE = None
-INVITES = None
+INVITES = OWNER_CLAIMS = None
 PORT = 8765
 ALLOWED_HOSTS = ()
 MAX_USERS = 50
@@ -31,7 +31,7 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     """Point the module at a data directory. Does not create anything on disk."""
     global DATA, PROFILES, DELETED, USERS, SESSIONS, AUTH_LOCKFILE, SERVER_LOCKFILE
     global GUEST_NOTES, GUEST_LIBRARY, GUEST_LINKS, GUEST_MARKS, CONFIG, CACHE, PORT, ALLOWED_HOSTS, MAX_USERS, COOKIE
-    global INVITES
+    global INVITES, OWNER_CLAIMS
     DATA = os.path.realpath(os.path.expanduser(data_dir))
     PROFILES = os.path.join(DATA, "profiles")
     DELETED = os.path.join(DATA, "deleted")
@@ -46,6 +46,7 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     CONFIG = os.path.join(DATA, "config.json")
     CACHE = os.path.join(DATA, "cache")
     INVITES = os.path.join(DATA, "invites.json")
+    OWNER_CLAIMS = os.path.join(DATA, "owner-claims.json")
     PORT = int(port)
     ALLOWED_HOSTS = tuple(h.strip().lower() for h in (allowed_hosts or ()) if h and h.strip())
     MAX_USERS = int(max_users)
@@ -81,15 +82,24 @@ def _safe_log_text(s, n=200):
 
 
 def log(event, uid=None, **kw):
-    """One line per security event on stderr. Never pass secrets, emails or bodies here."""
+    """One line per security event on stdout (routine information: a host reads stderr as errors). Never pass
+    secrets, emails or bodies here."""
     parts = ["[auth]", time.strftime("%Y-%m-%dT%H:%M:%S"), event]
     if uid is not None:
         parts.append(f"uid={uid or 'unknown'}")
     for k, v in kw.items():
         parts.append(f"{k}={_safe_log_text(v)}")
     try:
-        print(" ".join(parts), file=sys.stderr, flush=True)
+        print(" ".join(parts), flush=True)
     except Exception:  # noqa: logging must never break a request
+        pass
+
+
+def log_error(text):
+    """One '[error]' line on stderr: the only lines a host should treat as errors (a failed write, a traceback)."""
+    try:
+        print(f"[error] {time.strftime('%Y-%m-%dT%H:%M:%S')} {text}", file=sys.stderr, flush=True)
+    except Exception:  # noqa
         pass
 
 
@@ -592,6 +602,8 @@ def _normalize_user(uid, rec):
     u["failedLogins"] = f if f is not None and f >= 0 else 0
     lk = _as_int(u.get("lockUntil"))
     u["lockUntil"] = min(lk, now_ms() + 900 * 1000) if lk is not None and lk > 0 else 0  # never longer than the policy cap
+    lf = _as_int(u.get("lastFail"))
+    u["lastFail"] = lf if lf is not None and lf > 0 else 0
     for k in ("created", "updated", "lastLogin", "pwChanged"):
         if k in u:
             u[k] = _as_int(u[k])
@@ -794,8 +806,11 @@ def revoke_sessions(uid, keep_key=None):
         return len(dead)
 
 
+LOCK_MAX = 900  # the longest lockout; the hosted server lowers it (serve.configure_hosting), where a lock is per client
+
+
 def lock_seconds(f):
-    return 0 if f < 5 else min(900, 2 ** (f - 5))
+    return 0 if f < 5 else min(LOCK_MAX, 2 ** (f - 5))
 
 
 # ------------------------------------------------------------------ invites (hosting brief §1)
@@ -859,6 +874,24 @@ def invite_usable(rec):
 def public_invite(rec):
     """What an owner sees of an invite: never the code (it is not kept) or its hash."""
     return {k: rec[k] for k in ("id", "last4", "created", "uses", "maxUses", "note", "revoked")}
+
+
+# ------------------------------------------------------------------ owner claims (hosting; QC 0)
+# An address in BS_OWNER_EMAILS may sign up without an invite only until a profile has claimed it: DATA/owner-claims.json
+# is {SHA-256 of the email: {uid, claimed}}, kept for good (a delete or an email change must not reopen the address to a
+# stranger). The users.json rules apply: read and written under auth_lock(), a daily .bak, an unreadable file moved aside.
+def claim_key(email):
+    return hashlib.sha256(email.encode("utf-8")).hexdigest()
+
+
+def load_owner_claims():
+    d = read_json_strict(OWNER_CLAIMS, {})
+    return {k: v for k, v in d.items() if isinstance(k, str) and INVITE_KEY_RE.fullmatch(k) and isinstance(v, dict)}
+
+
+def save_owner_claims(claims):
+    _daily_backup(OWNER_CLAIMS)
+    write_json_atomic(OWNER_CLAIMS, claims)
 
 
 # ------------------------------------------------------------------ scope paths

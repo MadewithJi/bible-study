@@ -1,11 +1,11 @@
 // Wiring: boot, the action object A, the study-sheet state machine, top bar, stage panels, picker,
 // search, settings, dialogs, toast, keyboard, profiles (resume prompt, library marks) and the art panel.
 import { icon } from './icons.js'; // first import: injects the icon sprite
-import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked } from './store.js';
+import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted } from './store.js';
 import * as reader from './reader.js';
 import * as drawer from './drawer.js';
 import * as viz from './viz.js';
-import { initAuth, initAccountUI, openAuth } from './account.js';
+import { initAuth, initAccountUI, renderAccountButton, openAuth } from './account.js';
 import { closeDialog, showDialog, menuOpen as uiMenuOpen, relTime } from './ui.js';
 
 // Optional modules, loaded in parallel with the rest: a missing or broken library.js, tracker.js, art.js, links.js or marks.js
@@ -29,6 +29,9 @@ const trkCall = (name, ...args) => modCall(tracker, name, ...args);
 const artCall = (name, ...args) => modCall(art, name, ...args);
 const lnkCall = (name, ...args) => modCall(lnk, name, ...args);
 const mrkCall = (name, ...args) => modCall(mrk, name, ...args);
+// Home (home-build brief §1): home.js is imported the first time Home shows, never at boot for the reader
+let homeMod = null, homeP = null;
+const homeCall = (name, ...args) => modCall(homeMod, name, ...args);
 const has = (mod, name) => !!mod && typeof mod[name] === 'function';
 const DAY = 86400000;
 
@@ -55,8 +58,11 @@ const hideTip = () => { try { viz.tip?.hide?.(); } catch (e) { /* ignore */ } };
 const A = {
   navigate(b, c, v = 0, opts = {}) {
     hideResume();
-    if (!opts.noHistory) { state.history.push({ b: state.book, c: state.chapter, v: state.selected }); state.future = []; if (state.history.length > 200) state.history.shift(); }
+    // from Home, the in-app Back returns to the chapter read before Home (none when the reader was never shown)
+    const fromHome = state.home, skip = fromHome && (!readerSeen || (b === state.book && c === state.chapter));
+    if (!opts.noHistory && !skip) { state.history.push({ b: state.book, c: state.chapter, v: state.selected }); state.future = []; if (state.history.length > 200) state.history.shift(); }
     state.book = b; state.chapter = c; state.selected = v || null;
+    if (fromHome) exitHome({ push: !opts.fromHash }); // a new history entry, so the browser's Back returns Home
     drawer.setOrigFocus(null);
     lnkCall('clearMineFocus'); // the Mine tab follows the reader again (links-spec §3.3)
     if (state.selected && state.drawerTab === 'search') state.drawerTab = 'xref';
@@ -116,7 +122,9 @@ const A = {
   toggleDrawer(on) { const want = on ?? !state.drawerOpen; if (want) openDrawer(); else closeDrawer(); },
   showPanel(p, force = false) {
     const prev = state.panel;
-    state.panel = force ? p : (state.panel === p ? null : p); renderPanel();
+    state.panel = force || state.home ? p : (state.panel === p ? null : p); // from Home the button opens it: the stage was hidden
+    if (toReader()) return; // a visualisation belongs to the chapter: from Home the reader comes back with it
+    renderPanel();
     if (state.panel && prev) revealStage(); // switched panels (or 'Open full map'): the stage may sit far above the view
   },
   refreshMarker(v) { if (v) reader.refreshVerseMarker(v); drawer.renderHead(); },
@@ -127,6 +135,10 @@ const A = {
   /** A typed or linked reference ('John 3:16–18'): true when it resolved and opened. */
   goReference(text) { const r = parseReference(String(text || '')); if (r) { openRef(r); return true; } toast(`Couldn’t find “${text}”.`); return false; },
   openSettings() { openSettings(); },
+  /** Home's Welcome: Sign in, or I have an invite (the sign-up form, with its invite field when the site asks for one). */
+  openAuth(mode) { openAuth(mode === 'signup' ? 'signup' : 'signin'); },
+  /** Home (the wordmark, h): byKey moves focus to its heading. */
+  goHome(byKey = false) { goHome(byKey); },
   search(q) { const s = $('#search'); s.value = q; $('#search-form').classList.toggle('has-value', !!q); runSearch(q); },
   showTopic(name) { return showTopic(name); },
   toast(msg, action) { toast(msg, action); },
@@ -176,8 +188,12 @@ const A = {
 };
 
 /** Every chapter render goes through here so focus restores can wait for the new DOM. */
-let readerP = Promise.resolve();
-function renderReader(opts = {}) { readerP = reader.renderReader(opts).catch(e => console.error(e)); return readerP; }
+let readerP = Promise.resolve(), readerSeen = false;
+function renderReader(opts = {}) {
+  if (state.home) return readerP; // Home covers the reader: it is drawn when Home is left (exitHome, toReader)
+  readerSeen = true;
+  readerP = reader.renderReader(opts).catch(e => console.error(e)); return readerP;
+}
 /** Open a parsed reference: its chapter with the first verse selected, and the rest of a range briefly emphasised. */
 function openRef(r) {
   A.navigate(r.b, r.c, r.v);
@@ -200,7 +216,7 @@ function updateBar() {
     const m = label.match(/^(.*?)( \d[\d:–]*)$/) || [label, label, ''];
     t.innerHTML = `<span class="rb">${esc(m[1])}</span><span class="rc">${esc(m[2])}</span>`;
   } else if ($('#cur-ref')) $('#cur-ref').textContent = label;
-  document.title = `${label} · Bible Study`;
+  document.title = state.home ? 'Bible Lantern' : `${label} · Bible Lantern`;
   const off = { 'btn-prev': !reader.stepTarget(-1), 'btn-next': !reader.stepTarget(1), 'btn-back': !state.history.length, 'btn-fwd': !state.future.length };
   // a focused button that turns disabled would drop focus to <body>: set the others first (its partner may only now
   // become enabled), hand focus to the partner (or the reference), then disable the one that had it
@@ -209,13 +225,13 @@ function updateBar() {
   if (pair && off[ae.id]) (off[pair] ? $('#cur-ref') : $('#' + pair))?.focus({ preventScroll: true });
   if (pair) ae.disabled = off[ae.id];
   $('#btn-orig').setAttribute('aria-pressed', String(!!state.showOrig));
-  $$('[data-panel-btn]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.panelBtn === state.panel)));
+  $$('[data-panel-btn]').forEach(b => b.setAttribute('aria-pressed', String(!state.home && b.dataset.panelBtn === state.panel))); // Home hides the stage
   $('#tr').value = state.tr; $('#tr2').value = state.tr2 || '';
   // the parallel is another translation (and, hosted, never the owner's ESV or NLT for anyone else)
   $$('#tr2 option').forEach(o => { o.disabled = !!o.value && (o.value === state.tr || (ownerOnlyKeys() && trInfo(o.value).kind === 'api')); });
   $('#tr2').closest('.pill-select')?.classList.toggle('on', !!state.tr2);
 }
-function updateHash() { const h = `#${state.book}/${state.chapter}${state.selected ? '/' + state.selected : ''}`; if (location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h); }
+function updateHash() { if (state.home) return; const h = `#${state.book}/${state.chapter}${state.selected ? '/' + state.selected : ''}`; if (location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h); }
 /** `#b/c[/v]` → {b, c, v} clamped to the Bible (v 0 = no verse: '#43/3/0' is John 3), or null for any other hash. */
 function parseHash() {
   const m = location.hash.match(/^#(\d+)\/(\d+)(?:\/(\d+))?/); if (!m) return null;
@@ -227,7 +243,78 @@ function readHash() {
   const p = parseHash(); if (!p) return;
   state.book = p.b; state.chapter = p.c; state.selected = p.v || null;
 }
-function toggleOrig() { state.showOrig = !state.showOrig; updateBar(); renderReader(); }
+function toggleOrig() { state.showOrig = !state.showOrig; if (toReader()) return; updateBar(); renderReader(); }
+
+// ------------------------------------------------------------ Home (home-build brief §1)
+// `#home`, or a URL without a chapter, shows <main id="home"> in place of the page (reader and stage). Leaving it
+// for a chapter adds a history entry, so the browser's Back comes Home again; Back from Home returns to the chapter.
+// While Home shows, the reader is emptied (no position or reading is taken from a chapter nobody sees) and redrawn
+// on the way out. state.home says which is shown.
+const homeHash = () => !location.hash || location.hash === '#' || location.hash === '#home';
+let homeFocusNext = false, readerReturn = null;
+function loadHome() {
+  if (!homeP) homeP = import('./home.js').then(m => { homeMod = m; m.init(A, () => ({ library, tracker, art, lnk, mrk })); return m; })
+    .catch(e => { homeP = null; console.error('home.js failed to load', e); return null; });
+  return homeP;
+}
+function setHomeShown(on) {
+  state.home = on;
+  document.body.classList.toggle('at-home', on);
+  const page = $('#page'), home = $('#home');
+  if (page) page.hidden = on;
+  if (home) home.hidden = !on;
+  const skip = $('.skip'); if (skip) skip.textContent = on ? 'Skip to content' : 'Skip to the text';
+}
+/** Show Home. focus: its heading takes focus (entered by keyboard, or focus would otherwise be lost in the page). */
+async function enterHome({ focus = false } = {}) {
+  if (!state.home) {
+    const ae = document.activeElement, fromPage = !!(ae && $('#page')?.contains(ae));
+    focus = focus || fromPage;
+    if (readerSeen) readerReturn = { b: state.book, c: state.chapter, y: window.scrollY };
+    trkCall('capturePositionNow'); // a scroll in the last 2 s is still pending: take the place while the chapter is on screen
+    hideResume(); closeDrawer();
+    if (lnkCall('picking')) lnkCall('cancelPick');
+    mrkCall('closeBubble'); mrkCall('closeMarkPop');
+    vizCall('stopPanel'); if (state.panel === 'art') artCall('stop');
+    hideTip();
+    const r = $('#reader'); if (r) { r.innerHTML = ''; delete r.dataset.ch; }
+    setHomeShown(true);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    updateBar();
+  } else if (window.scrollY) window.scrollTo({ top: 0, behavior: scrollBehavior() });
+  const m = await loadHome();
+  if (!state.home) return;
+  if (!m) { toReader({ push: false }); updateHash(); toast('The home page could not load. Showing the chapter instead.'); return; }
+  await homeCall('show', { focus });
+}
+/** Leave Home for the reader (the caller draws it). push: a new history entry (not when Back/Forward brought us).
+ *  focus: false when the caller places focus itself (the study sheet). */
+function exitHome({ push = true, focus = true } = {}) {
+  if (!state.home) return false;
+  const ae = document.activeElement, home = $('#home'), hadFocus = focus && !!(ae && (ae === document.body || home?.contains(ae)));
+  setHomeShown(false);
+  homeCall('hide');
+  if (push) history.pushState(null, '', location.pathname + location.search + `#${state.book}/${state.chapter}${state.selected ? '/' + state.selected : ''}`);
+  // focus was on Home (now hidden): once the chapter is drawn, the verse (or the text) takes it
+  if (hadFocus) queueMicrotask(() => readerP.then(() => {
+    const now = document.activeElement;
+    if (state.home || (now && now !== document.body && !home?.contains(now))) return;
+    (state.selected && document.getElementById('v' + state.selected) || $('#reader'))?.focus({ preventScroll: true });
+  }));
+  return true;
+}
+/** From Home to the chapter behind it, drawn now: a top-bar tool, the study sheet, a word search. */
+function toReader({ push = true, focus = true } = {}) {
+  if (!exitHome({ push, focus })) return false;
+  render({ scroll: 'top' });
+  return true;
+}
+/** The wordmark and h: Home, as a new history entry (Back returns to the chapter). */
+function goHome(byKey = false) {
+  if (state.home) { window.scrollTo({ top: 0, behavior: scrollBehavior() }); if (byKey) homeCall('focusTitle'); return; }
+  homeFocusNext = byKey;
+  if (location.hash === '#home') enterHome({ focus: byKey }); else location.hash = '#home';
+}
 /** The reading line, as tracker.js draws it: html's scroll-padding-top (bar + 28px), where a resume parks its verse. */
 function readingLine() {
   let pad = NaN;
@@ -285,6 +372,7 @@ function afterSheetMove() {
   else if (m === 'sheet') sheetMoveT = setTimeout(() => reader.ensureVisible(state.selected), 520);
 }
 function openDrawer(o = {}) {
+  toReader({ focus: false }); // the study sheet stays closed on Home: it opens over the chapter (and takes focus)
   if (!state.drawerOpen) {
     if (layoutMode() === 'sheet') hideResume(); // the prompt never sits on top of the phone sheet
     lastFocus = document.activeElement;
@@ -385,6 +473,7 @@ function bindSheetDrag() {
 // ------------------------------------------------------------ stage panels (arcs / graph / map / art)
 let stageClearT = 0, lastPanel = null, renderedPanel = null;
 function renderPanel() {
+  if (state.home) return; // the stage sits in the hidden page: drawn again when Home is left
   const p = $('#panel'), st = $('#stage'); if (!p || !st) return;
   const on = !!state.panel;
   const wasOpen = p.classList.contains('open');
@@ -556,7 +645,7 @@ function applyTheme(t, persist = false) {
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
     if (m.dataset.color === undefined) { m.dataset.media = m.getAttribute('media') || 'all'; m.dataset.color = m.content; }
     if (t === 'auto') { m.setAttribute('media', m.dataset.media); m.content = m.dataset.color; }
-    else { m.setAttribute('media', 'all'); m.content = t === 'dark' ? '#000000' : '#fbfbfd'; }
+    else { m.setAttribute('media', 'all'); m.content = t === 'dark' ? '#000000' : '#f5f3ee'; }
   });
   if (persist) lsSet('bs-theme', t);
   const th = $('#theme'); if (th) drawer.setRadio(th, b => b.dataset.themeOpt === t);
@@ -575,7 +664,7 @@ async function removeKey(id) {
   const t = trInfo(id), f = $(`#${id}-key`);
   if (DRY) { toast(`Dry run: the ${t.abbr} key was not removed.`); return; }
   try { await saveConfig({ [id + 'Key']: '' }); }
-  catch (err) { toast(`Could not remove the ${t.abbr} key. Is serve.py running?`); return; }
+  catch (err) { toast(hostedMsg(`Could not remove the ${t.abbr} key. Is serve.py running?`, `Could not remove the ${t.abbr} key. Check your connection and try again.`)); return; }
   // the text that needed this key falls back to the KJV (and a parallel column that would now repeat it closes)
   if (state.tr === id) { state.tr = 'kjv'; lsSet('bs-tr', 'kjv'); }
   if (state.tr2 === id || state.tr2 === state.tr) { state.tr2 = ''; lsSet('bs-tr2', ''); }
@@ -626,7 +715,7 @@ function bindSettings() {
       if (DRY) toast('Dry run: API keys were not saved.');
       else {
         try { await saveConfig(body); toast('API keys saved.'); }
-        catch (err) { toast('Could not save the keys. Is serve.py running?'); return; }
+        catch (err) { toast(hostedMsg('Could not save the keys. Is serve.py running?', 'Could not save the keys. Check your connection and try again.')); return; }
       }
     }
     // the "ESV needs an API key" card asked for this key: switch to that translation now and drop the card
@@ -960,7 +1049,7 @@ function fillTranslationSelects() {
 /** A text the current session can read: bundled, or an API one with a key it may use. */
 const usableTr = id => { const t = state.translations.find(x => x.id === id); return !!t && t.kind !== 'external' && (t.kind !== 'api' || !!state.apiKeys[t.id]); };
 function bindTranslations() {
-  const after = () => { updateBar(); renderReader(); drawer.renderDrawer({ keepScroll: true }); };
+  const after = () => { updateBar(); renderReader(); drawer.renderDrawer({ keepScroll: true }); homeCall('refresh'); };
   const onTr = (sel, which) => sel.addEventListener('change', () => {
     const val = sel.value;
     if (which === 'tr2' && !val) { state.tr2 = ''; lsSet('bs-tr2', ''); after(); return; }
@@ -980,6 +1069,7 @@ function bindTranslations() {
       sel.value = state[which] || '';
       // `which` remembers the select that asked, so saving the key in Settings can apply it (bindSettings)
       state.notice = { tr: t.id, which, title: `${t.abbr} needs an API key`, body: `Add a free ${t.abbr} key in Settings and the text is fetched a chapter at a time, then cached.` };
+      toReader(); // the notice sits above the chapter
       renderReader().then(() => {
         const n = $('#reader .notice'); if (!n) return;
         const r = n.getBoundingClientRect(); if (r.top < 70 || r.bottom > innerHeight) n.scrollIntoView({ block: 'center', behavior: scrollBehavior() });
@@ -1008,7 +1098,13 @@ function bindChrome() {
   $('#btn-library')?.addEventListener('click', () => A.openLibrary());
   $('#scrim')?.addEventListener('click', () => closeDrawer());
   // 'Skip to the text' moves focus without '#reader' in the address bar (and without a history entry)
-  $('.skip')?.addEventListener('click', e => { const r = $('#reader'); if (!r) return; e.preventDefault(); r.focus({ preventScroll: true }); r.scrollIntoView({ block: 'start' }); });
+  $('.skip')?.addEventListener('click', e => {
+    e.preventDefault();
+    if (state.home) { homeCall('focusTitle'); return; } // Home: its heading
+    const r = $('#reader'); if (!r) return; r.focus({ preventScroll: true }); r.scrollIntoView({ block: 'start' });
+  });
+  // the wordmark: Home (a plain click; a new tab or window keeps the link's own behaviour)
+  $('#brand')?.addEventListener('click', e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return; e.preventDefault(); goHome(e.detail === 0); });
   $('#stage')?.addEventListener('click', e => { if (e.target.closest('[data-close-panel]') && state.panel) { const btn = $(`[data-panel-btn="${state.panel}"]`); A.showPanel(state.panel); btn?.focus({ preventScroll: true }); } });
 
   const sf = $('#search-form'), si = $('#search'), bar = $('#topbar');
@@ -1048,7 +1144,23 @@ function bindChrome() {
   // place; either way the address bar then shows the clamped location ('#99/99/99' → '#66/22/21', '#43/3/0' → '#43/3'),
   // and any other hash ('#abc') gives way to the chapter shown, so a copied or reloaded URL opens it
   window.addEventListener('hashchange', () => {
-    const p = parseHash(); if (!p) { updateHash(); return; }
+    const p = parseHash();
+    // '#home' or no hash (Back to a bare URL): Home. Any other hash gives way to the page shown, as before.
+    if (!p) {
+      if (homeHash()) { const focus = homeFocusNext; homeFocusNext = false; enterHome({ focus }); }
+      else if (state.home) history.replaceState(null, '', location.pathname + location.search + '#home');
+      else updateHash();
+      return;
+    }
+    if (state.home) {
+      // Back or Forward to a chapter (or a Home link): leave Home there; Back to the chapter Home was opened
+      // from also brings back where it was scrolled to
+      const back = readerReturn && readerReturn.b === p.b && readerReturn.c === p.c && !p.v ? readerReturn.y : null;
+      readerReturn = null;
+      A.navigate(p.b, p.c, p.v, { fromHash: true });
+      if (back != null) readerP.then(() => { if (!state.home && state.book === p.b && state.chapter === p.c) window.scrollTo({ top: back, behavior: 'auto' }); });
+      return;
+    }
     if (p.b !== state.book || p.c !== state.chapter) { A.navigate(p.b, p.c, p.v); return; }
     if ((p.v || null) !== state.selected) { state.selected = p.v || null; drawer.setOrigFocus(null); lnkCall('clearMineFocus'); render({ scroll: true }); }
     updateHash();
@@ -1083,6 +1195,10 @@ function bindKeyboard() {
     const modal = document.body.classList.contains('sheet-modal');
     const onPage = fn => { fn(); if (modal) closeDrawer(); };
     const k = e.key;
+    if (k === 'h') { e.preventDefault(); goHome(true); return; }
+    // Home has no chapter on screen: the keys that act on one wait for the reader
+    if (state.home && !['/', 't', 'l', '?', 'Escape'].includes(k)) return;
+    if (k === '/' && state.home && homeCall('focusSearch')) { e.preventDefault(); return; }
     if ((k === 'ArrowLeft' && !e.shiftKey) || k === '[') { if (!inSheet && !modal) { e.preventDefault(); A.step(-1); } } // Shift+arrows select words
     else if ((k === 'ArrowRight' && !e.shiftKey) || k === ']') { if (!inSheet && !modal) { e.preventDefault(); A.step(1); } }
     else if (k === 'j' || k === 'k') { e.preventDefault(); A.stepVerse(k === 'j' ? 1 : -1); }
@@ -1100,6 +1216,7 @@ function bindKeyboard() {
       if (mrkCall('closeMarkPop', { restore: true })) return; // then a highlight's margin popover
       if (lnkCall('picking')) { lnkCall('cancelPick'); return; } // then pick mode (links-spec §3.4)
       if ($('#topbar').classList.contains('searching')) { $('#topbar').classList.remove('searching'); return; }
+      if (state.home) return; // the sheet and the stage wait behind Home
       if (!$('#resume')?.hidden) { hideResume(); return; }
       if (state.drawerOpen && (inSheet || layoutMode() !== 'side')) closeDrawer();
       else if (state.panel) A.showPanel(state.panel);
@@ -1195,14 +1312,15 @@ function continueResume() {
 function resumeTo(pos, o = {}) {
   pos = validPos(pos); if (!pos) return;
   hideResume();
-  if (pos.b !== state.book || pos.c !== state.chapter || (state.selected && !o.silent)) A.navigate(pos.b, pos.c, 0);
+  const fromHome = state.home; // Home's Continue reading: its focus was on Home, so the verse takes it
+  if (fromHome || pos.b !== state.book || pos.c !== state.chapter || (state.selected && !o.silent)) A.navigate(pos.b, pos.c, 0);
   readerP.then(() => {
     if (state.book !== pos.b || state.chapter !== pos.c) return;
     const el = pos.v ? document.getElementById('v' + pos.v) : null;
     if (el) el.scrollIntoView({ block: 'start', behavior: 'auto' });
     else window.scrollTo({ top: 0, behavior: 'auto' });
     const ae = document.activeElement;
-    if (o.focus === 'force' || (o.focus && (!ae || ae === document.body || $('#reader')?.contains(ae)))) (el || $('#reader'))?.focus({ preventScroll: true });
+    if (o.focus === 'force' || (o.focus && (fromHome || !ae || ae === document.body || $('#reader')?.contains(ae)))) (el || $('#reader'))?.focus({ preventScroll: true });
   });
 }
 
@@ -1227,7 +1345,8 @@ async function onScopeChange(d = {}) {
   if (cfg) syncTranslations();
   render({ keepScroll: true });
   refreshPicker();
-  if (d.reason === 'signin' || d.reason === 'signup') {
+  homeCall('refresh'); // Today or Welcome, with this profile's data
+  if (!state.home && (d.reason === 'signin' || d.reason === 'signup')) {
     const pos = validPos(libCall('currentPosition'));
     if (pos && (pos.b !== state.book || pos.c !== state.chapter)) showResume(pos);
   }
@@ -1321,54 +1440,92 @@ function bindProfileEvents() {
 }
 
 // ------------------------------------------------------------ boot
+// How long the first paint waits for serve.py: a moment with a chapter in the URL (so a server that answers at once
+// is drawn in one go), longer only where the page needs the server first (Home's position, an ESV or NLT text).
+const BOOT_GRACE = 350, BOOT_CAP = 6000;
+const delay = ms => new Promise(r => setTimeout(r, ms));
+const apiTr = id => !!id && (state.translations.find(x => x.id === id) || {}).kind === 'api';
+/** The saved ESV or NLT choice, usable now that /api/config has answered (the first paint fell back to the KJV). */
+function adoptSavedTranslations(tr, tr2) {
+  let changed = false;
+  if (tr !== state.tr && usableTr(tr)) { state.tr = tr; changed = true; }
+  if (tr2 !== state.tr2 && (!tr2 || (usableTr(tr2) && tr2 !== state.tr))) { state.tr2 = tr2; changed = true; }
+  if (changed) fillTranslationSelects();
+  return changed;
+}
 async function boot() {
   const meta = await data.meta(); state.meta = meta; state.books = meta.books; state.translations = meta.translations || [];
   [library, tracker, art, lnk, mrk] = await modsP;
   artCall('init', A);
   artCall('load'); // art.json in the background; never throws
-  await initAuth();
-  await Promise.all([loadNotes(), loadConfig(), libCall('loadLibrary'), lnkCall('loadLinks'), mrkCall('loadMarks')]);
+  // serve.py is asked who is studying and for their notes, highlights, links and library alongside the first paint: the
+  // chapter comes from the static files, and what the server holds is drawn in when it answers (never blocked on /api)
+  // These start-up GETs give up at BOOT_CAP (a redeploying server must not hold the first paint or the savers' start
+  // for long); a reload later keeps api()'s 30 s, which a large profile on a slow link needs.
+  setApiTimeout(BOOT_CAP);
+  const authP = initAuth();
+  const loadsP = authP.then(() => Promise.all([loadNotes(), loadConfig(), libCall('loadLibrary'), lnkCall('loadLinks'), mrkCall('loadMarks')])).catch(e => console.error(e)).finally(() => setApiTimeout(0));
+  let landed = false; loadsP.then(() => { landed = true; });
   applyTheme(state.theme);
   const fz = lsGet('bs-font'); if (fz && +fz >= 12 && +fz <= 32) document.documentElement.style.setProperty('--read-size', fz + 'px');
   document.documentElement.classList.toggle('woc-off', lsGet('bs-woc') === '0');
-  state.tr = lsGet('bs-tr', 'kjv') || 'kjv'; state.tr2 = lsGet('bs-tr2', '') || '';
+  const savedTr = lsGet('bs-tr', 'kjv') || 'kjv', savedTr2 = lsGet('bs-tr2', '') || '';
+  state.tr = savedTr; state.tr2 = savedTr2;
   if (!usableTr(state.tr)) state.tr = 'kjv';
   if (state.tr2 && (!usableTr(state.tr2) || state.tr2 === state.tr)) state.tr2 = ''; // a parallel column never repeats the text
   fillTranslationSelects();
-  // leave off (§5.9): a load without a chapter in the URL opens where this profile stopped reading
+  // Home (home-build brief §1): a load without a chapter in the URL shows Home, whose Continue reading offers where
+  // this profile stopped (§5.9 opened it here before). The top bar names that chapter; it is drawn when Home is left.
   const hadHash = /^#\d+\/\d+/.test(location.hash);
   readHash();
+  await Promise.race([loadsP, delay(!hadHash || apiTr(savedTr) || apiTr(savedTr2) ? BOOT_CAP : BOOT_GRACE)]);
+  if (landed) adoptSavedTranslations(savedTr, savedTr2);
   const pos = validPos(libCall('currentPosition'));
-  let resumeOnBoot = null;
-  if (!hadHash && pos) { state.book = pos.b; state.chapter = pos.c; state.selected = null; resumeOnBoot = pos; }
+  if (!hadHash) {
+    if (pos) { state.book = pos.b; state.chapter = pos.c; state.selected = null; }
+    if (!homeHash()) history.replaceState(null, '', location.pathname + location.search + '#home'); // '#abc'
+    setHomeShown(true);
+  }
 
   reader.init(A); drawer.init(A); vizCall('init', A);
   reader.bindReader(); drawer.bindDrawer();
   bindChrome(); bindTranslations(); bindPicker(); buildPicker(); bindSettings(); bindDialogs(); bindToast(); bindSheetDrag(); bindKeyboard();
   bindSearchResults(); bindResume(); bindProfileEvents();
-  initAccountUI(A); libCall('initLibrary', A); trkCall('initTracker', A); bindNotesLifecycle(); lnkCall('initLinks', A); mrkCall('initMarks', A);
+  initAccountUI(A); libCall('initLibrary', A); bindNotesLifecycle();
+  const initSavers = () => { trkCall('initTracker', A); lnkCall('initLinks', A); mrkCall('initMarks', A); }; // their scope is who is studying
+  if (landed) initSavers();
   // the address bar always names the chapter shown: a clamped hash ('#99/99/99'), a resumed position or a bare URL
   syncDrawer(); updateBar(); updateHash(); renderPanel();
 
-  readerP = reader.renderReader({ scroll: true }); // not via the wrapper: a failure here should reach boot().catch
-  await readerP;
+  if (state.home) enterHome().catch(e => console.error(e)); // home.js loads now, never before the reader needs it
+  else {
+    readerSeen = true;
+    readerP = reader.renderReader({ scroll: true }); // not via the wrapper: a failure here should reach boot().catch
+    await readerP;
+  }
   drawer.renderDrawer(); // header fields and badges; the sheet stays closed
   // §6.1: a verse in the URL opens the sheet on arrival only where it does not cover the text
-  if (state.selected && layoutMode() === 'side') { state.drawerTab = 'xref'; openDrawer({}); }
+  if (!state.home && state.selected && layoutMode() === 'side') { state.drawerTab = 'xref'; openDrawer({}); }
   onScroll();
   try { sessionStorage.removeItem('bs-boot-retry'); } catch (e) { /* ignore */ } // index.html's load-failure retry
-  let toasted = true;
+  if (!landed) {
+    // the server answered after the first paint (or could not): the account button, then the notes, highlights,
+    // links and bookmarks over the text that is already there
+    await authP; initSavers(); renderAccountButton();
+    await loadsP;
+    adoptSavedTranslations(savedTr, savedTr2);
+    render({ keepScroll: true }); refreshPicker(); homeCall('refresh');
+  }
   if (DRY) toast('Dry run: nothing will be saved.');
-  else if (!state.serverOk) toast('Running without serve.py, so notes are kept in this browser only.');
-  else toasted = false;
-  if (resumeOnBoot) {
-    A.resume(resumeOnBoot, { silent: true });
-    if (!toasted) toast(`Picked up where you left off: ${refLabel(resumeOnBoot.b, resumeOnBoot.c, resumeOnBoot.v)}.`);
-  } else if (hadHash && pos && (pos.b !== state.book || pos.c !== state.chapter) && Date.now() - pos.t < 60 * DAY) showResume(pos);
+  else if (!state.serverOk) toast(hostedMsg('Running without serve.py, so notes are kept in this browser only.', 'Can’t reach the server right now. Reading works; saving will be back shortly.'));
+  const last = validPos(libCall('currentPosition'));
+  if (hadHash && last && (last.b !== state.book || last.c !== state.chapter) && Date.now() - last.t < 60 * DAY) showResume(last);
   (window.requestIdleCallback || (f => setTimeout(f, 400)))(() => { [data.people(), data.places(), data.events(), data.orig(state.book), data.topics()].forEach(p => p && p.catch && p.catch(() => {})); });
 }
 boot().catch(e => {
   console.error(e);
+  if (state.home) setHomeShown(false); // the message sits in the reader
   const el = document.getElementById('reader');
-  if (el) el.innerHTML = `<div class="notice error" role="note">${icon('info')}<p>Failed to start: ${esc(e.message)}<small>Run <code>python3 serve.py</code> and open http://localhost:8765.</small></p></div>`;
+  const how = likelyHosted() ? 'Reload the page to try again.' : 'Run <code>python3 serve.py</code> and open http://localhost:8765.';
+  if (el) el.innerHTML = `<div class="notice error" role="note">${icon('info')}<p>Failed to start: ${esc(e.message)}<small>${how}</small></p></div>`;
 });

@@ -22,6 +22,7 @@ export const state = {
   book: 43, chapter: 3,         // 1-based book number
   selected: null,               // selected verse number
   showOrig: false,
+  home: false,                  // Home is shown instead of the reader (home-build brief §1): main.js keeps it
   drawerOpen: false,            // the study sheet is closed until the user asks for it
   sheetFull: false,             // phone only: full (94dvh) vs medium (64dvh) detent
   drawerTab: 'xref',
@@ -253,9 +254,14 @@ export function onLayoutChange(fn) { [MQ_SIDE, MQ_SHEET].forEach(q => q && q.add
  * JSON request to serve.py. Never throws. Resolves { ok, status, data } (+ offline: true on a network error,
  * dry: true when ?dry refused a write). Mutations carry Content-Type JSON and a JSON body ({} when empty);
  * scoped calls carry X-BS-Scope, and a 409 scope_mismatch or 401 not_signed_in on them fires 'bs:auth-lost' (as does a
- * hosted site's 401 sign_in_required for a profile's write).
+ * hosted site's 401 sign_in_required for a profile's write). `timeout` (ms) overrides the default of 30 s (a large
+ * import passes a longer one; a large profile on a slow link needs the 30 s for its GETs), except while main.js boot
+ * has set a shorter one for the start-up GETs (setApiTimeout: they must not hold the page long during a redeploy).
  */
-export async function api(method, url, body, { keepalive = false, scoped = true } = {}) {
+let bootTimeout = 0;
+/** The default timeout (ms) for GETs started from now on; 0 restores the 30 s. Set around the boot loads only. */
+export function setApiTimeout(ms) { bootTimeout = ms > 0 ? ms : 0; }
+export async function api(method, url, body, { keepalive = false, scoped = true, timeout = 0 } = {}) {
   if (DRY && method !== 'GET') return { ok: false, status: 0, dry: true, data: null };
   const headers = { Accept: 'application/json' };
   if (method !== 'GET') headers['Content-Type'] = 'application/json';
@@ -263,7 +269,7 @@ export async function api(method, url, body, { keepalive = false, scoped = true 
   let r;
   // a serve.py that never answers must not leave a dialog waiting forever
   const ctl = !keepalive && typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timer = ctl ? setTimeout(() => ctl.abort(), 30000) : 0;
+  const timer = ctl ? setTimeout(() => ctl.abort(), timeout > 0 ? timeout : method === 'GET' && bootTimeout ? bootTimeout : 30000) : 0;
   try {
     r = await fetch(url, { method, headers, credentials: 'same-origin', cache: 'no-store', keepalive: !!keepalive, signal: ctl ? ctl.signal : undefined, body: method === 'GET' ? undefined : JSON.stringify(body ?? {}) });
   } catch (e) { clearTimeout(timer); return { ok: false, status: 0, offline: true, data: null }; }
@@ -289,6 +295,12 @@ export function onBroadcast(fn) { if (chan) chan.addEventListener('message', e =
  *  Locally never: there the guest saves as always. */
 export const readOnlyGuest = () => !!(state.auth.hosted && !state.auth.signedIn);
 export const SIGN_IN_MSG = 'Sign in to save your notes, links and highlights.';
+/** A local serve.py is always on loopback: anywhere else is the site, even before /api/auth/me has answered. */
+const LOOPBACK_RX = /^(localhost|127\.0\.0\.1|\[::1\])$/;
+export const likelyHosted = () => lsGet('bs-hosted') === '1' || (typeof location !== 'undefined' && !LOOPBACK_RX.test(location.hostname));
+/** Website wording where the local app would mention serve.py, Terminal or 'this computer'. */
+export const hostedMsg = (local, hosted) => (state.auth.hosted ? hosted : local);
+export const offlineMsg = () => hostedMsg('Can’t reach serve.py. Try again when it’s running.', 'Can’t reach the server. Check your connection and try again.');
 /** A write refused because this tab is a hosted site's guest. */
 export const signInRequired = r => !!(r && r.status === 401 && r.data && r.data.error === 'sign_in_required');
 let signInPrompt = null;
@@ -790,7 +802,7 @@ export function setSaveStatus(kind) {
   el.removeAttribute('title');
   if (!norm) { el.textContent = ''; return; }
   if (norm === 'saving') { el.textContent = 'Saving…'; return; }
-  if (norm === 'failed') { el.innerHTML = `${icon('info')}Save failed`; el.classList.add('warn'); el.title = 'Could not reach serve.py. Your notes are kept in this browser until it is running again.'; return; }
+  if (norm === 'failed') { el.innerHTML = `${icon('info')}Save failed`; el.classList.add('warn'); el.title = hostedMsg('Could not reach serve.py. Your notes are kept in this browser until it is running again.', 'Could not reach the server. Your notes are kept in this browser until it is back.'); return; }
   if (norm === 'signedout') {   // serve.py answered: the session expired or was revoked, so signing in again is the fix
     const who = state.auth.user && state.auth.user.name;
     el.innerHTML = `${icon('info')}Not saved`; el.classList.add('warn');
@@ -804,7 +816,11 @@ export function setSaveStatus(kind) {
 }
 
 export async function loadConfig() {
-  try { const r = await fetch('/api/config'); if (r.ok) state.apiKeys = await r.json(); } catch (e) { /* offline */ }
+  // a startup GET: the reader never waits long on it (main.js boot renders the chapter from the static files first)
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 6000) : 0;
+  try { const r = await fetch('/api/config', { signal: ctl ? ctl.signal : undefined }); if (r.ok) state.apiKeys = await r.json(); } catch (e) { /* offline */ }
+  clearTimeout(timer);
 }
 
 /** PUT /api/config. Refuses in dry-run (returns null without any request). */

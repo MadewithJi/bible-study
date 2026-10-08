@@ -23,7 +23,7 @@ const tabId = () => (tracker && typeof tracker.TAB_ID === 'string' ? tracker.TAB
 
 export const COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
 const TOTAL = 1189;
-const OFFLINE_MSG = 'Can’t reach serve.py. Try again when it’s running.';
+const offlineMsg = () => S.offlineMsg(); // website wording when hosted (store.js)
 const DRY_MSG = 'Dry run: nothing is saved.';
 const SWITCHED_MSG = 'The profile changed in another window, so nothing was changed.';
 const LEGACY_MSG = 'Restart serve.py to turn on bookmarks and reading progress.';
@@ -138,7 +138,7 @@ const lostNow = () => !DRY && !!(state.auth && state.auth.signedIn && state.auth
 function lostToast(why) {
   const u = (state.auth && state.auth.user) || {};
   toast(`You’ve been signed out. Sign in ${why ? why(u) : `to keep saving to ${u.name || 'your profile'}`}.`, { label: 'Sign in', run: () => {
-    import('./account.js').then(m => { if (typeof m.openAuth === 'function') m.openAuth('signin', { email: u.email || '', reason: 'lost' }); }).catch(() => toast(OFFLINE_MSG));
+    import('./account.js').then(m => { if (typeof m.openAuth === 'function') m.openAuth('signin', { email: u.email || '', reason: 'lost' }); }).catch(() => toast(offlineMsg()));
   } });
 }
 /** Writes check this first: while the sign-in is lost nothing is changed on screen and the reason is shown. A hosted
@@ -175,7 +175,7 @@ function failToast(r) {
     if (lostNow()) lostToast();
     return;
   }
-  if (!r.status || r.status >= 500 || !code) { toast(OFFLINE_MSG); return; }
+  if (!r.status || r.status >= 500 || !code) { toast(offlineMsg()); return; }
   toast(r.data.message || 'That didn’t work. Try again.');
 }
 function noteRev(rev, wrote = true) {
@@ -432,6 +432,28 @@ export function bookProgress(b) {
   for (let c = 1; c <= bk.chapters.length; c++) { const s = chapterState(b, c); if (!s) continue; if (s.read) read++; if (s.visits > 0 || s.studied.length) started++; }
   const total = bk.chapters.length;
   return { read, total, started, frac: total ? read / total : 0 };
+}
+/** Home's book map (home-build brief §2): the chapters read, as Map<book, Set<chapter>>. */
+export function chaptersRead() {
+  const out = new Map();
+  for (const [k, ch] of Object.entries(lib.chapters)) {
+    if (!ch || !ch.read) continue;
+    const [b, c] = k.split('.').map(Number), bk = bookOf(b);
+    if (!bk || !(c >= 1 && c <= bk.chapters.length)) continue;
+    let s = out.get(b); if (!s) out.set(b, s = new Set()); s.add(c);
+  }
+  return out;
+}
+/**
+ * Home's tally: the streak as the Library's Streak card shows it (stats.streak, with this window's local days),
+ * and the chapters read on each of the last `n` local days (each chapter's readAt), oldest first.
+ */
+export function readingWeek(n = 7) {
+  const st = lib.stats || emptyStats(), k = st.streak || {}, now = new Date(), days = [];
+  for (let i = n - 1; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); days.push({ day: localDay(+d), ago: i, n: 0 }); }
+  const at = new Map(days.map(x => [x.day, x]));
+  for (const ch of Object.values(lib.chapters)) { if (ch && ch.read && +ch.readAt) { const x = at.get(localDay(+ch.readAt)); if (x) x.n++; } }
+  return { current: +k.current || 0, longest: +k.longest || 0, studiedToday: !!k.studiedToday, days, total: days.reduce((s, x) => s + x.n, 0) };
 }
 function validPos(p) {
   if (!p || typeof p !== 'object') return null;
@@ -712,7 +734,7 @@ export function renderLibrary(opts = {}) {
   if (sub) {
     const au = state.auth || {};
     const who = au.signedIn && au.user ? au.user.name || au.user.email || 'Your profile' : 'Guest';
-    sub.textContent = lib.offline && !lib.loaded ? `${who} · not connected` : `${who} · saved on this computer`;
+    sub.textContent = lib.offline && !lib.loaded ? `${who} · not connected` : S.hostedMsg(`${who} · saved on this computer`, au.signedIn ? `${who} · saved to your profile` : `${who} · not saved`);
   }
   // My map redraws in place (its search field, canvas and layout stay); a push, pop or another view rebuilds the body
   if (view.name === 'map' && !opts.push && !opts.pop && $('#lib-map', body)) { if (opts.keepScroll === false) body.scrollTop = 0; paintMap(); return; }
@@ -802,6 +824,7 @@ function homeView() {
   h += continueCard();
   if (!lib.loaded) {
     h += !lib.offline ? SKELETON
+      : state.auth.hosted ? empty('info', 'Library is unavailable right now', esc(S.offlineMsg()))
       : legacy() ? empty('info', 'Library needs the new serve.py', 'The serve.py that is running predates profiles. Restart it with <code>python3 ~/bible-study/serve.py</code>, then reload.')
       : empty('info', 'Library needs serve.py', 'Start it with <code>python3 ~/bible-study/serve.py</code>, then reload.');
     return h;
@@ -1416,7 +1439,7 @@ function netZoom(f, sx = NET.w / 2, sy = NET.h / 2) {
 }
 function netColors() {
   const st = getComputedStyle(NET.el), g = n => st.getPropertyValue(n).trim();
-  NET.col = { ot: g('--ot') || '#e8590c', nt: g('--nt') || '#11998e', label: g('--label') || '#1d1d1f', label2: g('--label-2') || '#6e6e73', surface: g('--bg-elev') || '#fff', focus: g('--focus') || g('--accent') || '#0071e3', link: Object.fromEntries(COLORS.map(c => [c, g('--bm-' + c) || '#007aff'])) };
+  NET.col = { ot: g('--ot') || '#e4570c', nt: g('--nt') || '#0f9489', label: g('--label') || '#1d1d1f', label2: g('--label-2') || '#646469', surface: g('--bg-elev') || '#fbfaf7', focus: g('--focus') || g('--accent') || '#0071e3', link: Object.fromEntries(COLORS.map(c => [c, g('--bm-' + c) || '#007aff'])) };
   NET.font = g('--sans') || 'system-ui, sans-serif';
 }
 function netDraw() {
@@ -1655,7 +1678,7 @@ async function reset(what) {
 /** Download an export only when the server produced one (an error must not replace the app with a JSON page). */
 async function downloadExport(url, fallback) {
   let r;
-  try { r = await fetch(url, { credentials: 'same-origin', cache: 'no-store' }); } catch (e) { toast(OFFLINE_MSG); return false; }
+  try { r = await fetch(url, { credentials: 'same-origin', cache: 'no-store' }); } catch (e) { toast(offlineMsg()); return false; }
   if (!r.ok) { let data = null; try { data = await r.json(); } catch (e) { /* not JSON */ } failToast({ ok: false, status: r.status, data }); return false; }
   // the export routes answer for whoever is signed in now: after an expired session, the guest's data
   const sc = r.headers.get('X-BS-Scope');
@@ -1673,7 +1696,7 @@ const whose = what => u => `to export ${u.name ? u.name + '’s' : 'your'} ${wha
 export async function exportProfile() {
   if (DRY) { toast('Dry run: exports are turned off.'); return false; }
   if (lostNow()) { lostToast(whose('profile')); return false; }
-  return downloadExport('/api/export/profile', 'bible-study-profile.json');
+  return downloadExport(`/api/export/profile?day=${localDay()}`, 'bible-study-profile.json'); // the file is named with the visitor's date, not the server's
 }
 /** 'Export notes for Obsidian': unsent note edits go first (store.js); the same messages as the Notes tab's export. */
 let exporting = false;
@@ -1684,7 +1707,7 @@ export async function exportNotes() {
     const r = await S.exportObsidian();
     if (r.dry) toast('Dry run: exports are turned off.');
     else if (r.lost) lostToast(whose('notes'));
-    else if (r.offline) toast(OFFLINE_MSG);
+    else if (r.offline) toast(offlineMsg());
     else if (!r.ok && !r.mismatch) toast(`Export failed${r.data?.message ? ': ' + r.data.message : '.'}`);
     else if (r.pending) toast(`This export is missing ${plural(r.pending, 'unsaved change')}. Try again once your notes are saved.`);
     return !!r.ok;
@@ -1778,7 +1801,7 @@ function onLibClick(e) {
     return;
   }
   const au = t.closest('[data-lib-auth]');
-  if (au) { const mode2 = au.dataset.libAuth; import('./account.js').then(m => { if (typeof m.openAuth === 'function') m.openAuth(mode2); }).catch(() => toast(OFFLINE_MSG)); }
+  if (au) { const mode2 = au.dataset.libAuth; import('./account.js').then(m => { if (typeof m.openAuth === 'function') m.openAuth(mode2); }).catch(() => toast(offlineMsg())); }
 }
 
 export function initLibrary(actions) {

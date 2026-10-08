@@ -35,7 +35,7 @@ guest-marks.json (guest), config.json, cache/, users.json, sessions.json (hashed
 profiles/<uid>/{notes,library,links,marks}.json, deleted/, invites.json (hosted). Full contract: .design/profiles-spec.md,
 .design/links-spec.md and .design/annotations-brief.md
 """
-import argparse, getpass, hashlib, ipaddress, json, math, os, re, secrets, shutil, sys, threading, time, traceback
+import argparse, getpass, hashlib, hmac, ipaddress, json, math, os, re, secrets, shutil, sys, threading, time, traceback
 import urllib.parse, urllib.request
 from collections import OrderedDict, deque
 from html.parser import HTMLParser
@@ -53,6 +53,7 @@ ESV_NAMES = dict(zip(BOOKS, BOOKS)); ESV_NAMES["Song of Songs"] = "Song of Solom
 NLT_NAMES = dict(zip(BOOKS, BOOKS)); NLT_NAMES.update({"Song of Songs": "Song", "Psalms": "Ps"})
 
 KIB, MIB = 1024, 1024 * 1024
+MAX_BODY = 25 * MIB  # the largest body any route accepts (a profile import); a refused body is drained up to this
 
 
 def read_json(path, default):
@@ -284,20 +285,32 @@ def get_passage(tr, book_n, chapter):
 
 # ----------------------------------------------------------------- rate limiting (in memory, §3.5)
 class Window:
-    """Sliding window: at most `limit` hits per `seconds` for each key."""
-    def __init__(self, limit, seconds):
-        self.limit, self.seconds, self.hits, self.lock = limit, seconds, {}, threading.Lock()
+    """Sliding window: at most `limit` hits per `seconds` for each key. Hosted, a key names a visitor address and the
+    email it tried (Handler._client_key), which a client makes up freely, so the table never outgrows `cap` keys: a key
+    whose hits have all aged out is dropped, and past the cap the least recently hit key goes (that visitor starts a
+    fresh window, still under the backstop)."""
+    def __init__(self, limit, seconds, cap=4096):
+        self.limit, self.seconds, self.cap = limit, seconds, cap
+        self.hits, self.lock, self.clock = OrderedDict(), threading.Lock(), time.monotonic
 
     def check(self, key="*", record=True):
         """-> seconds to wait (0 = allowed). With record=True the check and the hit are ONE locked step, so a burst
         of simultaneous requests cannot all see room in the window before any of them is counted."""
         with self.lock:
-            now = time.monotonic()
-            dq = self.hits.setdefault(key, deque())
+            now = self.clock()
+            dq = self.hits.get(key)
+            if dq is None: dq = self.hits[key] = deque()
             while dq and dq[0] <= now - self.seconds: dq.popleft()
             if len(dq) >= self.limit:
                 return max(1, math.ceil(dq[0] + self.seconds - now))
-            if record: dq.append(now)
+            if not record:
+                if not dq: del self.hits[key]  # a look leaves nothing behind
+                return 0
+            dq.append(now)
+            self.hits.move_to_end(key)
+            if len(self.hits) > self.cap:
+                for k in [k for k, d in self.hits.items() if not d or d[-1] <= now - self.seconds]: del self.hits[k]
+                while len(self.hits) > self.cap: self.hits.popitem(last=False)
             return 0
 
     def unrecord(self, key="*"):
@@ -305,15 +318,21 @@ class Window:
         with self.lock:
             dq = self.hits.get(key)
             if dq: dq.pop()
+            if dq is not None and not dq: del self.hits[key]
 
 
-class UnknownEmailFailures:
-    """Lockout counters for emails with no profile, so known and unknown emails behave the same (LRU, 1,000).
+class AttemptFailures:
+    """In-memory lockout counters (LRU): for emails with no profile, so known and unknown emails behave the same, and
+    on the hosted site for every (account or email, client address) pair, so a lock is only ever the guesser's own.
     Same two-step protocol as a profile's counters: begin() gates and counts before hashing, failed() after."""
     def __init__(self, cap=1000): self.cap, self.d, self.lock = cap, OrderedDict(), threading.Lock()
 
     @staticmethod
     def _key(email): return hashlib.sha256(email.encode("utf-8")).hexdigest()  # no plain emails kept in memory
+
+    def forget(self, email):
+        """The password verified: that client starts from zero."""
+        with self.lock: self.d.pop(self._key(email), None)
 
     def begin(self, email):
         """-> seconds to wait while locked; else counts this attempt as a failure in advance and returns 0."""
@@ -355,12 +374,12 @@ LINKS_WINDOW = Window(300, 60)      # per scope
 MARKS_WINDOW = Window(300, 60)      # per scope
 UPSTREAM_WINDOW = Window(50, 60)    # ESV/NLT API calls, per translation (ESV throttles a key past 60 a minute)
 IMPORT_WINDOW = Window(30, 60)      # profile imports, per scope
-# Hosted or behind a proxy, AUTH_WINDOW and SIGNUP_WINDOW count per client address (Handler.client_ip), so one client
-# cannot lock everyone else out of signing in; these count every client together, as a backstop (an X-Forwarded-For
-# address can be made up).
+# Hosted or behind a proxy, AUTH_WINDOW and SIGNUP_WINDOW count per client (Handler._client_key: the address, and on
+# the site also who the attempt is about), so one client cannot lock everyone else out of signing in; these count
+# every client together, as a backstop (an X-Forwarded-For address can be made up).
 AUTH_BACKSTOP = Window(300, 60)
 SIGNUP_BACKSTOP = Window(100, 3600)
-UNKNOWN = UnknownEmailFailures()
+FAILURES = AttemptFailures(cap=5000)
 
 
 # ----------------------------------------------------------------- hosted mode (.design/hosting-brief.md §1)
@@ -369,6 +388,9 @@ HOSTED = TRUST_PROXY = False
 ENV_HOSTS = ()                 # BS_ALLOWED_HOSTS: 'name' or '*.domain' (any subdomain), with or without a port
 ALLOWED_ORIGINS = frozenset()  # BS_ALLOWED_ORIGINS: 'https://name[:port]', accepted by the CSRF Origin check
 OWNER_EMAILS = frozenset()     # BS_OWNER_EMAILS: sign up without an invite, manage invites, use ESV/NLT
+PROXY_SECRET = ""              # BS_PROXY_SECRET: a request carrying it in X-BS-Proxy-Secret came through the site's proxy
+OWNER_SETUP_TOKEN = ""         # BS_OWNER_SETUP_TOKEN: lets an owner email sign up again, after a claim, without an invite
+PROXY_HEADER = "X-BS-Proxy-Secret"
 HOST_NAME_RE = re.compile(r"(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*", re.ASCII)
 ORIGIN_RE = re.compile(r"https?://[a-z0-9.-]+(:[0-9]{1,5})?", re.ASCII)
 PORT_SUFFIX = re.compile(r":[0-9]{1,5}\Z")
@@ -383,8 +405,11 @@ def _env_list(v): return [x.strip().lower() for x in (v or "").split(",") if x.s
 
 def configure_hosting(env):
     """Read the hosting variables from `env` (os.environ). Entries that cannot be used are ignored with a warning."""
-    global HOSTED, TRUST_PROXY, ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS
+    global HOSTED, TRUST_PROXY, ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS, PROXY_SECRET, OWNER_SETUP_TOKEN
     HOSTED, TRUST_PROXY = _env_flag(env.get("BS_HOSTED")), _env_flag(env.get("BS_TRUST_PROXY"))
+    PROXY_SECRET = (env.get("BS_PROXY_SECRET") or "").strip()
+    OWNER_SETUP_TOKEN = (env.get("BS_OWNER_SETUP_TOKEN") or "").strip()
+    A.LOCK_MAX = 60 if HOSTED else 900  # on the site a lockout is per client, so it only needs to slow guessing (QC 8)
     hosts, origins, owners, bad = [], set(), set(), []
     for h in _env_list(env.get("BS_ALLOWED_HOSTS")):
         name = PORT_SUFFIX.sub("", h)
@@ -451,16 +476,24 @@ MESSAGES = {
     "registry_unavailable": "Profiles are unavailable: users.json in the data folder is missing or damaged. "
                             "Restore it from users.json.bak (see README), then try again.",
 }
+HOSTED_MESSAGES = {  # the same errors on the site, where a visitor has no computer, Terminal or users.json to look at
+    "bad_credentials": "That email and password don’t match a profile on this site.",
+    "bad_host": "This server doesn’t answer for that host name.",
+    "user_limit": "This site has reached its profile limit.",
+    "registry_unavailable": "Profiles are unavailable right now. Try again later.",
+}
 MSG_OWNER_TEXT = "ESV and NLT are available only to the owner of this site."
 MSG_ORPHANED = ("A profile for that email is on this computer but missing from users.json. "
                 "Restore users.json from users.json.bak (see README), then sign in.")
+MSG_OWNER_EMAIL = "Add the new address to BS_OWNER_EMAILS first, or this profile will lose its owner rights."
+MSG_LAST_OWNER = "This is the site owner’s profile. Add another owner email first."
 
 
 class ApiError(Exception):
     def __init__(self, status, code, message=None, field=None, retry_after=None, extra=None, headers=None):
         super().__init__(code)
         self.status, self.code, self.field, self.retry_after = status, code, field, retry_after
-        self.message = message or MESSAGES.get(code, code)
+        self.message = message or (HOSTED_MESSAGES.get(code) if HOSTED else None) or MESSAGES.get(code, code)
         self.extra, self.headers = extra or {}, headers or []
 
     def body(self):
@@ -471,9 +504,19 @@ class ApiError(Exception):
         return b
 
 
+def wait_text(secs):
+    """'1 second', '45 seconds', 'about 2 minutes', 'about an hour': a wait a person can read (QC 15)."""
+    secs = max(1, math.ceil(secs))
+    if secs < 60: return f"{secs} second{'s' if secs != 1 else ''}"
+    m = math.ceil(secs / 60)
+    if m < 60: return f"about {m} minute{'s' if m != 1 else ''}"
+    h = math.ceil(secs / 3600)
+    return "about an hour" if h == 1 else f"about {h} hours"
+
+
 def rate_limited(wait, uid=None, **log):
     A.log("rate-limit", uid if uid is not None else "unknown", **log)
-    return ApiError(429, "rate_limited", f"Too many attempts. Try again in {int(wait)} seconds.", retry_after=int(wait))
+    return ApiError(429, "rate_limited", f"Too many attempts. Try again in {wait_text(wait)}.", retry_after=int(wait))
 
 
 class Route:
@@ -492,7 +535,10 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw): super().__init__(*a, directory=APP, **kw)
 
     def log_message(self, fmt, *args):
-        if args and "/api/" in str(args[0]): super().log_message(fmt, *args)
+        """The access log for API requests, on stdout: it is information, and a host reads stderr as errors (QC 12)."""
+        if args and "/api/" in str(args[0]):
+            try: print(f"{self.address_string()} - - [{self.log_date_time_string()}] {fmt % args}", flush=True)
+            except Exception: pass  # noqa
 
     # ------------------------------------------------------------ request state and host allowlist (§3.3)
     def _reset_state(self):
@@ -516,8 +562,9 @@ class Handler(SimpleHTTPRequestHandler):
         if not super().parse_request(): return False
         self._reset_state()
         if self._host_ok(): return True
-        # A host's health checker uses its own name (Railway: healthcheck.railway.app); the answer is only {"ok": true}.
-        if HOSTED and self.command == "GET" and self._raw_path() == HEALTH: return True
+        # A host's health checker uses its own name (Railway: healthcheck.railway.app), and uptime monitors often ask
+        # with HEAD; the answer is only {"ok": true|false}.
+        if HOSTED and self.command in ("GET", "HEAD") and self._raw_path() == HEALTH: return True
         A.log("bad-host")
         self.close_connection = True
         if self._raw_path().startswith("/api/"):
@@ -594,13 +641,16 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def _drain(self):
-        """Discard an unread request body (bounded) so closing the socket does not reset the client."""
-        n, self._unread = min(getattr(self, "_unread", 0), 4 * MIB), 0
+        """Read and discard an unread request body, so the answer already sent reaches the client before the socket
+        closes: closing with bytes still unread resets the connection, and a proxy in between (Vercel) then shows its
+        own 502 instead of the JSON error (QC 14). Bounded: a little more than the largest body any route accepts,
+        within 10 s; past that the connection is simply closed."""
+        n, self._unread = min(getattr(self, "_unread", 0), MAX_BODY + MIB), 0
         if n <= 0: return
         self.close_connection = True
-        deadline = time.monotonic() + 1.0
+        deadline = time.monotonic() + 10.0
         try:
-            self.connection.settimeout(0.25)
+            self.connection.settimeout(1.0)
             while n > 0 and time.monotonic() < deadline:
                 chunk = self.rfile.read1(min(65536, n))
                 if not chunk: break
@@ -640,22 +690,40 @@ class Handler(SimpleHTTPRequestHandler):
     def ua(self): return self.headers.get("User-Agent", "")
 
     # ------------------------------------------------------------ client address and owners (hosting brief §1)
+    def via_proxy(self):
+        """True when BS_PROXY_SECRET is set and the request carries it: it came through the site's proxy (Vercel), whose
+        own headers then name the visitor. A request straight to the API host cannot forge that (QC 2)."""
+        if not PROXY_SECRET: return False
+        given = (self.headers.get(PROXY_HEADER) or "").strip()
+        return hmac.compare_digest(given.encode("utf-8"), PROXY_SECRET.encode("utf-8"))
+
     def client_ip(self):
-        """With BS_TRUST_PROXY, the first X-Forwarded-For hop (the client the proxy saw); otherwise the socket's peer."""
+        """With BS_TRUST_PROXY, the first X-Forwarded-For hop (the client the proxy saw); otherwise the socket's peer.
+        Behind two proxies (Vercel, then the host's) the last one rewrites X-Forwarded-For to the first one's address,
+        so a request proved to come through Vercel (via_proxy) is read from Vercel's own visitor headers first."""
         if TRUST_PROXY:
-            first = ",".join(self.headers.get_all("X-Forwarded-For") or []).split(",")[0].strip()
-            try: return str(ipaddress.ip_address(first))
-            except ValueError: pass
+            names = ("X-Vercel-Forwarded-For", "X-Real-IP", "X-Forwarded-For") if self.via_proxy() else ("X-Forwarded-For",)
+            for name in names:
+                first = ",".join(self.headers.get_all(name) or []).split(",")[0].strip()
+                try: return str(ipaddress.ip_address(first))
+                except ValueError: pass
         return str(self.client_address[0]) if self.client_address else "?"
 
     def _per_client(self): return HOSTED or TRUST_PROXY
 
     def _ip_log(self): return {"ip": self.client_ip()} if self._per_client() else {}
 
-    def _hit(self, window, backstop):
-        """Check and count one hit. Locally one window for every client ("*", as always); hosted or behind a proxy, one
-        per client address plus the backstop for all of them. -> (seconds to wait, the key counted)."""
+    def _client_key(self, who=None):
+        """What a per-client window counts: '*' locally (everyone is one client), else the client address, and on the
+        site also who the attempt is about (QC 2): visitors who share a proxy address then do not share an allowance."""
         key = self.client_ip() if self._per_client() else "*"
+        if HOSTED and who: key = f"{key}|{hashlib.sha256(who.encode('utf-8')).hexdigest()[:16]}"
+        return key
+
+    def _hit(self, window, backstop, who=None):
+        """Check and count one hit. Locally one window for every client ("*", as always); hosted or behind a proxy, one
+        per client (_client_key) plus the backstop for all of them. -> (seconds to wait, the key counted)."""
+        key = self._client_key(who)
         wait = window.check(key)
         if not wait and key != "*":
             wait = backstop.check()
@@ -688,16 +756,16 @@ class Handler(SimpleHTTPRequestHandler):
                 xfp = (self.headers.get("X-Forwarded-Proto") or "").split(",")[0].strip().lower()
                 if xfp in ("http", "https"): scheme = xfp
             o = origin.strip().lower()
-            if o != f"{scheme}://{host}" and o not in ALLOWED_ORIGINS:
-                A.log("csrf-block", path=path, reason="origin"); raise ApiError(403, "csrf")
+            if o != f"{scheme}://{host}" and o not in ALLOWED_ORIGINS:  # the origin is logged: it is what to allow (QC 13)
+                A.log("csrf-block", path=path, reason="origin", origin=o[:100]); raise ApiError(403, "csrf")
         else:
             sfs = self.headers.get("Sec-Fetch-Site")
             if sfs is not None and sfs.strip().lower() not in ("same-origin", "none"):
                 A.log("csrf-block", path=path, reason="fetch-site"); raise ApiError(403, "csrf")
 
     def read_json_body(self, limit):
+        """The body as a JSON object. api() has already run check_same_origin() and refused a guest who may not write."""
         path = self._raw_path()
-        self.check_same_origin()
         ctype = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
         if ctype != "application/json":
             A.log("csrf-block", path=path, reason="content-type"); raise ApiError(415, "unsupported_media_type")
@@ -760,10 +828,16 @@ class Handler(SimpleHTTPRequestHandler):
                 m = BOOKMARK_PATH.fullmatch(path)
                 if m: methods, arg = BOOKMARK_ROUTES, m.group(1)
             if methods is None or (path in HOSTED_ONLY and not HOSTED): raise ApiError(404, "not_found")
-            route = methods.get(method)
-            if route is None or method in ("HEAD", "OPTIONS"):
+            # HEAD is only for the health check (uptime monitors ask that way, QC 10): answered like GET, with no body.
+            route = methods.get("GET" if method == "HEAD" and path == HEALTH else method)
+            if route is None or method == "OPTIONS":
                 raise ApiError(405, "method_not_allowed", headers=[("Allow", ", ".join(sorted(methods)))])
-            body = self.read_json_body(route.limit) if method != "GET" else None
+            body = None
+            if method not in ("GET", "HEAD"):
+                self.check_same_origin()
+                if not self._uid and (route.auth or (route.write and HOSTED)):  # before a byte of the body is read (QC 1)
+                    raise ApiError(401, "sign_in_required" if route.write and HOSTED else "not_signed_in")
+                body = self.read_json_body(route.limit)
             if route.write and HOSTED and not self._uid: raise ApiError(401, "sign_in_required")  # guests read only
             if route.auth and not self._uid: raise ApiError(401, "not_signed_in")
             if route.scope: self.check_scope(required=True)
@@ -779,7 +853,7 @@ class Handler(SimpleHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             self.close_connection = True
         except Exception:  # noqa: details go to the log, never to the client
-            sys.stderr.write(f"[error] {time.strftime('%Y-%m-%dT%H:%M:%S')} {method} {A._safe_log_text(path)}\n{traceback.format_exc()}")
+            A.log_error(f"{method} {A._safe_log_text(path)}\n{traceback.format_exc()}")
             try: self.send_json(ApiError(500, "server_error").body(), 500)
             except OSError: pass
         finally:
@@ -813,6 +887,12 @@ class Handler(SimpleHTTPRequestHandler):
         if locked: A.log("lockout", uid or "unknown", seconds=locked, **self._ip_log())
         raise ApiError(401, "bad_credentials", field=field)
 
+    def _attempt_key(self, who):
+        """What a lockout counts. Locally the account (or the unknown email), as always. On the site the account AND
+        the client address (QC 8): a stranger guessing from elsewhere locks only their own attempts, never the owner's.
+        What still makes guessing hopeless there: the per-client windows, the backstops and the hash itself."""
+        return f"{who}|{self.client_ip()}" if HOSTED else who
+
     def _begin_attempt(self, uid, email):
         """-> (uid or None, stored hash, seconds to wait). Not locked: the attempt is counted before hashing."""
         if uid:
@@ -820,38 +900,44 @@ class Handler(SimpleHTTPRequestHandler):
                 users = A.load_users(); u = users["users"].get(uid)
                 if u is not None:
                     now = A.now_ms()
-                    wait = max(0, math.ceil((u["lockUntil"] - now) / 1000))
+                    if u["failedLogins"] and now - u["lastFail"] > A.DAY_MS: u["failedLogins"] = 0  # a quiet day forgets them
+                    if HOSTED: wait = FAILURES.begin(self._attempt_key(uid))  # the lock lives per client, in memory
+                    else: wait = max(0, math.ceil((u["lockUntil"] - now) / 1000))
                     if not wait:
                         f = u["failedLogins"] + 1
-                        u["failedLogins"], u["lockUntil"] = f, now + A.lock_seconds(f) * 1000
+                        u["failedLogins"], u["lastFail"] = f, now
+                        if not HOSTED: u["lockUntil"] = now + A.lock_seconds(f) * 1000
                         A.save_users(users)
                     return uid, u.get("pw"), wait
-        return None, None, UNKNOWN.begin(email)  # no such profile (or deleted meanwhile): same policy, in memory
+        return None, None, FAILURES.begin(self._attempt_key(email))  # no such profile (or deleted meanwhile): same policy
 
     def _end_attempt(self, uid, email, outcome):
         """outcome 'ok' resets the counters, 'fail' restarts the lockout from now, 'undo' takes the count back
         (the hash never ran). -> lock seconds after a failure."""
-        if not uid:
-            if outcome == "fail": return UNKNOWN.failed(email)
-            if outcome == "undo": UNKNOWN.undo(email)
-            return 0
+        secs = 0
+        if not uid or HOSTED:
+            key = self._attempt_key(uid or email)
+            if outcome == "fail": secs = FAILURES.failed(key)
+            elif outcome == "undo": FAILURES.undo(key)
+            else: FAILURES.forget(key)
+            if not uid: return secs
         with A.auth_lock():
             users = A.load_users(); u = users["users"].get(uid)
             if u is None: return 0
-            secs = 0
             if outcome == "ok":
                 u["failedLogins"], u["lockUntil"] = 0, 0
             elif outcome == "undo":
                 u["failedLogins"] = max(0, u["failedLogins"] - 1)
-            else:
+            elif not HOSTED:
                 secs = A.lock_seconds(u["failedLogins"])
                 if secs: u["lockUntil"] = max(u["lockUntil"], A.now_ms() + secs * 1000)
             A.save_users(users)
             return secs
 
-    def auth_window_or_429(self):
-        """The auth window (per client when hosted, see _hit): check and count in one locked step (see Window.check)."""
-        wait, _ = self._hit(AUTH_WINDOW, AUTH_BACKSTOP)
+    def auth_window_or_429(self, who=None):
+        """The auth window (per client when hosted, see _hit; `who` is the email or uid the attempt is about): check and
+        count in one locked step (see Window.check)."""
+        wait, _ = self._hit(AUTH_WINDOW, AUTH_BACKSTOP, who)
         if wait: raise rate_limited(wait, self._uid or "unknown", **self._ip_log())
 
     def registry_or_503(self, users=None, email=None):
@@ -860,9 +946,10 @@ class Handler(SimpleHTTPRequestHandler):
         if A.registry_problem():
             A.log("registry-unavailable")
             raise ApiError(503, "registry_unavailable")
-        if users is not None and email and A.orphaned_profile(users, email):
-            A.log("registry-orphan")
-            raise ApiError(503, "registry_unavailable", MSG_ORPHANED, field="email")
+        orphan = A.orphaned_profile(users, email) if users is not None and email else None
+        if orphan:  # on the site the restore details go to the log only (QC 9)
+            A.log("registry-orphan", orphan, hint="restore users.json from users.json.bak")
+            raise ApiError(503, "registry_unavailable", None if HOSTED else MSG_ORPHANED, field="email")
 
     def me_body(self):
         if HOSTED:  # the hosted guest store is shared by every visitor and never imported (h_import_guest)
@@ -901,12 +988,12 @@ class Handler(SimpleHTTPRequestHandler):
         if not ok: raise ApiError(400, code, msg, field="password")
         remember = body.get("remember") is True
         import_guest = body.get("importGuest") is True and not HOSTED  # hosted guests save nothing to import
-        self.auth_window_or_429()
-        wait, rkey = self._hit(SIGNUP_WINDOW, SIGNUP_BACKSTOP)  # checked and counted atomically (no burst overshoots)
+        self.auth_window_or_429(email)
+        wait, rkey = self._hit(SIGNUP_WINDOW, SIGNUP_BACKSTOP, email)  # checked and counted atomically (no burst overshoots)
         if wait: raise rate_limited(wait, **self._ip_log())
         # Hosted: an invite first (a wrong code counts against the window), so no one without one learns which
-        # emails have profiles. Owners need none.
-        ikey = self._invite_or_403(body.get("invite")) if HOSTED and email not in OWNER_EMAILS else None
+        # emails have profiles. An owner email needs none until a profile has claimed it (QC 0).
+        ikey = self._invite_or_403(body.get("invite")) if HOSTED and not self._owner_claim_free(email, body) else None
         try:
             with A.auth_lock():
                 users = A.load_users()
@@ -953,9 +1040,10 @@ class Handler(SimpleHTTPRequestHandler):
                     inv["uses"] += 1
                     A.save_invites(invites)
                 user = {"uid": uid, "email": email, "name": name, "pw": pw_hash, "created": now, "updated": now,
-                        "lastLogin": now, "pwChanged": now, "failedLogins": 0, "lockUntil": 0}
+                        "lastLogin": now, "pwChanged": now, "failedLogins": 0, "lockUntil": 0, "lastFail": 0}
                 users["users"][uid] = user
                 A.save_users(users)
+                if HOSTED and email in OWNER_EMAILS: self._record_owner_claim(email, uid, now)
                 if self._sess: A.revoke_session(self._sess["key"])
                 token, sess = A.create_session(uid, remember, self.ua())
         except BaseException:
@@ -979,6 +1067,22 @@ class Handler(SimpleHTTPRequestHandler):
         A.log("invite-refused", **self._ip_log())
         raise ApiError(403, "invite_required", field="invite")
 
+    def _owner_claim_free(self, email, body):
+        """Hosted: may `email` sign up with no invite? An owner email no profile has claimed yet; or any owner email
+        with the setup token, so the owner can come back after a delete or an email change (QC 0)."""
+        if email not in OWNER_EMAILS: return False
+        token = body.get("setupToken")
+        if OWNER_SETUP_TOKEN and isinstance(token, str) and hmac.compare_digest(token.encode("utf-8"), OWNER_SETUP_TOKEN.encode("utf-8")):
+            return True
+        with A.auth_lock(): return A.claim_key(email) not in A.load_owner_claims()
+
+    @staticmethod
+    def _record_owner_claim(email, uid, now):
+        """Call under auth_lock(), after users.json: from now on this owner email needs an invite or the setup token."""
+        claims = A.load_owner_claims()
+        claims[A.claim_key(email)] = {"uid": uid, "claimed": now}
+        A.save_owner_claims(claims)
+
     def _write_owner(self, user, only_if_missing=False):
         try:
             A.write_profile_owner(user, only_if_missing)
@@ -988,7 +1092,7 @@ class Handler(SimpleHTTPRequestHandler):
     def h_login(self, body, q, arg):
         email = A.normalize_email(body.get("email"))
         pw, remember = body.get("password"), body.get("remember") is True
-        self.auth_window_or_429()
+        self.auth_window_or_429(email)
         with A.auth_lock():
             users = A.load_users()  # first: a corrupt file is moved aside here
             self.registry_or_503()
@@ -1036,7 +1140,7 @@ class Handler(SimpleHTTPRequestHandler):
             pw = body.get("password")
             if not isinstance(pw, str) or not pw:
                 raise ApiError(400, "bad_request", "Enter your password to change your email.", field="password")
-            self.auth_window_or_429()
+            self.auth_window_or_429(self._uid)
             user = self.load_user(self._uid)
             if not user: raise ApiError(401, "not_signed_in")
             self.check_credentials(user, user.get("email", ""), pw)
@@ -1048,7 +1152,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if other and other["uid"] != self._uid: raise ApiError(409, "email_taken", field="email")
                 if HOSTED and email in OWNER_EMAILS and u.get("email") not in OWNER_EMAILS:  # owner rights come with it
                     raise ApiError(409, "email_taken", field="email")
+                if HOSTED and u.get("email") in OWNER_EMAILS and email not in OWNER_EMAILS:  # and would go with it (QC 0)
+                    raise ApiError(409, "owner_email", MSG_OWNER_EMAIL, field="email")
                 u["email"] = email
+                if HOSTED and email in OWNER_EMAILS: self._record_owner_claim(email, self._uid, A.now_ms())
                 A.log("email-change", self._uid)
             if has_email: u.update(failedLogins=0, lockUntil=0)
             if has_name: u["name"] = name
@@ -1058,7 +1165,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json({"ok": True, "user": A.public_user(u)})
 
     def h_password(self, body, q, arg):
-        self.auth_window_or_429()
+        self.auth_window_or_429(self._uid)
         user = self.load_user(self._uid)
         if not user: raise ApiError(401, "not_signed_in")
         self.check_credentials(user, user.get("email", ""), body.get("current"), field="current")
@@ -1081,7 +1188,10 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json({"ok": True, "revokedOthers": max(0, revoked - 1)})
 
     def h_delete(self, body, q, arg):
-        self.auth_window_or_429()
+        """Locally the profile folder moves to deleted/<uid>-<stamp> (the README says how to erase it). On the site it
+        is erased at once, with the users.json entry, the sessions and the 'by' of any invite it made (QC 4); the
+        owner claim stays, so the address cannot be picked up by a stranger. The last owner cannot be deleted (QC 0)."""
+        self.auth_window_or_429(self._uid)
         user = self.load_user(self._uid)
         if not user: raise ApiError(401, "not_signed_in")
         self.check_credentials(user, user.get("email", ""), body.get("password"))
@@ -1089,17 +1199,28 @@ class Handler(SimpleHTTPRequestHandler):
         with A.auth_lock():
             users = A.load_users(); u = users["users"].get(uid)
             if not u: raise ApiError(401, "not_signed_in")
+            if HOSTED and u.get("email") in OWNER_EMAILS and not any(
+                    v.get("email") in OWNER_EMAILS for k, v in users["users"].items() if k != uid):
+                raise ApiError(409, "last_owner", MSG_LAST_OWNER)
             with A.lock_for(uid):
                 src = A.profile_dir(uid)
-                os.makedirs(A.DELETED, mode=0o700, exist_ok=True)
-                dst = os.path.join(A.DELETED, f"{uid}-{A.stamp()}")
-                if os.path.isdir(src): os.replace(src, dst)
-                else: os.makedirs(dst, mode=0o700, exist_ok=True)
+                if HOSTED:
+                    if os.path.isdir(src): shutil.rmtree(src)
+                else:
+                    os.makedirs(A.DELETED, mode=0o700, exist_ok=True)
+                    dst = os.path.join(A.DELETED, f"{uid}-{A.stamp()}")
+                    if os.path.isdir(src): os.replace(src, dst)
+                    else: os.makedirs(dst, mode=0o700, exist_ok=True)
+                    A.write_json_atomic(os.path.join(dst, "user.json"), {k: v for k, v in u.items() if k != "pw"})
                 A.DELETED_UIDS.add(uid)
-                A.write_json_atomic(os.path.join(dst, "user.json"), {k: v for k, v in u.items() if k != "pw"})
             del users["users"][uid]
             A.save_users(users)
             A.revoke_sessions(uid)
+            if HOSTED:
+                invites, changed = A.load_invites(), False
+                for inv in invites.values():
+                    if inv.get("by") == uid: inv["by"], changed = None, True
+                if changed: A.save_invites(invites)
         A.log("account-delete", uid)
         self._uid, self._sess, self._scope = None, None, "guest"
         self.clear_session_cookie()
@@ -1481,7 +1602,10 @@ class Handler(SimpleHTTPRequestHandler):
             data = A.export_profile(self._scope, user)
         slug = (A.slugify(user.get("name", "")) or "profile") if user else "guest"
         body = json.dumps(data, ensure_ascii=False, indent=1, allow_nan=False).encode("utf-8")
-        self.send_download(body, "application/json; charset=utf-8", f"bible-study-{slug}-{time.strftime('%Y-%m-%d')}.json")
+        # ?day=YYYY-MM-DD is the client's local date (the server's clock may be in another time zone, QC 15).
+        day = (q.get("day") or [""])[0]
+        if not A.DAY_RE.fullmatch(day): day = time.strftime("%Y-%m-%d")
+        self.send_download(body, "application/json; charset=utf-8", f"bible-study-{slug}-{day}.json")
 
     def h_export_obsidian(self, body, q, arg):
         with A.lock_for(self._scope):
@@ -1570,7 +1694,46 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json({"ok": True, "invite": A.public_invite(rec)})
 
     def h_health(self, body, q, arg):
-        self.send_json({"ok": True})
+        problem = health_problem()
+        if problem:
+            A.log_error(f"health: {problem}")
+            self.send_json({"ok": False}, 503)
+        else:
+            self.send_json({"ok": True})
+
+
+HEALTH_TTL = 5         # seconds a healthy probe is reused for: a burst of probes costs the volume one fsync, not one each
+_HEALTH = [None, None]  # [when (monotonic), problem] of the last probe
+
+
+def health_problem():
+    """data_problem() for /api/health, which anyone may call as often as they like. Hosted, a healthy verdict is reused
+    for HEALTH_TTL seconds (still fresh for the host's deploy check and a minute-cadence monitor) and a problem is
+    probed again every time: its open or write fails before any fsync, and recovery shows at once. Locally there is no
+    volume to doubt, and nothing is written into the notes folder."""
+    if not HOSTED: return None
+    now = time.monotonic()
+    if _HEALTH[0] is not None and _HEALTH[1] is None and now - _HEALTH[0] <= HEALTH_TTL: return None
+    _HEALTH[:] = [now, data_problem()]
+    return _HEALTH[1]
+
+
+def data_problem():
+    """None when the data directory takes a write (written, synced and removed again) and users.json can be trusted;
+    else what is wrong, for the log. The host's deploy check and any uptime monitor then see 503 {"ok": false}
+    instead of a green light over a read-only, full or detached volume (QC 3)."""
+    path = os.path.join(A.DATA, f".health-{os.getpid()}-{secrets.token_hex(4)}.tmp")
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            os.write(fd, b"ok\n"); os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.unlink(path)
+    except OSError as e:
+        return f"cannot write to {A.DATA}: {e.__class__.__name__}: {e.strerror or e}"
+    problem = A.registry_problem()
+    return f"users.json {problem}" if problem else None
 
 
 def _reject_constant(name):
@@ -1607,7 +1770,7 @@ ROUTES = {
     "/api/library/chapters": {"POST": Route(H.h_chapters, 16 * KIB, scope=True, write=True)},
     "/api/library/reset": {"POST": Route(H.h_reset, 1 * KIB, scope=True, write=True)},
     "/api/profile/import-guest": {"POST": Route(H.h_import_guest, 1 * KIB, auth=True, scope=True, write=True)},
-    "/api/profile/import": {"POST": Route(H.h_profile_import, 25 * MIB, auth=True, scope=True)},
+    "/api/profile/import": {"POST": Route(H.h_profile_import, MAX_BODY, auth=True, scope=True)},
     "/api/export/profile": {"GET": Route(H.h_export_profile)},
     "/api/export/obsidian": {"GET": Route(H.h_export_obsidian)},
     "/api/config": {"GET": Route(H.h_config_get), "PUT": Route(H.h_config_put, 8 * KIB)},
@@ -1669,6 +1832,18 @@ def cli_reset_password(email_arg, from_stdin):
     return 0
 
 
+def backfill_owner_claims():
+    """Hosted start-up: every profile with an owner email counts as that email's claim (QC 0). -> claims added."""
+    with A.auth_lock():
+        users, claims, added = A.load_users(), A.load_owner_claims(), 0
+        for u in users["users"].values():
+            if u.get("email") in OWNER_EMAILS and A.claim_key(u["email"]) not in claims:
+                claims[A.claim_key(u["email"])] = {"uid": u["uid"], "claimed": u.get("created") or A.now_ms()}
+                added += 1
+        if added: A.save_owner_claims(claims)
+    return added
+
+
 _SERVER_LOCK_FD = None
 
 
@@ -1705,8 +1880,7 @@ def main():
     ap = argparse.ArgumentParser(description="Bible study app server")
     ap.add_argument("--port", type=int, default=int(port) if port else 8765)
     ap.add_argument("--host", default=env.get("HOST", "").strip() or "127.0.0.1")
-    ap.add_argument("--data-dir", default=env.get("BS_DATA_DIR", "").strip() or DEFAULT_DATA,
-                    help="where notes, profiles and settings live (default: notes/)")
+    ap.add_argument("--data-dir", default=None, help="where notes, profiles and settings live (default: $BS_DATA_DIR, else notes/)")
     ap.add_argument("--allow-host", action="append", default=[], metavar="NAME", help="also accept this Host name")
     ap.add_argument("--max-users", type=int, default=50)
     ap.add_argument("--dev", action="store_true", help="also serve app/mock/ (design mocks and builder harnesses)")
@@ -1716,7 +1890,21 @@ def main():
     a = ap.parse_args()
     configure_hosting(env)
 
-    data = os.path.realpath(os.path.expanduser(a.data_dir))
+    # Hosted, the data directory must be named, and be on the host's volume when it says where that is: otherwise
+    # every profile would silently live on the container disk and vanish at the next deploy (QC 3).
+    data_arg = (a.data_dir or env.get("BS_DATA_DIR", "")).strip()
+    if HOSTED and not data_arg:
+        sys.exit("BS_HOSTED needs --data-dir or BS_DATA_DIR naming the volume where profiles live. Refusing to start on the container disk.")
+    data = os.path.realpath(os.path.expanduser(data_arg or DEFAULT_DATA))
+    mount = env.get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+    if HOSTED and mount:
+        mount = os.path.realpath(mount)
+        if os.path.commonpath([data, mount]) != mount:
+            sys.exit(f"The data directory {data} is not on the volume mounted at {mount}. Refusing to start.")
+        if not os.path.ismount(mount):
+            # a bind mount on the same device fools ismount(), so this is a warning, not a refusal; the write
+            # probe below and /api/health still have to succeed on that directory
+            print(f"[warn] {mount} does not look like a mount point; the data directory {data} may be on the container disk", file=sys.stderr)
     app_real = os.path.realpath(APP)
     if data == app_real or data.startswith(app_real + os.sep):
         print("--data-dir must not be inside app/", file=sys.stderr); sys.exit(1)
@@ -1735,15 +1923,23 @@ def main():
         print(f"Another serve.py is already using {data}.", file=sys.stderr); sys.exit(1)
     with A.auth_lock():  # with .server.lock and the auth lock held, no other writer (server or CLI) is mid-write
         n_tmp = A.remove_stale_tmp_files()
-    if n_tmp: print(f"Removed {n_tmp} temporary file(s) left by an interrupted write.", file=sys.stderr)
+    if n_tmp: print(f"Removed {n_tmp} temporary file(s) left by an interrupted write.", flush=True)
     n_esv = prune_esv_cache()  # a cache an older serve.py filled past the ESV terms
-    if n_esv: print(f"Removed {n_esv} ESV chapter(s) from the cache (the ESV terms allow 500 verses).", file=sys.stderr)
+    if n_esv: print(f"Removed {n_esv} ESV chapter(s) from the cache (the ESV terms allow 500 verses).", flush=True)
     A.purge_expired_sessions()
     A.init_dummy_hash()
     if not _is_loopback(a.host) and not HOSTED:  # hosted, TLS ends at the host's proxy
         print("Warning: Profiles over plain HTTP on a network are visible to that network.", file=sys.stderr)
     if HOSTED and not OWNER_EMAILS:
         print("Warning: BS_HOSTED is on but BS_OWNER_EMAILS is empty: nobody can make invites or use ESV/NLT.", file=sys.stderr)
+    if HOSTED and not ALLOWED_ORIGINS:
+        print("Warning: BS_ALLOWED_ORIGINS is empty: a browser on the site's own domain is refused (csrf) when the API "
+              "answers under another host name.", file=sys.stderr)
+    if HOSTED:
+        problem = data_problem()  # before anything is written there: a full or read-only volume exits cleanly
+        if problem: sys.exit(f"The data directory cannot be used: {problem}")
+        n_claims = backfill_owner_claims()
+        if n_claims: print(f"Recorded {n_claims} owner claim(s) for profiles made before owner-claims.json existed.", flush=True)
     Handler.serve_mocks = a.dev
     srv = Server((a.host, a.port), Handler)
     n_users = len(A.load_users()["users"])

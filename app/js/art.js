@@ -5,7 +5,7 @@
 // gallery stage panel ('art'). The chapter hero carries no art: it looks the same on every chapter.
 // Data: data/art.json + data/art/<id>-s.jpg (small, shown first) and <id>.jpg (large: the viewer,
 // and inline plates on wide or high-density screens once the small one is in).
-import { state, esc, bookOf, refLabel, smart, lsGet, lsSet, DRY, RM } from './store.js';
+import { state, esc, bookOf, refLabel, smart, lsGet, lsSet, DRY, RM, hostedMsg } from './store.js';
 import { icon } from './icons.js';
 
 const DATA_URL = new URL('../data/art.json', import.meta.url).href;
@@ -1203,7 +1203,7 @@ export function renderGallery(stage) {
     load().then(() => {
       if (G.stage !== stage || !G.active || !stage.querySelector(':scope > .art-g-body')) return;
       if (loaded) renderGallery(stage);
-      else { const em = stage.querySelector('.stage-empty'); if (em) em.textContent = 'The engravings couldn’t be loaded. Is serve.py running?'; }
+      else { const em = stage.querySelector('.stage-empty'); if (em) em.textContent = hostedMsg('The engravings couldn’t be loaded. Is serve.py running?', 'The engravings couldn’t be loaded. Check your connection and try again.'); }
     });
     return;
   }

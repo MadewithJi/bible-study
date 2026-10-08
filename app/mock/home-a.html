@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bible Lantern</title>
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="../css/styles.css">
+<!--
+  Home page mock-up, direction A: quiet and devotional (.design/home-brief.md).
+  One centred, serif-led column. The verse of the day is the centrepiece, set in a soft lamplight
+  glow (Psalm 119:105); a faint dotted trail leads down the page and lights up as you reach it.
+  URL: ?state=guest (default: signed in) · ?theme=light|dark (default: follows the system) ·
+  ?day=N previews the verse of the day for day-of-year N.
+  Real data: meta.json, KJV text, art.json and plates, xref/43, context/43 with places and events,
+  orig/19 and orig/43. Everything personal (name, reading position, progress, notes, streak) is
+  SAMPLE content, defined in the SAMPLE block of the script.
+-->
+<style>
+/* Lamplight: warmth is an accent (flame, glow, trail), never text and never a data colour. */
+:root {
+  --lamp: #e39b2d;                 /* flame fill (decorative) */
+  --lamp-core: #ffd27a;
+  --lamp-mark: #c77700;            /* meaningful warm marks (week dots): 3.4:1 on --bg */
+  --glow-1: rgba(255,184,77,.24); --glow-2: rgba(255,214,150,.10);
+  --trail: rgba(199,119,0,.46);
+  --on-glow-2: #636368;            /* --label-2 inside the glow: 5.1:1 at its warmest point */
+  --col: 640px; --wide: 880px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lamp: #ffb547; --lamp-core: #ffe2a8; --lamp-mark: #ffb547;
+    --glow-1: rgba(255,166,56,.19); --glow-2: rgba(255,140,30,.06);
+    --trail: rgba(255,181,71,.5); --on-glow-2: #a1a1a6;
+  }
+}
+:root[data-theme="dark"] {
+  --lamp: #ffb547; --lamp-core: #ffe2a8; --lamp-mark: #ffb547;
+  --glow-1: rgba(255,166,56,.19); --glow-2: rgba(255,140,30,.06);
+  --trail: rgba(255,181,71,.5); --on-glow-2: #a1a1a6;
+}
+
+html { scroll-padding-top: 24px; }
+#app { overflow-x: clip; }   /* the glows spill past the column; never past the page */
+.wrap { width: 100%; max-width: calc(var(--col) + 40px); margin-inline: auto; padding-inline: 20px; }
+.wrap.wide { max-width: calc(var(--wide) + 40px); }
+main { padding-bottom: 24px; }
+
+/* ---- top bar: the mark and wordmark, nothing else */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; color: var(--label); }
+.brand:hover { text-decoration: none; }
+.brand-name { font: 600 19px/1 var(--serif); letter-spacing: -.01em; }
+.mark { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.h-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--av-grad); color: #fff; font: 600 14px/1 var(--sans); }
+.h-avatar:hover { text-decoration: none; filter: brightness(1.08); }
+
+/* ---- greeting and search */
+.greet { text-align: center; padding-top: clamp(28px, 6vw, 64px); }
+.greet-date { margin: 0 0 10px; font: 500 15px/1.3 var(--sans); color: var(--label-2); }
+.greet h1 { margin: 0; font: 500 clamp(30px, 4.6vw, 40px)/1.12 var(--serif); letter-spacing: -.016em; text-wrap: balance; }
+.h-search { position: relative; max-width: 440px; margin: 28px auto 0; }
+.h-search .i { position: absolute; left: 15px; top: 50%; translate: 0 -50%; width: 17px; height: 17px; color: var(--label-2); pointer-events: none; }
+.h-search input { width: 100%; height: 46px; padding: 0 18px 0 42px; border: 0; border-radius: var(--r-pill); background: var(--fill-2); color: var(--label); font: 400 16px/1 var(--sans); letter-spacing: -.012em; box-shadow: inset 0 0 0 .5px var(--sep); transition: background-color var(--d-2), box-shadow var(--d-2); }
+.h-search input::placeholder { color: var(--label-2); }
+.h-search input:hover { background: var(--fill); }
+.h-search input:focus { outline: none; background: var(--bg-elev); box-shadow: 0 0 0 2px var(--focus), var(--sh-2); }
+
+/* ---- lamplight: a soft warm pool behind the centrepiece */
+.lamplit { position: relative; isolation: isolate; }
+.votd, .h-hero { --label-2: var(--on-glow-2); }
+.lamplit::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 46%; width: min(1100px, 180vw); aspect-ratio: 1.45; translate: -50% -50%; pointer-events: none;
+  background: radial-gradient(closest-side, var(--glow-1), var(--glow-2) 52%, transparent); animation: breathe 9s var(--ease-io) infinite alternate; }
+@keyframes breathe { from { opacity: .78; scale: .97; } to { opacity: 1; scale: 1.02; } }
+
+/* ---- verse of the day */
+.votd { text-align: center; padding-block: clamp(56px, 9vw, 104px) clamp(40px, 6vw, 72px); }
+.h-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 600 13px/1.2 var(--sans); letter-spacing: .01em; color: var(--label-2); }
+.h-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lamp) 18%, transparent), 0 0 10px 1px color-mix(in srgb, var(--lamp) 55%, transparent); }
+.votd-text { margin: 26px auto 0; max-width: 18em; font: 400 clamp(30px, 4.6vw, 46px)/1.3 var(--serif); letter-spacing: -.014em; color: var(--label); text-wrap: balance; }
+.votd-text.mid { max-width: 21em; font-size: clamp(25px, 3.5vw, 36px); line-height: 1.36; }
+.votd-text.long { max-width: 24em; font-size: clamp(22px, 2.9vw, 30px); line-height: 1.42; }
+.lord { font-variant-caps: small-caps; letter-spacing: .02em; }
+.votd-ref { position: static; display: inline-block; margin-top: 22px; font: 600 15px/1.2 var(--sans); font-variant-caps: all-small-caps; letter-spacing: .09em; color: var(--label-2); }
+.votd-ref::after { content: ''; position: absolute; inset: 0; border-radius: var(--r-2xl); }
+.votd-ref:hover { text-decoration: none; color: var(--link); }
+.votd-ref:focus-visible { outline: none; }
+.votd-ref:focus-visible::after { outline: 2px solid var(--focus); outline-offset: 4px; }
+.votd-ref .go { display: inline-block; opacity: 0; translate: -4px 0; transition: opacity var(--d-2), translate var(--d-2) var(--ease-out); }
+.votd:hover .votd-ref .go, .votd-ref:focus-visible .go { opacity: 1; translate: 0 0; }
+.votd-inner { position: relative; padding: 4px 0 8px; border-radius: var(--r-2xl); }
+.plate { display: flex; flex-direction: column; align-items: center; margin: 34px auto 0; }
+.plate-mat { display: block; max-width: 100%; padding: 7px; background: var(--bg-elev); border-radius: 4px; box-shadow: var(--sh-2); rotate: -.6deg; transition: rotate var(--d-4) var(--ease), translate var(--d-4) var(--ease); }
+.votd:hover .plate-mat { rotate: 0deg; translate: 0 -2px; }
+.plate img { display: block; width: auto; height: 196px; max-width: 100%; object-fit: contain; border-radius: 1px; }   /* same height for upright and wide plates */
+.plate figcaption { max-width: 30em; margin-top: 14px; font: 400 13px/1.4 var(--sans); color: var(--label-2); text-wrap: balance; }
+.plate figcaption i { font: italic 400 14px/1.4 var(--serif); }
+
+/* ---- trail: a faint dotted path between sections; each step lights as you reach it */
+.trail { position: relative; height: 84px; margin: 0 auto; width: 12px; }
+.trail::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; translate: -50% 0;
+  background: radial-gradient(circle, var(--trail) 1.05px, transparent 1.55px) 50% 3px / 3px 11px repeat-y;
+  -webkit-mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+.trail i { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; translate: -50% -50%; border-radius: 50%; background: var(--trail); transition: background-color 1.2s var(--ease-io), box-shadow 1.2s var(--ease-io); }
+.trail.lit i { background: var(--lamp); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lamp) 16%, transparent), 0 0 14px 2px color-mix(in srgb, var(--lamp) 50%, transparent); }
+
+/* ---- sections */
+.sec { padding-block: 8px; }
+.sec-head { text-align: center; margin-bottom: 26px; }
+.sec-head h2 { margin: 0; font: 500 clamp(24px, 3vw, 28px)/1.2 var(--serif); letter-spacing: -.012em; }
+.sec-head p { margin: 8px auto 0; max-width: 32em; font-size: 15px; color: var(--label-2); text-wrap: balance; }
+
+/* ---- continue reading */
+.cont { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 18px 24px; padding: 26px 28px 24px; border-radius: var(--r-xl); background: var(--bg-elev); box-shadow: var(--sh-2); }
+.cont-k { margin: 0; font: 600 13px/1.2 var(--sans); color: var(--label-2); }
+.cont-t { margin: 8px 0 0; font: 500 30px/1.1 var(--serif); letter-spacing: -.016em; }
+.cont-t a { color: inherit; }
+.cont-v { margin: 12px 0 0; font: 400 17px/1.5 var(--serif); color: var(--label-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cont-v b { font: 600 12px/1 var(--sans); color: var(--label-2); margin-right: 4px; vertical-align: .18em; font-variant-numeric: tabular-nums; }
+.h-prog { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.prog-line { position: relative; flex: 1; height: 3px; border-radius: 2px; background: var(--fill); }
+.prog-line span { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); border-radius: inherit; background: var(--accent); }
+/* the lamp at your feet: a small light where you stopped */
+.prog-line span::after { content: ''; position: absolute; right: -4.5px; top: 50%; width: 9px; height: 9px; translate: 0 -50%; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2.5px var(--bg-elev), 0 0 14px 4px color-mix(in srgb, var(--lamp) 45%, transparent); }
+.prog-n { font: 500 13px/1 var(--sans); color: var(--label-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cont .btn { height: 40px; padding: 0 20px; font-size: 15px; font-weight: 600; }
+
+/* ---- your study, recently */
+.h-stats { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; margin: -8px 0 22px; }
+.h-stat { font: 500 15px/1.3 var(--sans); color: var(--label-2); }
+.h-stat b { color: var(--label); font-weight: 600; font-variant-numeric: tabular-nums; }
+.week { display: flex; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.week li { display: grid; justify-items: center; gap: 5px; font: 600 11px/1 var(--sans); color: var(--label-2); }
+.week li::before { content: ''; width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1.25px var(--sep-strong); }
+.week li.is-on::before { background: var(--lamp-mark); box-shadow: 0 0 8px 1px color-mix(in srgb, var(--lamp) 45%, transparent); }
+.week li.is-today { color: var(--label); }
+.recent { margin: 0; padding: 0; list-style: none; border-radius: var(--r-xl); background: var(--bg-elev); box-shadow: var(--sh-1); overflow: hidden; }
+.recent li + li { border-top: .5px solid var(--sep); }
+.ri { display: grid; grid-template-columns: 28px 1fr auto; gap: 2px 12px; padding: 16px 20px 17px 16px; color: var(--label); transition: background-color var(--d-1); }
+.ri:hover { text-decoration: none; background: var(--fill-3); }
+.ri:focus-visible { outline-offset: -3px; border-radius: var(--r-xl); }
+.ri-ic { grid-row: 1 / span 3; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--fill-2); color: var(--label-2); }
+.ri-ic .i { width: 15px; height: 15px; }
+.ri-ic .h-sw { width: 11px; height: 11px; border-radius: 50%; background: var(--c); }
+.ri-ref { font: 600 15px/1.3 var(--sans); letter-spacing: -.015em; align-self: center; }
+.ri-when { font-size: 13px; color: var(--label-2); align-self: center; }
+.ri-v { grid-column: 2 / -1; margin: 3px 0 0; font: 400 16px/1.5 var(--serif); color: var(--read); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ri-v mark { color: inherit; background: var(--hl); border-radius: 3px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.ri-n { grid-column: 2 / -1; margin: 5px 0 0; font-size: 14px; color: var(--label-2); }
+.h-more { display: block; width: max-content; margin: 16px auto 0; font-size: 15px; }
+
+/* ---- the whole Bible: books shaded by how much has been read (the app's .lib-book rule) */
+.h-canon { display: grid; gap: 28px; }
+.testament h3 { margin: 0 0 14px 106px; font: 600 13px/1.2 var(--sans); color: var(--label-2); text-align: center; }   /* centred over the books, not the labels */
+.div { display: grid; grid-template-columns: 92px 1fr; gap: 6px 14px; align-items: start; padding: 10px 0; border-top: .5px solid var(--sep); }
+.div-name { margin: 0; padding-top: 9px; font: italic 400 15px/1.2 var(--serif); color: var(--label-2); }
+.books { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.bk { width: 100%; min-height: 36px; padding: 6px 11px; border-radius: 10px; text-align: left; font: 500 14px/1.2 var(--sans); letter-spacing: -.012em; color: var(--label);
+  background: var(--bg-elev); background: color-mix(in srgb, var(--accent) calc(var(--p, 0) * 26%), var(--bg-elev)); box-shadow: 0 0 0 .5px var(--sep); transition: transform var(--d-2) var(--spring), box-shadow var(--d-2); }
+.bk:hover { box-shadow: 0 0 0 .5px var(--sep), 0 4px 12px rgba(0,0,0,.07); }
+.bk:active { transform: scale(.96); }
+.bk[aria-expanded="true"] { box-shadow: 0 0 0 1.5px var(--accent); }
+.bk.is-here::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 7px; vertical-align: .14em; border-radius: 50%; background: var(--accent); }
+.chs { grid-column: 1 / -1; margin: 6px 0 4px; padding: 18px 18px 20px; border-radius: var(--r-lg); background: var(--bg-elev); box-shadow: var(--sh-2); }
+.chs-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.chs-head h4 { margin: 0; font: 500 21px/1.2 var(--serif); letter-spacing: -.01em; outline: none; }
+.chs-head p { margin: 0; flex: 1; font-size: 13px; color: var(--label-2); }
+.chs-x { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--fill-2); color: var(--label-2); align-self: center; }
+.chs-x:hover { background: var(--fill); color: var(--label); }
+.chs-x .i { width: 12px; height: 12px; stroke-width: 2.4; }
+.chs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; }
+.ch { display: grid; place-items: center; height: 38px; border-radius: 8px; font: 500 14px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label);
+  background: var(--bg-2); background: color-mix(in srgb, var(--accent) calc(var(--p, 0) * 26%), var(--bg-2)); transition: transform var(--d-2) var(--spring); }
+.ch:hover { text-decoration: none; transform: scale(1.06); }
+.ch[aria-current] { box-shadow: 0 0 0 1.5px var(--accent); font-weight: 700; }
+.h-legend { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 18px; font-size: 13px; color: var(--label-2); }
+.h-legend i { width: 96px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--bg-elev), color-mix(in srgb, var(--accent) 26%, var(--bg-elev))); box-shadow: 0 0 0 .5px var(--sep-2); }
+
+/* ---- guest hero */
+.h-hero { text-align: center; padding-block: clamp(72px, 13vw, 150px) clamp(40px, 6vw, 64px); }
+.h-hero .lamplit::before { top: 34%; width: min(1000px, 190vw); }
+.hero-mark { width: 58px; height: 58px; color: var(--label); stroke-width: 1.15; }
+.h-hero h1 { margin: 22px 0 0; font: 500 clamp(46px, 8vw, 84px)/1.02 var(--serif); letter-spacing: -.028em; }
+.motto { margin: 28px auto 0; max-width: 30em; }
+@media (min-width: 561px) { .cl { display: inline-block; } }
+.motto p { margin: 0; font: italic 400 clamp(21px, 2.7vw, 27px)/1.42 var(--serif); color: var(--label); text-wrap: balance; }
+.motto cite { display: block; margin-top: 12px; font: 600 14px/1.2 var(--sans); font-style: normal; font-variant-caps: all-small-caps; letter-spacing: .09em; color: var(--label-2); }
+.cta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 18px; margin-top: 40px; }
+.cta .btn-primary { height: 46px; padding: 0 26px; font-size: 16px; font-weight: 600; }
+.cta .btn-primary .i { width: 16px; height: 16px; }
+.cta-alt { font-size: 15px; color: var(--label-2); }
+.cta-alt a { font-weight: 500; }
+.cta-note { margin: 16px 0 0; font-size: 14px; color: var(--label-2); }
+.cta-note i { font: italic 400 15px/1 var(--serif); }
+
+/* ---- guest tiles: real previews */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.tile { display: flex; flex-direction: column; border-radius: var(--r-xl); background: var(--bg-elev); box-shadow: var(--sh-2); overflow: hidden; }
+.tile-pv { position: relative; height: 212px; background: var(--bg-2); overflow: hidden; }
+.tile-pv svg { display: block; width: 100%; height: 100%; }
+.tile-b { padding: 18px 22px 22px; }
+.tile-b h3 { margin: 0; font: 500 20px/1.25 var(--serif); letter-spacing: -.01em; }
+.tile-b p { margin: 6px 0 0; font-size: 15px; color: var(--label-2); }
+.pv-wait { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: var(--label-2); }
+.h-lg { position: absolute; left: 14px; bottom: 10px; display: flex; gap: 12px; font: 500 12px/1 var(--sans); color: var(--label-2); }
+.h-lg span { display: inline-flex; align-items: center; gap: 5px; }
+.h-lg span::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+/* arcs */
+.h-arc { fill: none; stroke-linecap: round; }
+.arc-ot { stroke: var(--ot); } .arc-nt { stroke: var(--nt); }
+.arc-base { stroke: var(--sep-2); stroke-width: 1; }
+.arc-lbl { font: 500 11px var(--sans); fill: var(--label-2); }
+.arc-src { fill: var(--accent); }
+/* map and timeline */
+.ctx { display: grid; grid-template-columns: 1.25fr 1fr; height: 100%; }
+.ctx-map { background: var(--map-sea); }
+.land { fill: var(--map-land); stroke: var(--sep-2); stroke-width: .75; }
+.h-lake { fill: var(--map-sea); stroke: var(--map-water); stroke-width: .75; }
+.h-river { fill: none; stroke: var(--map-water); stroke-width: 1.2; stroke-linecap: round; }
+.h-pin { fill: var(--accent); stroke: var(--bg-elev); stroke-width: 1.5; }
+.pin-l { font: 600 11px var(--sans); fill: var(--label); paint-order: stroke; stroke: var(--map-land); stroke-width: 3px; stroke-linejoin: round; }
+.h-tl { margin: 0; padding: 18px 14px 14px 30px; list-style: none; position: relative; display: grid; align-content: center; gap: 13px; }
+.h-tl::before { content: ''; position: absolute; left: 17px; top: 22px; bottom: 22px; width: 1.5px; background: var(--sep-2); }
+.h-tl li { position: relative; font: 500 13px/1.3 var(--sans); color: var(--label); }
+.h-tl li::before { content: ''; position: absolute; left: -16.5px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--bg-elev); box-shadow: 0 0 0 1.5px var(--label-2); }
+.h-tl li small { display: block; font: 500 12px/1.2 var(--sans); color: var(--label-2); font-variant-numeric: tabular-nums; }
+/* interlinear */
+.tile-pv.il-pv { container-type: inline-size; }
+.il { display: grid; align-content: center; gap: 12px; height: 100%; padding: 12px 10px; }
+.il-row { display: flex; flex-wrap: nowrap; justify-content: center; gap: 5px; }
+.il-row[dir="rtl"] { direction: rtl; }
+.il-w { display: grid; justify-items: center; align-content: start; gap: 2px; min-width: 0; padding: 7px 7px 6px; border-radius: 10px; background: var(--bg-elev); box-shadow: 0 0 0 .5px var(--sep); }
+.il-w .il-o { font: 400 22px/1.15 var(--heb); color: var(--label); }
+.il-row.is-grk .il-o { font: 400 19px/1.2 var(--grk); }
+.il-w .il-t { font: italic 400 11px/1.2 var(--sans); color: var(--label-2); direction: ltr; white-space: nowrap; }
+.il-w .il-g { font: 500 11px/1.2 var(--sans); color: var(--label); direction: ltr; white-space: nowrap; }
+@container (max-width: 380px) {
+  .il-row { gap: 4px; }
+  .il-w { padding: 6px 5px 5px; border-radius: 8px; }
+  .il-w .il-o { font-size: 19px; } .il-row.is-grk .il-o { font-size: 16px; }
+  .il-w .il-t, .il-w .il-g { font-size: 10px; }
+  .il-w .il-g { max-width: 7.5em; white-space: normal; text-align: center; }
+}
+.il-w.lit { box-shadow: 0 0 0 .5px var(--sep), 0 0 0 3px color-mix(in srgb, var(--lamp) 22%, transparent), 0 4px 16px color-mix(in srgb, var(--lamp) 30%, transparent); }
+.il-cap { margin: 0; text-align: center; font: 500 12px/1.2 var(--sans); color: var(--label-2); }
+/* Doré */
+.dore-pv { display: block; height: 100%; background: #e9e4da; }
+.dore-pv img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+
+/* ---- footer */
+.foot { text-align: center; padding-block: 8px 120px; }
+.foot-motto { margin: 0 auto; max-width: 26em; font: italic 400 18px/1.5 var(--serif); color: var(--label-2); text-wrap: balance; }
+.foot-motto cite { display: block; margin-top: 6px; font: 600 13px/1.2 var(--sans); font-style: normal; font-variant-caps: all-small-caps; letter-spacing: .09em; }
+.foot-brand { display: inline-flex; align-items: center; gap: 8px; margin-top: 36px; font: 600 15px/1 var(--serif); color: var(--label); }
+.foot-brand .mark { width: 20px; height: 20px; }
+.foot small { display: block; max-width: 40em; margin: 12px auto 0; font-size: 12px; line-height: 1.5; color: var(--label-2); }
+
+/* ---- mock-up controls (not part of the design) */
+.mockbar { position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 60; display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: var(--r-pill); background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: var(--sh-pop); }
+.mockbar .pill-seg { background: var(--fill); }
+.mockbar .pill-seg > button[aria-checked="true"] { background: var(--seg-thumb); color: var(--label); box-shadow: var(--sh-thumb); }
+.theme-btn { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: var(--label); background: var(--fill-2); }
+.theme-btn:hover { background: var(--fill); }
+.theme-btn .i { width: 17px; height: 17px; }
+#toast { bottom: calc(68px + env(safe-area-inset-bottom)); }
+
+/* ---- arrival: sections rise gently into place once */
+.rise { animation: rise .9s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 90ms); }
+@keyframes rise { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+
+/* ---- responsive */
+@media (max-width: 760px) {
+  .tiles { grid-template-columns: 1fr; }
+  .div { grid-template-columns: 1fr; gap: 8px; }
+  .div-name { padding-top: 2px; }
+  .testament h3 { margin-left: 0; }
+}
+@media (max-width: 560px) {
+  .wrap { padding-inline: 16px; }
+  .cont { grid-template-columns: 1fr; padding: 22px 20px 20px; }
+  .cont .btn { width: 100%; }
+  .books { grid-template-columns: repeat(auto-fill, minmax(102px, 1fr)); }
+  .bk { font-size: 13px; padding: 6px 9px; }
+  .ri { padding: 14px 16px 15px 12px; gap: 2px 10px; }
+  .ctx { grid-template-columns: 1fr 1fr; }
+  .h-tl { padding-left: 26px; padding-right: 10px; }
+  .h-tl::before { left: 13px; }
+  .trail { height: 68px; }
+  .week { order: -1; flex-basis: 100%; justify-content: center; margin-bottom: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lamplit::before, .rise { animation: none; }
+  .trail i, .plate-mat, .votd-ref .go, .bk, .ch { transition: none; }
+}
+@media (forced-colors: active) { .lamplit::before, .trail { display: none; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Icons: the app's set (spec 4.2) plus the lantern mark and sun/moon, same 24px monoline style. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20 20"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M11 4.5H7a3 3 0 00-3 3v9.5a3 3 0 003 3h9.5a3 3 0 003-3V13"/><path d="M17.8 3.9a1.9 1.9 0 012.7 2.7l-8 8-3.5.9.9-3.5z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1-1"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.6A8 8 0 019.4 4.5a8 8 0 1010.1 10.1z"/></symbol>
+  <!-- the lantern: finial, cap, rounded glass, foot; the flame takes the lamp colour (custom properties reach into <use>) -->
+  <symbol id="i-lantern" viewBox="0 0 24 24"><path d="M12 2.8v1.4"/><path d="M8.4 7.2L12 4.2l3.6 3"/><path d="M7.6 7.2h8.8"/><path d="M8.6 7.2c-.9 1.6-1.3 3.3-1.3 5.1s.4 3.5 1.3 5.1M15.4 7.2c.9 1.6 1.3 3.3 1.3 5.1s-.4 3.5-1.3 5.1"/><path d="M7.6 17.4h8.8M9 17.4l.5 2.6h5l.5-2.6"/><path style="fill: var(--lamp); stroke: none" d="M12 9.3c1.25 1.45 1.9 2.6 1.9 3.55a1.9 1.9 0 01-3.8 0c0-.95.65-2.1 1.9-3.55z"/><path style="fill: var(--lamp-core); stroke: none" d="M12 11.9c.45.55.7 1 .7 1.35a.7.7 0 01-1.4 0c0-.35.25-.8.7-1.35z"/></symbol>
+</defs></svg>
+
+<div id="app"></div>
+
+<aside class="mockbar" aria-label="Mock-up controls">
+  <div class="pill-seg" role="radiogroup" aria-label="Who is looking">
+    <button type="button" role="radio" data-state="today">Signed in</button>
+    <button type="button" role="radio" data-state="guest">Guest</button>
+  </div>
+  <button class="theme-btn" type="button" id="theme-btn"><svg class="i" aria-hidden="true"><use href="#i-moon"/></svg></button>
+</aside>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module">
+// ================================================================ brand: the one place to change these
+const BRAND = {
+  name: 'Bible Lantern',
+  domain: 'biblelantern.com',
+  motto: { text: 'Thy word is a lamp unto my feet, and a light unto my path.', ref: 'Psalm 119:105', tr: 'KJV' },
+};
+
+// ================================================================ SAMPLE: personal content (not real data)
+// Shapes follow the library (profiles-spec 1.5), notes (1.4) and links (links-spec 1.2) documents.
+const SAMPLE = {
+  name: 'Ji',
+  lastPosition: { b: 43, c: 3, v: 16 },
+  streak: 12, chaptersThisWeek: 9,
+  // chapters read, by book: 'all', a count of chapters from 1, or a list
+  read: { 1: 'all', 2: 20, 19: [1, 8, 19, 23, 27, 46, 51, 90, 91, 103, 119, 121, 139], 20: 10, 23: [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55],
+    40: 'all', 41: 'all', 42: 15, 43: 2, 44: 9, 45: 8, 50: 'all', 59: 'all', 62: 'all', 66: [21, 22] },
+  recent: [
+    { kind: 'note', ref: [43, 3, 16], when: 'Today', note: 'Love that gives. The whole gospel in a sentence.' },
+    { kind: 'highlight', ref: [19, 119, 105], when: 'Yesterday', color: 'yellow' },
+    { kind: 'link', ref: [43, 1, 29], to: [23, 53, 7], type: 'fulfils', when: 'Monday', note: 'The Lamb led to the slaughter.' },
+    { kind: 'highlight', ref: [25, 3, 23], when: 'Sunday', color: 'green' },
+  ],
+};
+
+// ================================================================ verse of the day (curated; by day of year)
+// About half have a Doré plate; the plate is found from art.json, not hard-coded.
+const VOTD = [
+  [1, 1, 3], [19, 23, 1], [40, 5, 8], [43, 8, 12], [41, 4, 39], [23, 40, 31], [42, 15, 20], [19, 27, 1],
+  [43, 6, 20], [40, 11, 28], [42, 10, 42], [43, 1, 5], [33, 6, 8], [43, 3, 16], [1, 28, 16], [23, 9, 2],
+  [42, 2, 19], [45, 8, 28], [40, 28, 6], [47, 4, 6], [43, 4, 14], [19, 46, 10], [40, 26, 39], [50, 4, 7],
+];
+
+// ================================================================ helpers (store.js conventions)
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const smart = s => String(s || '').replace(/(^|[\s(\[{—–-])'/g, '$1‘').replace(/'/g, '’').replace(/(^|[\s(\[{—–-])"/g, '$1“').replace(/"/g, '”');
+const icon = (n, cls = '') => `<svg class="i${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const mark = (cls = '') => `<svg class="mark${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lantern"/></svg>`;
+// KJV "LORD" set in small capitals, as printed Bibles do
+const kjvHtml = t => esc(t).replace(/\bLORD\b/g, '<span class="lord">Lord</span>');
+// the motto breaks at its comma on wider screens: each clause is kept whole
+const clauses = t => String(t).split(/(?<=[,;:]) /).map(c => `<span class="cl">${esc(c)}</span>`).join(' ');
+const pad2 = n => String(n).padStart(2, '0');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const cache = new Map();
+const json = url => { if (!cache.has(url)) cache.set(url, fetch(url).then(r => { if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.json(); })); return cache.get(url); };
+const kjv = b => json(`../data/bibles/kjv/${pad2(b)}.json`);
+const verseText = async ([b, c, v]) => (await kjv(b))[String(c)]?.[v - 1] || '';
+const appHref = (b, c, v) => `../?dry#${b}/${c}${v ? '/' + v : ''}`;
+
+const params = new URLSearchParams(location.search);
+let state = params.get('state') === 'guest' ? 'guest' : 'today';
+
+const [meta, art] = await Promise.all([json('../data/meta.json'), json('../data/art.json').catch(() => ({ plates: [] }))]);
+const BOOKS = meta.books;
+const book = b => BOOKS[b - 1];
+// a single psalm is "Psalm 23", as in BRAND.motto
+const refLabel = ([b, c, v]) => `${b === 19 && c ? 'Psalm' : book(b).name}${c ? ` ${c}${v ? ':' + v : ''}` : ''}`;
+// Canon geometry: one slot per chapter, Genesis 1 to Revelation 22 (1,189)
+const CUM = []; { let n = 0; BOOKS.forEach(bk => { CUM[bk.n] = n; n += bk.chapters.length; }); }
+const TOTAL_CH = BOOKS.reduce((s, bk) => s + bk.chapters.length, 0);
+
+// Divisions for the map, in canonical order (meta.json "div" slugs folded into the brief's names)
+const DIVS = [
+  { t: 'OT', name: 'Law', from: 1, to: 5 }, { t: 'OT', name: 'History', from: 6, to: 17 }, { t: 'OT', name: 'Wisdom', from: 18, to: 22 },
+  { t: 'OT', name: 'Prophets', from: 23, to: 39 }, { t: 'NT', name: 'Gospels', from: 40, to: 43 }, { t: 'NT', name: 'History', from: 44, to: 44 },
+  { t: 'NT', name: 'Letters', from: 45, to: 65 }, { t: 'NT', name: 'Revelation', from: 66, to: 66 },
+];
+
+function readSet(b) {
+  const r = SAMPLE.read[b], n = book(b).chapters.length;
+  if (r === 'all') return new Set(Array.from({ length: n }, (_, i) => i + 1));
+  if (typeof r === 'number') return new Set(Array.from({ length: Math.min(r, n) }, (_, i) => i + 1));
+  return new Set(r || []);
+}
+
+function dayOfYear(d = new Date()) { return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 864e5); }
+function plateFor([b, c, v]) {
+  let best = null, dist = Infinity;
+  for (const p of art.plates || []) for (const r of [p.ref, ...(p.also || [])]) {
+    if (r[0] === b && r[1] === c && r[2] <= v && v <= r[3] && v - r[2] < dist) { best = p; dist = v - r[2]; }
+  }
+  return best;
+}
+
+let toastT = 0, toastOutT = 0;
+function toast(msg) {
+  const t = $('#toast'); clearTimeout(toastT); clearTimeout(toastOutT);
+  t.classList.remove('out'); t.hidden = false;
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span>`;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  toastT = setTimeout(() => { t.classList.add('out'); toastOutT = setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, reduced.matches ? 0 : 300); }, 4200);
+}
+
+// ================================================================ theme: follows the system until toggled
+const sysDark = matchMedia('(prefers-color-scheme: dark)');
+const isDark = () => (document.documentElement.dataset.theme || (sysDark.matches ? 'dark' : 'light')) === 'dark';
+function setTheme(t) {
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  const dark = isDark(), btn = $('#theme-btn');
+  btn.setAttribute('aria-label', dark ? 'Use light appearance' : 'Use dark appearance');
+  btn.title = btn.getAttribute('aria-label');
+  btn.querySelector('use').setAttribute('href', dark ? '#i-sun' : '#i-moon');
+  syncUrl();
+}
+function syncUrl() {
+  const q = new URLSearchParams(location.search);
+  if (state === 'guest') q.set('state', 'guest'); else q.delete('state');
+  const t = document.documentElement.dataset.theme; if (t) q.set('theme', t); else q.delete('theme');
+  const s = q.toString(); history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + location.hash);
+}
+$('#theme-btn').addEventListener('click', () => setTheme(isDark() ? 'light' : 'dark'));
+sysDark.addEventListener('change', () => setTheme(''));   // a system change hands control back to the system
+
+// ================================================================ shared pieces
+function trail() { return '<div class="trail" aria-hidden="true"><i></i></div>'; }
+
+function bookMap({ personal }) {
+  const here = SAMPLE.lastPosition;
+  const testament = t => DIVS.filter(d => d.t === t).map((d, di) => {
+    const items = [];
+    for (let b = d.from; b <= d.to; b++) {
+      const bk = book(b), n = bk.chapters.length, read = personal ? readSet(b).size : 0, p = read / n;
+      const lbl = personal ? `${bk.name}, ${read ? `${read} of ${n} chapters read` : 'not started'}` : `${bk.name}, ${n} chapter${n > 1 ? 's' : ''}`;
+      items.push(`<li><button class="bk${personal && b === here.b ? ' is-here' : ''}" type="button" data-b="${b}" aria-expanded="false" aria-label="${esc(lbl)}" title="${esc(lbl)}" style="--p:${p.toFixed(3)}">${esc(bk.name)}</button></li>`);
+    }
+    return `<div class="div" data-div="${t}${di}"><p class="div-name">${d.name}</p><ul class="books" role="list">${items.join('')}</ul></div>`;
+  }).join('');
+  return `<div class="h-canon" data-personal="${personal ? 1 : 0}">
+    <section class="testament" aria-labelledby="t-ot"><h3 id="t-ot">Old Testament</h3>${testament('OT')}</section>
+    <section class="testament" aria-labelledby="t-nt"><h3 id="t-nt">New Testament</h3>${testament('NT')}</section>
+  </div>${personal ? '<p class="h-legend" aria-hidden="true">Not yet read <i></i> Read</p>' : ''}`;
+}
+
+// Tapping a book opens its chapters right under that division; one at a time; Escape closes.
+function bindBookMap(root) {
+  const personal = root.querySelector('.h-canon')?.dataset.personal === '1';
+  const close = (focusBack) => {
+    const open = $('.chs', root); if (!open) return;
+    const btn = $(`.bk[data-b="${open.dataset.b}"]`, root);
+    open.remove(); btn?.setAttribute('aria-expanded', 'false');
+    if (focusBack) btn?.focus();
+  };
+  root.addEventListener('click', e => {
+    if (e.target.closest('.chs-x')) { close(true); return; }
+    const btn = e.target.closest('.bk'); if (!btn) return;
+    const b = +btn.dataset.b, wasOpen = btn.getAttribute('aria-expanded') === 'true';
+    close(false); if (wasOpen) return;
+    const bk = book(b), n = bk.chapters.length, read = personal ? readSet(b) : new Set();
+    const here = personal && SAMPLE.lastPosition.b === b ? SAMPLE.lastPosition.c : 0;
+    const cells = Array.from({ length: n }, (_, i) => {
+      const c = i + 1, r = read.has(c);
+      const lbl = `${bk.name} ${c}${personal ? (c === here ? ', where you are reading' : r ? ', read' : '') : ''}`;
+      return `<a class="ch" href="${appHref(b, c)}" style="--p:${r ? 1 : 0}" aria-label="${esc(lbl)}"${c === here ? ' aria-current="location"' : ''}>${c}</a>`;
+    }).join('');
+    const sub = personal ? `${n} chapter${n > 1 ? 's' : ''} · ${read.size === n ? 'all read' : read.size ? `${read.size} read` : 'not started'}` : `${n} chapter${n > 1 ? 's' : ''}`;
+    const id = `chs-${b}`;
+    const panel = document.createElement('div');
+    panel.className = 'chs'; panel.id = id; panel.dataset.b = b;
+    panel.setAttribute('role', 'region'); panel.setAttribute('aria-labelledby', `${id}-t`);
+    panel.innerHTML = `<div class="chs-head"><h4 id="${id}-t" tabindex="-1">${esc(bk.name)}</h4><p>${sub}</p><button class="chs-x" type="button" aria-label="Close ${esc(bk.name)} chapters">${icon('xmark')}</button></div><nav class="chs-grid" aria-label="${esc(bk.name)} chapters">${cells}</nav>`;
+    btn.closest('.div').appendChild(panel);
+    btn.setAttribute('aria-expanded', 'true'); btn.setAttribute('aria-controls', id);
+  });
+  root.addEventListener('keydown', e => { if (e.key === 'Escape' && (e.target.closest('.chs') || e.target.closest('.bk[aria-expanded="true"]'))) { e.preventDefault(); close(true); } });
+}
+
+// The trail lights step by step as each one reaches the middle of the view, and stays lit.
+let trailObs;
+function lightTrails() {
+  trailObs?.disconnect();
+  const steps = $$('.trail');
+  if (reduced.matches || !('IntersectionObserver' in window)) { steps.forEach(s => s.classList.add('lit')); return; }
+  trailObs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('lit'); trailObs.unobserve(e.target); } }), { rootMargin: '0px 0px -30% 0px' });
+  steps.forEach(s => trailObs.observe(s));
+}
+
+function footer({ motto }) {
+  const m = BRAND.motto;
+  return `<footer class="foot wrap">
+    ${motto ? `<blockquote class="foot-motto"><p style="margin:0">${clauses(m.text)}</p><cite>${esc(m.ref)} · ${esc(m.tr)}</cite></blockquote>` : ''}
+    <div class="foot-brand">${mark()}<span>${esc(BRAND.name)}</span></div>
+    <small>Scripture from the King James Version. Engravings by Gustave Doré (1866), public domain, via Wikimedia Commons. Cross-references from OpenBible.info; places and events from Theographic; original-language words from STEPBible.</small>
+  </footer>`;
+}
+
+// ================================================================ signed in: Today
+async function renderToday() {
+  const doy = +params.get('day') || dayOfYear();
+  const vref = VOTD[((doy % VOTD.length) + VOTD.length) % VOTD.length];
+  const pos = SAMPLE.lastPosition;
+  const [vtext, ptext, ...rtexts] = await Promise.all([verseText(vref), verseText([pos.b, pos.c, pos.v]), ...SAMPLE.recent.map(r => verseText(r.ref))]);
+  const plate = plateFor(vref);
+  const vlen = vtext.length, vcls = vlen > 130 ? ' long' : vlen > 75 ? ' mid' : '';
+  const now = new Date(), hr = now.getHours();
+  const greeting = hr < 5 ? 'Good evening' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  const date = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+  const nv = (await kjv(pos.b))[String(pos.c)].length;
+
+  // this week, Monday to Sunday; sample: every day so far was a study day (the streak runs through today)
+  const dow = (now.getDay() + 6) % 7;
+  const week = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => `<li class="${i <= dow ? 'is-on' : ''}${i === dow ? ' is-today' : ''}"><span aria-hidden="true">${d[0]}</span><span class="sr">${d}${i === dow ? ' (today)' : ''}: ${i <= dow ? 'studied' : 'not yet'}</span></li>`).join('');
+
+  const hl = { yellow: 'var(--hl-yellow)', green: 'var(--hl-green)', blue: 'var(--hl-blue)', pink: 'var(--hl-pink)', orange: 'var(--hl-orange)' };
+  const sw = { yellow: 'var(--sw-yellow)', green: 'var(--sw-green)', blue: 'var(--sw-blue)', pink: 'var(--sw-pink)', orange: 'var(--sw-orange)' };
+  const recent = SAMPLE.recent.map((r, i) => {
+    const t = rtexts[i], [b, c, v] = r.ref;
+    let ic, title = refLabel(r.ref), body = kjvHtml(t), note = r.note ? smart(r.note) : '', kind;
+    if (r.kind === 'note') { ic = icon('note'); kind = 'Note'; }
+    else if (r.kind === 'link') { ic = icon('link'); kind = 'Link'; title = `${refLabel(r.ref)} → ${refLabel(r.to)}`; note = `${r.type[0].toUpperCase()}${r.type.slice(1)} ${refLabel(r.to)}${note ? ` · ${note}` : ''}`; }
+    else { ic = `<span class="h-sw" style="--c:${sw[r.color]}"></span>`; kind = `${r.color[0].toUpperCase()}${r.color.slice(1)} highlight`; body = `<mark style="--hl:${hl[r.color]}">${body}</mark>`; }
+    return `<li><a class="ri" href="${appHref(b, c, v)}" aria-label="${esc(`${kind}, ${title.replace('→', 'to')}, ${r.when}`)}">
+      <span class="ri-ic" aria-hidden="true">${ic}</span><span class="ri-ref">${esc(title)}</span><span class="ri-when">${esc(r.when)}</span>
+      <p class="ri-v">${body}</p>${note ? `<p class="ri-n">${esc(note)}</p>` : ''}</a></li>`;
+  }).join('');
+
+  $('#app').innerHTML = `
+  <header class="wrap top">
+    <a class="brand" href="./home-a.html" aria-label="${esc(BRAND.name)}, home">${mark()}<span class="brand-name">${esc(BRAND.name)}</span></a>
+    <a class="h-avatar" href="../?dry" aria-label="${esc(SAMPLE.name)}’s library" title="Your library">${esc(SAMPLE.name[0])}</a>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="wrap greet rise">
+      <p class="greet-date">${esc(date)}</p>
+      <h1>${greeting}, ${esc(SAMPLE.name)}</h1>
+      <form class="h-search" role="search" id="search">
+        ${icon('search')}
+        <input type="search" name="q" placeholder="John 3:16, love, G26" aria-label="Search the Bible: a reference, a word or a Strong’s number" autocomplete="off" enterkeyhint="search">
+      </form>
+    </div>
+
+    <section class="wrap votd rise" style="--i:1" aria-labelledby="votd-h">
+      <div class="lamplit votd-inner">
+        <h2 class="h-eyebrow" id="votd-h">Verse of the day</h2>
+        <blockquote class="votd-text${vcls}" style="margin-bottom:0">${kjvHtml(vtext)}</blockquote>
+        <a class="votd-ref" href="${appHref(...vref)}"><span class="sr">Read </span>${esc(refLabel(vref))}<span class="sr"> in context</span> <span class="go" aria-hidden="true">→</span></a>
+        ${plate ? `<figure class="plate"><span class="plate-mat"><img src="../data/art/${esc(plate.id)}-s.jpg" width="${plate.sw}" height="${plate.sh}" alt="${esc(altOf(plate))}" decoding="async"></span><figcaption><i>${esc(smart(plate.title))}</i> · Gustave Doré</figcaption></figure>` : ''}
+      </div>
+    </section>
+
+    ${trail()}
+    <section class="wrap sec" aria-labelledby="cont-h">
+      <div class="cont">
+        <div>
+          <h2 class="cont-k" id="cont-h">Continue reading</h2>
+          <p class="cont-t"><a href="${appHref(pos.b, pos.c, pos.v)}" tabindex="-1">${esc(refLabel([pos.b, pos.c]))}</a></p>
+          <p class="cont-v"><b>${pos.v}</b>${kjvHtml(ptext)}</p>
+        </div>
+        <a class="btn btn-primary" href="${appHref(pos.b, pos.c, pos.v)}" aria-label="Resume ${esc(refLabel([pos.b, pos.c]))} at verse ${pos.v}">Resume</a>
+        <div class="h-prog"><div class="prog-line" role="img" aria-label="Verse ${pos.v} of ${nv}"><span style="--p:${(pos.v / nv).toFixed(3)}"></span></div><span class="prog-n" aria-hidden="true">Verse ${pos.v} of ${nv}</span></div>
+      </div>
+    </section>
+
+    ${trail()}
+    <section class="wrap sec" aria-labelledby="rec-h">
+      <div class="sec-head"><h2 id="rec-h">Your study, recently</h2></div>
+      <div class="h-stats">
+        <span class="h-stat"><b>${SAMPLE.streak}</b> days in a row</span>
+        <ol class="week" aria-label="This week">${week}</ol>
+        <span class="h-stat"><b>${SAMPLE.chaptersThisWeek}</b> chapters this week</span>
+      </div>
+      <ul class="recent" role="list">${recent}</ul>
+      <a class="h-more" href="../?dry">All notes, highlights and links</a>
+    </section>
+
+    ${trail()}
+    <section class="wrap wide sec" aria-labelledby="map-h" id="bible">
+      <div class="sec-head"><h2 id="map-h">The whole Bible</h2><p>Each book is shaded by how much you’ve read. Choose one to see its chapters.</p></div>
+      ${bookMap({ personal: true })}
+    </section>
+    ${trail()}
+  </main>
+  ${footer({ motto: true })}`;
+
+  bindBookMap($('#bible'));
+  $('#search').addEventListener('submit', onSearch);
+}
+
+// A reference ("John 3:16", "ps 23") opens the app there; anything else is the app's search.
+function onSearch(e) {
+  e.preventDefault();
+  const q = e.target.q.value.trim(); if (!q) return;
+  const m = !/^[GH]\d+$/i.test(q) && q.match(/^((?:[123]\s*)?[a-z][a-z .]+?)\s*(\d+)(?:\s*[:.]\s*(\d+))?$/i);   // not a Strong's number
+  if (m) {
+    const k = m[1].replace(/[\s.]/g, '').toLowerCase();
+    const bk = BOOKS.find(x => x.name.replace(/\s/g, '').toLowerCase() === k) || (k === 'songofsolomon' && book(22)) || BOOKS.find(x => [x.osis, x.short].some(s => s.toLowerCase() === k)) || BOOKS.find(x => x.name.replace(/\s/g, '').toLowerCase().startsWith(k));
+    const c = +m[2], v = +m[3] || 0;
+    if (bk && c >= 1 && c <= bk.chapters.length && (!v || v <= bk.chapters[c - 1])) { location.href = appHref(bk.n, c, v); return; }
+  }
+  toast(`In the app, this searches every verse for “${q}”.`);
+}
+
+const altOf = p => { const s = smart(p.scene || ''); return smart(p.title) + (s ? `. ${s}${/[.!?…]["'”’]?$/.test(s) ? '' : '.'}` : ''); };
+
+// ================================================================ guest: welcome
+function renderGuest() {
+  const m = BRAND.motto, dore = (art.plates || []).find(p => p.id === 'dore-001');
+  const nPlates = (art.plates || []).length;
+  $('#app').innerHTML = `
+  <header class="wrap h-hero rise" aria-labelledby="hero-h">
+    <div class="lamplit">
+      <svg class="mark hero-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lantern"/></svg>
+      <h1 id="hero-h">${esc(BRAND.name)}</h1>
+      <blockquote class="motto"><p>${clauses(m.text)}</p><cite>${esc(m.ref)} · ${esc(m.tr)}</cite></blockquote>
+    </div>
+    <div class="cta">
+      <a class="btn btn-primary" href="${appHref(43, 1)}">Start reading ${icon('arrow-right')}</a>
+      <span class="cta-alt"><a href="../#signin" data-mock="signin">Sign in</a> · <a href="../#invite" data-mock="invite">I have an invite</a></span>
+    </div>
+    <p class="cta-note">Begins at John 1, <i>In the beginning was the Word</i></p>
+  </header>
+  <main id="main" tabindex="-1">
+    ${trail()}
+    <section class="wrap wide sec" aria-labelledby="find-h">
+      <div class="sec-head"><h2 id="find-h">A quiet place to study</h2><p>The King James and Berean Bibles, with the tools to look closer.</p></div>
+      <div class="tiles">
+        <article class="tile" aria-labelledby="tl-arcs">
+          <div class="tile-pv" id="pv-arcs" role="img" aria-label="Arcs from John 1 to the passages it cross-references, from Genesis to Revelation"><span class="pv-wait">Drawing…</span></div>
+          <div class="tile-b"><h3 id="tl-arcs">Every cross-reference, at a glance</h3><p>Arcs join John 1 to the passages it echoes, from Genesis to Revelation.</p></div>
+        </article>
+        <article class="tile" aria-labelledby="tl-ctx">
+          <div class="tile-pv" id="pv-ctx"><span class="pv-wait">Drawing…</span></div>
+          <div class="tile-b"><h3 id="tl-ctx">Where and when</h3><p>A map and a timeline for every chapter: here, the places and events of John 1.</p></div>
+        </article>
+        <article class="tile" aria-labelledby="tl-orig">
+          <div class="tile-pv il-pv" id="pv-orig"><span class="pv-wait">Loading…</span></div>
+          <div class="tile-b"><h3 id="tl-orig">Hebrew and Greek, word by word</h3><p>Each word with its meaning and Strong’s number. In Psalm 119:105, the lamp is <span lang="he" dir="rtl">נֵר</span>, <i>ner</i>.</p></div>
+        </article>
+        <article class="tile" aria-labelledby="tl-dore">
+          <div class="tile-pv">${dore ? `<span class="dore-pv"><img src="../data/art/${dore.id}-s.jpg" width="${dore.sw}" height="${dore.sh}" alt="${esc(altOf(dore))}" loading="lazy" decoding="async"></span>` : ''}</div>
+          <div class="tile-b"><h3 id="tl-dore">Gustave Doré’s engravings</h3><p>${nPlates} plates from the 1866 Bible, beside the verses they illustrate. Here, <i>${esc(smart(dore?.title || ''))}</i>.</p></div>
+        </article>
+      </div>
+    </section>
+
+    ${trail()}
+    <section class="wrap wide sec" aria-labelledby="map-h" id="bible">
+      <div class="sec-head"><h2 id="map-h">Begin anywhere</h2><p>All sixty-six books. Choose one to see its chapters.</p></div>
+      ${bookMap({ personal: false })}
+    </section>
+    ${trail()}
+  </main>
+  ${footer({ motto: false })}`;
+
+  bindBookMap($('#bible'));
+  $$('[data-mock]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); toast(a.dataset.mock === 'signin' ? 'In the app, this opens Sign in.' : 'In the app, this opens the invite form.'); }));
+  // previews load when they come near the view (the Hebrew and Greek files are large)
+  const jobs = { 'pv-arcs': drawArcs, 'pv-ctx': drawContext, 'pv-orig': drawInterlinear };
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return; io.unobserve(e.target);
+    jobs[e.target.id](e.target).then(() => { if (e.target.id !== 'pv-orig') { e.target.dataset.w = e.target.clientWidth; resize.observe(e.target); } })
+      .catch(err => { console.warn(err); e.target.innerHTML = '<span class="pv-wait">Preview unavailable</span>'; });
+  }), { rootMargin: '400px 0px' });
+  // the arcs and the map are drawn at their real size (11px labels); redraw when the tile width changes
+  const resize = new ResizeObserver(es => es.forEach(e => {
+    const el = e.target, w = el.clientWidth; if (Math.abs(w - +el.dataset.w) < 24) return;
+    el.dataset.w = w; jobs[el.id](el).catch(err => console.warn(err));
+  }));
+  Object.keys(jobs).forEach(id => io.observe($('#' + id)));
+}
+
+// ---- preview: cross-reference arcs (xref/43.json; one arc per target chapter, weighted by votes)
+async function drawArcs(el) {
+  const x = await json('../data/xref/43.json');
+  const src = 43, ch = 1, W = Math.max(280, el.clientWidth || 600), H = 212, P = 22, base = H - 42;
+  const tgt = new Map();
+  for (const [k, rows] of Object.entries(x)) {
+    if (!k.startsWith(ch + ':')) continue;
+    for (const r of rows) { if (r[0] === src && r[1] === ch) continue; const key = `${r[0]}.${r[1]}`; tgt.set(key, (tgt.get(key) || 0) + Math.max(1, r[4] || 1)); }
+  }
+  const X = (b, c) => P + ((CUM[b] + c - .5) / TOTAL_CH) * (W - 2 * P);
+  const sx = X(src, ch), max = Math.max(...tgt.values());
+  const arcs = [...tgt].sort((a, z) => a[1] - z[1]).map(([k, w]) => {
+    const [b, c] = k.split('.').map(Number), tx = X(b, c), x0 = Math.min(sx, tx), x1 = Math.max(sx, tx);
+    const rx = (x1 - x0) / 2, ry = Math.min(rx * .92, base - 14), f = Math.sqrt(w / max);
+    return `<path class="h-arc arc-${b <= 39 ? 'ot' : 'nt'}" d="M${x0.toFixed(1)} ${base}A${rx.toFixed(1)} ${ry.toFixed(1)} 0 0 1 ${x1.toFixed(1)} ${base}" stroke-width="${(.6 + f * 1.1).toFixed(2)}" stroke-opacity="${(.16 + f * .6).toFixed(2)}"/>`;
+  }).join('');
+  const otEnd = X(39, book(39).chapters.length) + 1;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${arcs}
+    <path class="arc-base" d="M${P} ${base}H${W - P}"/>
+    <path d="M${P} ${base + 6}H${otEnd - 3}" stroke="var(--ot)" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <path d="M${otEnd + 3} ${base + 6}H${W - P}" stroke="var(--nt)" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <circle class="arc-src" cx="${sx.toFixed(1)}" cy="${base}" r="3.5"/>
+    <text class="arc-lbl" x="${P}" y="${base + 22}">Genesis</text>
+    <text class="arc-lbl" x="${(sx + 4).toFixed(1)}" y="${base + 22}" text-anchor="end" style="fill:var(--label)">John 1</text>
+    ${W - P - 58 > sx + 10 ? `<text class="arc-lbl" x="${W - P}" y="${base + 22}" text-anchor="end">Revelation</text>` : ''}</svg>
+    <span class="h-lg" aria-hidden="true" style="left:auto;right:14px;top:12px;bottom:auto"><span style="--c:var(--ot)">Old Testament</span><span style="--c:var(--nt)">New Testament</span></span>`;
+}
+
+// ---- preview: map and timeline (context/43.json chapter 1 → places.json, events.json; coast from viz.js LEVANT)
+const LEVANT = {
+  coast: [[34.2, 35.62], [33.9, 35.47], [33.56, 35.37], [33.27, 35.2], [33.09, 35.1], [32.93, 35.07], [32.83, 34.96], [32.61, 34.92], [32.5, 34.89], [32.2, 34.81], [32.05, 34.75], [31.8, 34.63], [31.67, 34.55], [31.52, 34.44], [31.3, 34.24], [31.15, 33.8], [31.08, 33.3], [31.05, 32.6]],
+  galilee: [[32.9, 35.6], [32.88, 35.64], [32.82, 35.65], [32.75, 35.64], [32.7, 35.59], [32.72, 35.55], [32.79, 35.52], [32.86, 35.54]],
+  dead: [[31.77, 35.52], [31.76, 35.58], [31.66, 35.57], [31.53, 35.51], [31.42, 35.51], [31.3, 35.5], [31.18, 35.47], [31.08, 35.43], [31.05, 35.39], [31.13, 35.38], [31.3, 35.4], [31.45, 35.43], [31.6, 35.46], [31.72, 35.47]],
+  jordanN: [[33.26, 35.63], [33.12, 35.61], [33.02, 35.63], [32.91, 35.61]],
+  jordanS: [[32.71, 35.57], [32.62, 35.58], [32.52, 35.56], [32.4, 35.555], [32.3, 35.565], [32.18, 35.53], [32.05, 35.525], [31.93, 35.535], [31.84, 35.545], [31.77, 35.55]],
+};
+const f1 = n => n.toFixed(1);
+function smoothPath(pts, closed) {
+  if (pts.length < 3) return 'M' + pts.map(p => p.map(f1).join(' ')).join('L');
+  const Q = closed ? [pts[pts.length - 1], ...pts, pts[0], pts[1]] : [pts[0], ...pts, pts[pts.length - 1]];
+  let d = `M${f1(Q[1][0])} ${f1(Q[1][1])}`;
+  for (let i = 1; i < Q.length - 2; i++) {
+    const [p0, p1, p2, p3] = [Q[i - 1], Q[i], Q[i + 1], Q[i + 2]];
+    d += `C${f1(p1[0] + (p2[0] - p0[0]) / 6)} ${f1(p1[1] + (p2[1] - p0[1]) / 6)} ${f1(p2[0] - (p3[0] - p1[0]) / 6)} ${f1(p2[1] - (p3[1] - p1[1]) / 6)} ${f1(p2[0])} ${f1(p2[1])}`;
+  }
+  return d + (closed ? 'Z' : '');
+}
+async function drawContext(el) {
+  const [ctx, places, events] = await Promise.all([json('../data/context/43.json'), json('../data/places.json'), json('../data/events.json')]);
+  const vs = Object.values(ctx['1']?.v || {});
+  const pl = [...new Set(vs.flatMap(v => v.pl || []))].map(id => places[id]).filter(p => p && p.ft !== 'Water' && p.ft !== 'Region' && isFinite(p.lat));
+  const seen = new Set(), pts = pl.filter(p => { const k = `${p.lat.toFixed(2)},${p.lon.toFixed(2)}`; if (seen.has(k)) return false; seen.add(k); return true; });
+  const ev = [...new Set(vs.flatMap(v => v.e || []))].map(id => events[id]).filter(Boolean).sort((a, z) => a.y - z.y);
+  el.innerHTML = `<div class="ctx"><div class="ctx-map"></div><ol class="h-tl" aria-label="Timeline of John 1">${ev.map(e => `<li>${esc(smart(e.t))}<small>${e.y < 0 ? `${-e.y} BC` : `AD ${e.y}`}</small></li>`).join('')}</ol></div>`;
+  const mapEl = $('.ctx-map', el), W = Math.max(160, mapEl.clientWidth || 260), H = mapEl.clientHeight || 212;
+  const la0 = Math.min(...pts.map(p => p.lat)) - .3, la1 = Math.max(...pts.map(p => p.lat)) + .3;
+  const lo0 = Math.min(...pts.map(p => p.lon)) - .55, lo1 = Math.max(...pts.map(p => p.lon)) + .45;
+  const kx = Math.cos(((la0 + la1) / 2) * Math.PI / 180), s = Math.min(W / ((lo1 - lo0) * kx), H / (la1 - la0));
+  const cLo = (lo0 + lo1) / 2, cLa = (la0 + la1) / 2;
+  const PJ = (la, lo) => [W / 2 + (lo - cLo) * kx * s, H / 2 - (la - cLa) * s];
+  const land = [...LEVANT.coast.map(p => PJ(p[0], p[1])), PJ(29, 32.6), PJ(29, 40), PJ(36, 40), PJ(36, 35.62)];
+  const proj = pts.map(p => { const [x, y] = PJ(p.lat, p.lon); return { p, x, y }; }).sort((a, z) => (z.p.vc || 0) - (a.p.vc || 0));
+  const boxes = proj.map(q => [q.x - 5, q.y - 5, q.x + 5, q.y + 5]);
+  const free = b => b[0] >= 2 && b[2] <= W - 2 && b[1] >= 2 && b[3] <= H - 2 && !boxes.some(o => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+  const pins = proj.map(({ p, x, y }) => {
+    const w = p.n.length * 6.3 + 2;
+    const cands = [{ x: x + 8, y: y + 4, a: 'start', b: [x + 7, y - 6, x + 8 + w, y + 6] }, { x: x - 8, y: y + 4, a: 'end', b: [x - 8 - w, y - 6, x - 7, y + 6] },
+      { x, y: y - 9, a: 'middle', b: [x - w / 2, y - 19, x + w / 2, y - 6] }, { x, y: y + 17, a: 'middle', b: [x - w / 2, y + 6, x + w / 2, y + 19] }];
+    const c = cands.find(k => free(k.b)) || cands[0]; boxes.push(c.b);
+    return `<circle class="h-pin" cx="${f1(x)}" cy="${f1(y)}" r="4"/><text class="pin-l" x="${f1(c.x)}" y="${f1(c.y)}" text-anchor="${c.a}">${esc(p.n)}</text>`;
+  }).join('');
+  mapEl.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of John 1: ${esc(pts.map(p => p.n).join(', '))}">
+      <path class="land" d="M${land.map(p => p.map(f1).join(' ')).join('L')}Z"/>
+      <path class="h-lake" d="${smoothPath(LEVANT.galilee.map(p => PJ(p[0], p[1])), true)}"/><path class="h-lake" d="${smoothPath(LEVANT.dead.map(p => PJ(p[0], p[1])), true)}"/>
+      <path class="h-river" d="${smoothPath(LEVANT.jordanN.map(p => PJ(p[0], p[1])), false)}"/><path class="h-river" d="${smoothPath(LEVANT.jordanS.map(p => PJ(p[0], p[1])), false)}"/>
+      ${pins}</svg>`;
+}
+
+// ---- preview: word by word (orig/19.json Psalm 119:105 in Hebrew, orig/43.json John 1:5 in Greek)
+async function drawInterlinear(el) {
+  const [heb, grk] = await Promise.all([json('../data/orig/19.json'), json('../data/orig/43.json')]);
+  const LIT = new Set(['H5216', 'H216', 'G5457']);   // lamp, light, light
+  const chip = w => `<span class="il-w${LIT.has(w[3]) ? ' lit' : ''}" role="listitem"><span class="il-o" lang="${w[3][0] === 'H' ? 'he' : 'grc'}">${esc(w[0].replace(/[־׃,.;·]+$/u, ''))}</span><span class="il-t">${esc(w[1].replace(/-$/, '').replace(/'/g, 'ʼ'))}</span><span class="il-g">${esc(w[2].replace(/[.,;]+$/, ''))}</span></span>`;
+  el.innerHTML = `<div class="il">
+    <div class="il-row" dir="rtl" role="list" aria-label="Psalm 119:105 in Hebrew, word by word">${(heb['119:105'] || []).map(chip).join('')}</div>
+    <p class="il-cap">Psalm 119:105 · John 1:5</p>
+    <div class="il-row is-grk" role="list" aria-label="John 1:5 in Greek, word by word: the light shines in the darkness">${(grk['1:5'] || []).slice(1, 7).map(chip).join('')}</div></div>`;
+}
+
+// ================================================================ state switch and start
+const seg = $('.mockbar .pill-seg');
+function syncSeg() { $$('button', seg).forEach(b => { const on = b.dataset.state === state; b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; }); }
+async function show(s, focus) {
+  state = s; syncSeg(); syncUrl();
+  if (s === 'guest') renderGuest(); else await renderToday();
+  document.title = s === 'guest' ? BRAND.name : `Today · ${BRAND.name}`;
+  lightTrails();
+  if (focus) $(`button[data-state="${s}"]`, seg).focus();
+  window.scrollTo(0, 0);
+}
+seg.addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.state !== state) show(b.dataset.state); });
+seg.addEventListener('keydown', e => {
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+  e.preventDefault();
+  const next = e.key === 'Home' ? 'today' : e.key === 'End' ? 'guest' : state === 'guest' ? 'today' : 'guest';
+  if (next === state) $(`button[data-state="${next}"]`, seg).focus(); else show(next, true);
+});
+
+const t0 = params.get('theme');
+setTheme(t0 === 'light' || t0 === 'dark' ? t0 : '');
+await show(state);
+</script>
+</body>
+</html>
