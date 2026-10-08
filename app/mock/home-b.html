@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Bible Lantern</title>
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+/* =====================================================================
+   Home page mock-up, direction B: dashboard (.design/home-brief.md).
+   A responsive card grid in the Apple Health / Fitness summary manner.
+   App tokens from ../css/styles.css; page classes are prefixed hb-.
+   The lamp (Psalm 119:105) is a warm accent only: the wordmark's flame,
+   a soft glow on the verse of the day and the guest hero, and the light
+   on the reader's place along the path through the current book.
+   ===================================================================== */
+:root {
+  --hb-page: var(--bg-2);
+  --lamp: #f2a33a;                          /* flame and glow only, never text */
+  --lamp-glow: rgba(255, 168, 48, .15);
+  --lamp-glow-2: rgba(255, 196, 120, .10);
+  --lamp-halo: rgba(255, 160, 40, .45);
+  --hb-gap: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --hb-page: #000; --lamp: #ffb347; --lamp-glow: rgba(255, 159, 10, .15); --lamp-glow-2: rgba(255, 179, 71, .07); --lamp-halo: rgba(255, 170, 60, .7); }
+}
+:root[data-theme="dark"] { --hb-page: #000; --lamp: #ffb347; --lamp-glow: rgba(255, 159, 10, .15); --lamp-glow-2: rgba(255, 179, 71, .07); --lamp-halo: rgba(255, 170, 60, .7); }
+
+html, body.hb { background: var(--hb-page); }
+body.hb { overflow-x: hidden; }
+.hb-wrap { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+#main { padding-bottom: 40px; }
+#main:focus { outline: none; }
+body[data-state="guest"] .hb-signed-only, body[data-state="signed"] .hb-guest-only { display: none !important; }
+
+/* lantern mark: monoline like the app's icon set, the flame lit */
+.hb-lamp { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.hb-lamp .flame { fill: var(--lamp); stroke: none; filter: drop-shadow(0 0 2.5px var(--lamp-halo)); }
+
+/* ------------------------------------------------------------ top bar */
+.hb-bar { position: sticky; top: 0; z-index: 40; background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-bottom: 1px solid var(--sep); }
+.hb-bar-in { max-width: 1180px; margin: 0 auto; padding: 0 32px; height: 56px; display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(200px, 420px) minmax(max-content, 1fr); align-items: center; gap: 16px; }
+.hb-brand { display: inline-flex; align-items: center; gap: 8px; justify-self: start; color: var(--label); font: 600 17px/1 var(--display); letter-spacing: -.022em; border-radius: 8px; }
+.hb-brand:hover { text-decoration: none; }
+.hb-brand .hb-lamp { width: 22px; height: 22px; }
+.hb-search { position: relative; display: flex; align-items: center; height: 36px; border-radius: 10px; background: var(--fill-2); transition: background-color var(--d-2), box-shadow var(--d-2); }
+.hb-search:hover { background: var(--fill); }
+.hb-search:focus-within { background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); }
+.hb-search > .i { position: absolute; left: 11px; width: 16px; height: 16px; color: var(--label-2); pointer-events: none; }
+.hb-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; padding: 0 12px 0 34px; font-size: 15px; color: var(--label); -webkit-appearance: none; appearance: none; }
+.hb-search input::placeholder { color: var(--label-2); }
+.hb-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.hb-bar-r { justify-self: end; display: flex; align-items: center; gap: 8px; }
+.hb-av { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--av-grad); color: #fff; font: 600 14px/1 var(--display); }
+
+/* ------------------------------------------------------------ page head */
+.hb-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; margin: 32px 0 18px; }
+.hb-date { margin: 0 0 2px; font: 600 13px/1.3 var(--sans); color: var(--label-2); }
+.hb-h1 { margin: 0; font: 700 34px/1.1 var(--display); letter-spacing: -.03em; }
+.hb-greet { margin: 0 0 4px; font-size: 15px; color: var(--label-2); }
+
+/* ------------------------------------------------------------ grid and cards */
+.hb-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--hb-gap); }
+.hb-card { position: relative; min-width: 0; padding: 18px 22px 22px; border-radius: var(--r-xl); background: var(--bg-elev); box-shadow: var(--sh-2); animation: hbIn .6s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes hbIn { from { opacity: 0; transform: translateY(10px); } }
+.hb-card:has(.hb-stretch:focus-visible) { outline: 2px solid var(--focus); outline-offset: 3px; }
+.hb-stretch:focus-visible { outline: none; }
+.hb-stretch::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.hb-ch { display: flex; align-items: center; gap: 9px; min-height: 28px; margin-bottom: 14px; }
+.hb-ch h2 { flex: 1; min-width: 0; margin: 0; font: 600 15px/1.25 var(--sans); letter-spacing: -.012em; }
+.hb-ch .tile-i { width: 28px; height: 28px; border-radius: 8px; }
+.hb-ch .tile-i .i { width: 16px; height: 16px; }
+.hb-meta { flex: none; font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-more { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 2px; font-size: 14px; font-weight: 500; }
+.hb-more .i { width: 13px; height: 13px; stroke-width: 2; transition: transform var(--d-2) var(--ease-out); }
+.hb-more:hover .i { transform: translateX(2px); }
+.hb-num { margin: 0; font: 700 34px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--label); }
+.hb-num small { margin-left: 5px; font: 600 15px/1 var(--sans); letter-spacing: -.01em; color: var(--label-2); }
+.hb-sub { margin: 6px 0 0; font-size: 13px; color: var(--label-2); }
+.hb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn.hb-lg { height: 40px; padding: 0 20px; font-size: 15px; }
+.btn.sm { height: 28px; padding: 0 12px; font-size: 13px; }
+
+/* signed-in placement (≥ 1100: 12 columns) */
+.hb-cont { grid-column: span 7; }
+.hb-votd { grid-column: span 5; grid-row: span 2; }
+.hb-streak { grid-column: span 3; }
+.hb-week { grid-column: span 4; }
+.hb-recent { grid-column: span 7; }
+.hb-bible { grid-column: span 5; }
+.hb-map { grid-column: 1 / -1; }
+/* guest placement */
+.hb-hero { grid-column: 1 / -1; }
+.hb-feat { grid-column: span 6; }
+
+/* ------------------------------------------------------------ continue reading */
+.hb-cont-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 28px; align-items: center; }
+.hb-cont-t { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 0; }
+.hb-cont-t a { font: 700 38px/1.05 var(--display); letter-spacing: -.03em; background: var(--grad-num); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .04em; }
+.hb-cont-t a:hover { text-decoration: none; }
+.hb-cont-t span { font-size: 15px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-quote { margin: 8px 0 0; max-width: 36em; font: 400 17px/1.5 var(--serif); letter-spacing: 0; color: var(--read); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hb-cont .hb-actions { margin-top: 16px; }
+.hb-cont .chip { height: 32px; font-size: 13px; padding: 0 12px; }
+/* the path through the book: chapters read, and the lamp on the reader's place */
+.hb-path { margin-top: 16px; }
+.hb-path ol { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
+.hb-path li { position: relative; flex: 1 1 0; height: 10px; display: grid; place-items: center; }
+.hb-path li::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: var(--fill); }
+.hb-path li:first-child::before { left: 50%; } .hb-path li:last-child::before { right: 50%; }
+.hb-path li.read::before { background: var(--accent); }
+.hb-path li.now::before { background: linear-gradient(90deg, var(--accent) 50%, var(--fill) 50%); }
+.hb-path li i { position: relative; width: 6px; height: 6px; border-radius: 50%; background: var(--bg-elev); box-shadow: inset 0 0 0 1.5px var(--fill); }
+.hb-path li.read i { background: var(--accent); box-shadow: none; }
+.hb-path li.now i { width: 10px; height: 10px; background: var(--bg-elev); box-shadow: inset 0 0 0 2.5px var(--accent), 0 0 0 4px var(--lamp-glow), 0 0 14px 4px var(--lamp-glow); }
+.hb-path p { display: flex; justify-content: space-between; margin: 6px 0 0; font-size: 12px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-ringbox { position: relative; display: grid; place-items: center; }
+.hb-ringbox .hb-ring-l { position: absolute; text-align: center; }
+.hb-ring-l b { display: block; font: 700 24px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.hb-ring-l small { display: block; margin-top: 3px; font-size: 12px; color: var(--label-2); }
+.hb-ring { display: block; }
+.hb-ring circle { fill: none; }
+.hb-ring .trk { stroke: var(--fill); }
+.hb-ring .val { stroke: var(--accent); stroke-linecap: round; stroke-dashoffset: var(--off); animation: hbRing 1.2s var(--ease-out) .15s both; }
+@keyframes hbRing { from { stroke-dashoffset: var(--c); } }
+
+/* ------------------------------------------------------------ verse of the day: lamplight on the page */
+.hb-votd { display: flex; flex-direction: column; overflow: hidden; background: radial-gradient(85% 55% at 10% 0%, var(--lamp-glow), transparent 72%), radial-gradient(60% 40% at 0% 0%, var(--lamp-glow-2), transparent 60%), var(--bg-elev); }
+.hb-votd .hb-ch .hb-lamp { width: 28px; height: 28px; padding: 4px; border-radius: 8px; background: color-mix(in srgb, var(--lamp) 14%, transparent); color: var(--label-2); }
+.hb-votd-main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 4px 0 8px; }
+.hb-votd-q { margin: 0; }
+.hb-votd-q p { margin: 0; font: 400 25px/1.42 var(--serif); letter-spacing: -.005em; color: var(--read); text-wrap: pretty; }
+.hb-votd-q.short p { font-size: 30px; line-height: 1.36; }
+.hb-votd-q.long p { font-size: 21px; }
+.hb-votd-ref { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 0; }
+.hb-votd-ref a { font: 600 15px/1.3 var(--sans); color: var(--label); }
+.hb-votd-ref a:hover { text-decoration: none; }
+.hb-votd-ref span { font-size: 13px; color: var(--label-2); }
+.hb-votd-ref .i { width: 13px; height: 13px; stroke-width: 2; color: var(--label-2); align-self: center; }
+.hb-plate { position: relative; z-index: 2; display: flex; align-items: center; gap: 14px; margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--sep); }
+.hb-plate-btn { flex: none; display: block; border-radius: 6px; padding: 4px; background: var(--bg-elev); box-shadow: 0 0 0 .5px var(--sep-2), 0 4px 14px rgba(0,0,0,.10); transition: transform var(--d-2) var(--ease-out); }
+.hb-plate-btn:hover { transform: translateY(-1px) scale(1.02); }
+.hb-plate-btn img { display: block; width: 92px; height: auto; border-radius: 3px; }
+.hb-plate figcaption { min-width: 0; font-size: 13px; color: var(--label-2); }
+.hb-plate figcaption b { display: block; font: 600 14px/1.3 var(--sans); color: var(--label); }
+.hb-plate figcaption button { margin-top: 6px; color: var(--link); font-size: 13px; font-weight: 500; }
+.hb-plate figcaption button:hover { text-decoration: underline; text-underline-offset: .16em; }
+
+/* ------------------------------------------------------------ stat tiles */
+.hb-tile { display: flex; flex-direction: column; }
+.hb-tile .hb-ch { margin-bottom: 10px; }
+.hb-week-dots { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: auto 0 0; padding: 14px 0 0; list-style: none; }
+.hb-week-dots li { display: grid; justify-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--label-2); }
+.hb-week-dots i { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--fill); }
+.hb-week-dots .on i { background: var(--tile-orange); box-shadow: none; }
+.hb-week-dots .today i { box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 3.5px var(--tile-orange); }
+.hb-week-dots .today { color: var(--label); }
+.hb-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; height: 62px; margin: auto 0 0; padding: 14px 0 0; list-style: none; }
+.hb-bars li { display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 5px; height: 100%; font-size: 11px; font-weight: 600; color: var(--label-2); }
+.hb-bars i { align-self: end; width: 100%; max-width: 22px; height: max(3px, calc(var(--h) * 100%)); border-radius: 4px 4px 2px 2px; background: var(--accent); transform-origin: bottom; animation: hbBar .8s var(--ease-out) both; animation-delay: calc(.2s + var(--n) * 40ms); }
+.hb-bars .z i { background: var(--fill); }
+.hb-bars .later i { background: none; box-shadow: inset 0 0 0 1px var(--sep-2); height: 3px; }
+.hb-bars .today { color: var(--label); }
+@keyframes hbBar { from { transform: scaleY(0); } }
+
+.hb-bible-in { display: flex; align-items: center; gap: 18px; }
+.hb-bible-in .hb-ringbox { flex: none; }
+.hb-bible-in > div:last-child { min-width: 0; }
+.hb-bible-body { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+.hb-dv { display: grid; gap: 9px; margin: auto 0 0; padding: 0; list-style: none; }
+.hb-dv li { display: grid; grid-template-columns: 124px minmax(0, 1fr) 38px; align-items: center; gap: 12px; font-size: 13px; }
+.hb-dv li span:last-child { text-align: right; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-dv i { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.hb-dv i b { display: block; width: calc(var(--p) * 100%); height: 100%; border-radius: inherit; background: var(--c); transform-origin: left; animation: hbGrow 1s var(--ease-out) .2s both; }
+@keyframes hbGrow { from { transform: scaleX(0); } }
+
+/* ------------------------------------------------------------ recent study */
+.hb-acts { margin: -4px -10px 0; padding: 0; list-style: none; }
+.hb-acts li + li { border-top: 1px solid var(--sep); }
+.hb-act { display: flex; align-items: flex-start; gap: 12px; padding: 11px 10px; border-radius: 12px; color: var(--label); transition: background-color var(--d-1); }
+.hb-act:hover { background: var(--fill-3); text-decoration: none; }
+.hb-acts li + li .hb-act { margin-top: 1px; }
+.hb-act .tile-i { width: 30px; height: 30px; margin-top: 1px; }
+.hb-sw { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-top: 1px; border-radius: 8px; background: color-mix(in srgb, var(--sw) 22%, transparent); }
+.hb-sw::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--sw); }
+.hb-act-b { flex: 1; min-width: 0; }
+.hb-act-t { display: block; font-size: 14px; line-height: 1.35; }
+.hb-act-t b { font-weight: 600; }
+.hb-act-t span { color: var(--label-2); }
+.hb-act-s { display: block; margin-top: 2px; font: 15px/1.45 var(--serif); letter-spacing: 0; color: var(--read); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-act-s mark { color: inherit; border-radius: 3px; padding: 0 2px; }
+.hb-act-s mark.yellow { background: var(--hl-yellow); } .hb-act-s mark.blue { background: var(--hl-blue); }
+.hb-act time { flex: none; margin-top: 2px; font-size: 12px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-recent-f { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--sep); font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------ the whole Bible at a glance */
+.hb-map .hb-ch { flex-wrap: wrap; }
+.hb-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; font-size: 12px; color: var(--label-2); }
+.hb-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hb-legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--fill-2); box-shadow: inset 0 0 0 .5px var(--sep); }
+.hb-legend i.part { background: color-mix(in srgb, var(--accent) 22%, var(--bg-elev)); }
+.hb-legend i.done { background: var(--accent-fill); box-shadow: none; }
+.hb-map-s { margin: -6px 0 14px; font-size: 14px; color: var(--label-2); }
+.hb-divs { display: grid; }
+.hb-div { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 10px 20px; padding: 12px 0; border-top: 1px solid var(--sep); }
+.hb-div:first-child { border-top: 0; padding-top: 2px; }
+.hb-div-h { min-width: 0; padding-top: 4px; }
+.hb-div-h h3 { margin: 0; font: 600 14px/1.25 var(--sans); letter-spacing: -.01em; }
+.hb-div-h p { margin: 2px 0 0; font-size: 12px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-books { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; align-content: start; }
+.hb-bk { position: relative; height: 40px; padding: 0 4px; border-radius: 10px; background: var(--fill-2); color: var(--label); font: 600 13px/1 var(--sans); letter-spacing: -.01em; white-space: nowrap; transition: transform var(--d-1) var(--ease-out), box-shadow var(--d-1), background-color var(--d-1); }
+.hb-bk:hover { box-shadow: inset 0 0 0 1px var(--sep-2); }
+.hb-bk:active { transform: scale(.95); }
+.hb-bk.part { background: color-mix(in srgb, var(--accent) calc(8% + var(--p) * 26%), var(--bg-elev)); }
+.hb-bk.done { background: var(--accent-fill); color: #fff; }
+.hb-bk.here::after { content: ""; position: absolute; right: 5px; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 6px 1px var(--lamp-halo); }
+.hb-bk[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 3.5px var(--accent); }
+.hb-chs { grid-column: 1 / -1; margin: 4px 0 4px; padding: 14px 16px 16px; border-radius: var(--r-lg); background: var(--hb-page); animation: hbOpen .35s var(--ease-out); }
+@keyframes hbOpen { from { opacity: 0; transform: translateY(-4px); } }
+.hb-chs-h { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 12px; }
+.hb-chs-h h4 { margin: 0; font: 600 17px/1.2 var(--display); letter-spacing: -.02em; }
+.hb-chs-h span { flex: 1; min-width: 0; font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 5px; margin: 0; padding: 0; list-style: none; }
+.hb-c { display: grid; place-items: center; height: 36px; border-radius: 9px; background: var(--bg-elev); color: var(--label); font: 500 13px/1 var(--sans); font-variant-numeric: tabular-nums; box-shadow: var(--sh-1); }
+.hb-c:hover { text-decoration: none; box-shadow: inset 0 0 0 1px var(--accent); }
+.hb-c.read { background: var(--accent-fill); color: #fff; box-shadow: none; }
+.hb-c.here { box-shadow: inset 0 0 0 2px var(--accent), 0 0 12px 2px var(--lamp-glow); font-weight: 700; }
+
+/* ------------------------------------------------------------ guest: hero */
+.hb-hero { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 28px 48px; align-items: center; padding: 44px 48px 44px; overflow: hidden; background: radial-gradient(55% 75% at 6% 0%, var(--lamp-glow), transparent 70%), radial-gradient(35% 50% at 2% 0%, var(--lamp-glow-2), transparent 70%), var(--bg-elev); }
+.hb-wordmark { display: flex; align-items: center; gap: 14px; margin: 0; font: 700 56px/1.02 var(--display); letter-spacing: -.035em; }
+.hb-wordmark .hb-lamp { width: 52px; height: 52px; stroke-width: 1.25; color: var(--label); }
+.hb-wordmark .hb-lamp .flame { filter: drop-shadow(0 0 6px var(--lamp-halo)); }
+.hb-motto { margin: 22px 0 0; }
+.hb-motto p { margin: 0; font: 400 27px/1.4 var(--serif); letter-spacing: -.005em; color: var(--read); text-wrap: balance; }
+.hb-motto footer { margin-top: 8px; font-size: 14px; color: var(--label-2); }
+.hb-hero-s { max-width: 34em; margin: 18px 0 0; font-size: 16px; line-height: 1.5; color: var(--label-2); }
+.hb-hero .hb-actions { margin-top: 24px; }
+.hb-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.hb-facts div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 4px; padding: 16px 18px; border-radius: var(--r-lg); background: var(--hb-page); }
+.hb-facts dt { font-size: 13px; color: var(--label-2); }
+.hb-facts dd { margin: 0; font: 700 28px/1.05 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------ guest: feature tiles with real previews */
+.hb-feat { display: flex; flex-direction: column; }
+.hb-feat .hb-ch { margin-bottom: 6px; }
+.hb-feat-s { margin: 0 0 14px; font-size: 14px; color: var(--label-2); }
+.hb-prev { position: relative; flex: 1; min-height: 290px; border-radius: var(--r-lg); overflow: hidden; }
+.hb-feat .hb-more { margin-top: 14px; align-self: flex-start; }
+.tile-i.teal { background: color-mix(in srgb, var(--nt) 16%, transparent); color: var(--nt); }
+/* the night tile, as the app's stage */
+.hb-night { --label: #f5f5f7; --label-2: #a1a1a6; --ot: #e36a10; --nt: #1fa99b; color-scheme: dark; color: var(--label); background: radial-gradient(120% 90% at 50% 0%, #1b1b22 0%, #0c0c10 62%), #0c0c10; box-shadow: 0 0 0 .5px rgba(255,255,255,.08), inset 0 1px 0 rgba(255,255,255,.08); }
+.hb-night svg { display: block; width: 100%; }
+.hb-night .cb { opacity: .55; } .hb-night .cb.ot { fill: var(--ot); } .hb-night .cb.nt { fill: var(--nt); }
+.hb-night .cb.cur { fill: #f5f5f7; opacity: 1; }
+.hb-night .lbl { font: 500 11px var(--sans); fill: #a1a1a6; }
+.hb-night .lbl.cur { fill: #f5f5f7; font-weight: 600; }
+.hb-arcs.anim .arc { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.4s var(--ease-out) forwards; animation-delay: calc(var(--d, 0) * 1ms); }
+.hb-arc-cap { position: absolute; left: 14px; top: 12px; margin: 0; font-size: 12px; color: #a1a1a6; font-variant-numeric: tabular-nums; }
+.hb-arc-cap b { color: #f5f5f7; font-weight: 600; }
+/* map and timeline */
+.hb-ctx { display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--map-land); box-shadow: inset 0 0 0 .5px var(--sep-2); }
+.hb-ctx .lev { height: 100%; }
+.hb-ctx .lev .region { fill: var(--label-2); opacity: 1; }   /* ≥ 4.5:1 (the app's mini-map draws them fainter) */
+.hb-ctx .hb-mapbox { min-height: 0; }
+.hb-tl { padding: 10px 14px 12px; border-top: 1px solid var(--sep); background: var(--bg-elev); }
+.hb-tl svg { display: block; width: 100%; height: 34px; overflow: visible; }
+.hb-tl .axis { stroke: var(--sep-2); stroke-width: 1; }
+.hb-tl .tick { stroke: var(--sep-2); }
+.hb-tl .yr { font: 500 11px var(--sans); fill: var(--label-2); font-variant-numeric: tabular-nums; }
+.hb-tl .ev { fill: var(--nt); stroke: var(--bg-elev); stroke-width: 1.5; }
+.hb-tl p { margin: 4px 0 0; font-size: 12px; color: var(--label-2); }
+/* interlinear */
+.hb-il { display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 18px; background: var(--hb-page); }
+.hb-il-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; padding: 0; list-style: none; direction: rtl; }
+.hb-il-row li { direction: ltr; display: grid; justify-items: center; gap: 3px; min-width: 0; padding: 10px 8px 9px; border-radius: 12px; background: var(--bg-elev); box-shadow: var(--sh-1); text-align: center; }
+.hb-il-row .w { font: 400 24px/1.25 var(--heb); direction: rtl; color: var(--label); }
+.hb-il-row .t { font: italic 12px/1.2 var(--sans); color: var(--label-2); }
+.hb-il-row .g { font: 500 13px/1.25 var(--sans); color: var(--label); }
+.hb-il-row .s { font: 500 11px/1 var(--mono); color: var(--accent-on-tint); background: var(--accent-tint); padding: 3px 5px; border-radius: 5px; }
+.hb-il-en { margin: 0; text-align: center; font: 16px/1.45 var(--serif); color: var(--read); }
+.hb-il-en small, .hb-il-cap { display: block; margin-top: 3px; font: 12px/1.3 var(--sans); color: var(--label-2); }
+.hb-il-row.is-grk { direction: ltr; }
+.hb-il-row.is-grk .w { font: 400 20px/1.25 var(--grk); direction: ltr; }
+.hb-il-cap { margin: -8px 0 0; text-align: center; }
+/* engravings */
+.hb-dore { flex: none; height: 290px; display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 8px; background: var(--hb-page); }
+.hb-dore button { position: relative; min-height: 0; border-radius: 10px; overflow: hidden; background: var(--fill-2); }
+.hb-dore button:first-child { grid-row: span 2; }
+.hb-dore img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; transition: transform .6s var(--ease-out); }
+.hb-dore button:hover img { transform: scale(1.03); }
+.hb-dore button:first-child::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 45% at 40% 0%, rgba(255, 210, 140, .22), transparent 75%); pointer-events: none; }
+.hb-dore span { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 8px; font: 600 12px/1.25 var(--sans); color: #fff; text-align: left; background: linear-gradient(transparent, rgba(0,0,0,.72)); }
+
+/* ------------------------------------------------------------ engraving viewer (as the art module's) */
+dialog.hb-viewer { max-width: 720px; }
+.hb-viewer .modal-body { padding-bottom: 22px; }
+.hb-viewer figure { margin: 0; }
+.hb-viewer img { display: block; width: 100%; height: auto; max-height: calc(100dvh - 260px); object-fit: contain; border-radius: 8px; background: var(--bg-2); }
+.hb-viewer figcaption { margin-top: 12px; font: 15px/1.5 var(--serif); color: var(--read); }
+.hb-viewer figcaption small { display: block; margin-top: 6px; font: 12px/1.4 var(--sans); color: var(--label-2); }
+
+/* ------------------------------------------------------------ footer and mock-up controls */
+.hb-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; padding-top: 22px; padding-bottom: 96px; border-top: 1px solid var(--sep); font-size: 12px; color: var(--label-2); }
+.hb-foot p { margin: 0; }
+.hb-foot .hb-lamp { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
+.hb-mock { position: fixed; z-index: 60; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 14px; background: var(--glass-2); -webkit-backdrop-filter: var(--blur-sheet); backdrop-filter: var(--blur-sheet); box-shadow: var(--sh-pop); }
+.hb-mock .segmented { width: 164px; }
+.hb-theme { display: grid; place-items: center; width: 32px; height: 28px; border-radius: 8px; color: var(--label-2); transition: background-color var(--d-1), color var(--d-1); }
+.hb-theme:hover { background: var(--fill-2); color: var(--label); }
+.hb-theme[aria-pressed="true"] { background: var(--accent-tint-2); color: var(--accent-on-tint); }
+.hb-theme .i { width: 17px; height: 17px; }
+.hb .toast { bottom: max(76px, env(safe-area-inset-bottom)); }
+
+/* ------------------------------------------------------------ responsive: 1100 / 899 / 699 */
+@media (max-width: 1099px) {
+  .hb-wrap, .hb-bar-in { padding-left: 24px; padding-right: 24px; }
+  .hb-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .hb-cont, .hb-votd, .hb-recent, .hb-map, .hb-hero { grid-column: 1 / -1; grid-row: auto; }
+  .hb-streak, .hb-week { grid-column: span 3; }
+  .hb-bible { grid-column: 1 / -1; }
+  .hb-bible-body { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px 40px; }
+  .hb-dv { margin: 0; }
+  .hb-feat { grid-column: span 3; }
+  .hb-votd-q { flex: none; }
+  .hb-hero { grid-template-columns: minmax(0, 1fr); padding: 36px 36px 32px; }
+  .hb-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 700px) and (max-width: 1099px) {
+  .hb-votd { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 28px; }
+  .hb-votd > .hb-ch { grid-column: 1 / -1; }
+  .hb-votd .hb-plate { flex-direction: column; align-items: flex-start; max-width: 190px; margin: 0; padding: 0 0 0 24px; border-top: 0; border-left: 1px solid var(--sep); }
+}
+@media (max-width: 899px) {
+  .hb-div { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .hb-div-h { display: flex; align-items: baseline; gap: 10px; padding-top: 0; }
+  .hb-div-h p { margin: 0; }
+  .hb-feat .hb-ch h2 { font-size: 14px; }
+  .hb-il-row .w { font-size: 22px; } .hb-il-row.is-grk .w { font-size: 18px; }
+}
+@media (max-width: 699px) {
+  :root { --hb-gap: 12px; }
+  .hb-wrap { padding-left: 16px; padding-right: 16px; }
+  .hb-bar { position: static; }
+  .hb-bar-in { grid-template-columns: minmax(0, 1fr) auto; height: auto; padding: 10px 16px 12px; row-gap: 10px; }
+  .hb-search { grid-column: 1 / -1; grid-row: 2; }
+  .hb-head { margin: 22px 0 14px; }
+  .hb-h1 { font-size: 30px; }
+  .hb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hb-cont, .hb-votd, .hb-recent, .hb-map, .hb-hero, .hb-bible, .hb-feat { grid-column: 1 / -1; }
+  .hb-streak, .hb-week { grid-column: span 1; }
+  .hb-card { padding: 16px 16px 18px; border-radius: var(--r-xl); }
+  .hb-cont-body { grid-template-columns: minmax(0, 1fr); }
+  .hb-cont .hb-ringbox { display: none; }
+  .hb-cont-t a { font-size: 32px; }
+  .hb-votd-q p { font-size: 22px; }
+  .hb-votd-q.short p { font-size: 26px; }
+  .hb-votd-q.long p { font-size: 19px; }
+  .hb-cont .chip:nth-child(n+4) { display: none; }
+  .hb-num { font-size: 30px; }
+  .hb-tile .hb-ch { gap: 7px; }
+  .hb-tile .hb-ch .tile-i { width: 22px; height: 22px; border-radius: 6px; }
+  .hb-tile .hb-ch .tile-i .i { width: 13px; height: 13px; }
+  .hb-tile .hb-ch h2 { font-size: 14px; }
+  .hb-tile .hb-num small { display: block; margin: 6px 0 0; font-size: 14px; }
+  .hb-week-dots { gap: 2px; }
+  .hb-week-dots i { width: 14px; height: 14px; }
+  .hb-bars { gap: 4px; }
+  .hb-bible-body { display: flex; }
+  .hb-dv li { grid-template-columns: 112px minmax(0, 1fr) 36px; gap: 10px; }
+  .hb-hero { padding: 28px 20px 24px; gap: 24px; }
+  .hb-wordmark { font-size: 38px; gap: 10px; }
+  .hb-wordmark .hb-lamp { width: 36px; height: 36px; }
+  .hb-motto { margin-top: 16px; }
+  .hb-motto p { font-size: 22px; }
+  .hb-hero-s { font-size: 15px; }
+  .hb-hero .hb-actions .btn { flex: 1 1 auto; }
+  .hb-hero .hb-actions .btn-plain { flex: 1 1 100%; }
+  .hb-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .hb-facts div { padding: 12px 14px; }
+  .hb-facts dd { font-size: 24px; }
+  .hb-books { grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); }
+  .hb-chs { padding: 12px; }
+  .hb-cgrid { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); }
+  .hb-c { height: 40px; }
+  .hb-acts { margin: -4px -6px 0; }
+  .hb-act { padding: 10px 6px; gap: 10px; }
+  .hb-dore { min-height: 240px; }
+  .hb-mock { left: 50%; right: auto; transform: translateX(-50%); }
+}
+
+/* ------------------------------------------------------------ reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hb-card, .hb-chs, .hb-ring .val, .hb-bars i, .hb-dv i b, .hb-arcs.anim .arc { animation: none !important; }
+  .hb-arcs.anim .arc { stroke-dasharray: none; stroke-dashoffset: 0; }
+  .hb-dore img, .hb-plate-btn, .hb-more .i { transition: none; }
+}
+</style>
+</head>
+<body class="hb" data-state="signed">
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- Icons copied from app/js/icons.js (24px grid, 1.5px strokes); the lantern is built by lampSVG() below. -->
+<svg id="icon-sprite" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20 20"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z"/><path d="M12 6.8v13.4"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M11 4.5H7a3 3 0 00-3 3v9.5a3 3 0 003 3h9.5a3 3 0 003-3V13"/><path d="M17.8 3.9a1.9 1.9 0 012.7 2.7l-8 8-3.5.9.9-3.5z"/></symbol>
+<symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 20.5c-3.6 0-6-2.4-6-5.7 0-2.6 1.5-4.4 2.9-6.1.4 1.3 1.1 2.2 2.1 2.6 0-3 1.3-5.5 3.5-7.3.3 2.8 1.6 4.4 2.7 5.9 1 1.3 1.8 2.8 1.8 4.9 0 3.3-3.1 5.7-7 5.7z"/></symbol>
+<symbol id="i-link-node" viewBox="0 0 24 24"><circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="7" r="2.5"/><path d="M8.2 15.8c3.3-1.3 4.3-6.3 7.6-7.6"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.6 14.6A7.8 7.8 0 019.4 4.4a7.8 7.8 0 1010.2 10.2z"/></symbol>
+<symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-arcs" viewBox="0 0 24 24"><path d="M3 18.5h18"/><path d="M4.5 18.5a7.5 7.5 0 0115 0"/><path d="M9 18.5a3 3 0 016 0"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4.5L3.5 6.5v13l5.5-2 6 2 5.5-2v-13l-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></symbol>
+<symbol id="i-alpha" viewBox="0 0 24 24"><path d="M2.5 18.5L7 5.5l4.5 13M4.1 14h5.8"/><path d="M20.8 10.2c-.5 4-1.9 8.3-4.3 8.3-1.7 0-2.7-1.4-2.7-3.3 0-2.3 1.4-4.2 3.2-4.2 2.4 0 2.9 3.3 3.9 5.9.3.9.8 1.5 1.5 1.5"/></symbol>
+<symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><circle cx="8.6" cy="9.4" r="1.7"/><path d="M3.4 17.2l4.9-4.5a1.3 1.3 0 011.75 0l2.45 2.25"/><path d="M10.9 16.6l4-3.9a1.3 1.3 0 011.8 0l3.9 3.75"/></symbol>
+<symbol id="i-xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></symbol>
+<symbol id="i-library" viewBox="0 0 24 24"><path d="M5.5 6.5a2 2 0 012-2h10v15.5h-10a2 2 0 01-2-2z"/><path d="M5.5 18a2 2 0 012-2h10"/><path d="M10 4.5v6.3l2-1.5 2 1.5V4.5"/></symbol>
+</defs></svg>
+
+<header class="hb-bar">
+  <div class="hb-bar-in">
+    <a class="hb-brand" href="#main"><i data-lamp></i><span data-brand-name>Bible Lantern</span></a>
+    <form class="hb-search" id="hb-search" role="search">
+      <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+      <label class="sr" for="hb-q">Search the Bible</label>
+      <input id="hb-q" name="q" type="search" placeholder="John 3:16, love, G26" autocomplete="off" spellcheck="false" enterkeyhint="search">
+    </form>
+    <div class="hb-bar-r">
+      <button class="btn btn-plain hb-guest-only" type="button" data-signin>Sign in</button>
+      <!-- sample: the signed-in reader's initial -->
+      <span class="hb-av hb-signed-only" role="img" aria-label="Signed in as Ji">J</span>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="hb-wrap" tabindex="-1">
+
+  <!-- ================================================= signed in: Today -->
+  <section id="v-signed" aria-labelledby="hb-today">
+    <div class="hb-head">
+      <div><p class="hb-date" id="hb-date"></p><h1 class="hb-h1" id="hb-today">Today</h1></div>
+      <p class="hb-greet" id="hb-greet"></p>
+    </div>
+    <div class="hb-grid">
+      <div class="hb-card hb-cont" style="--i:0">
+        <div class="hb-ch"><span class="tile-i blue"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg></span><h2>Continue reading</h2><span class="hb-meta" id="cont-when"></span></div>
+        <div class="hb-cont-body" id="cont-body"></div>
+      </div>
+      <div class="hb-card hb-votd" style="--i:1" id="votd"></div>
+      <div class="hb-card hb-tile hb-streak" style="--i:2" id="streak"></div>
+      <div class="hb-card hb-tile hb-week" style="--i:3" id="week"></div>
+      <div class="hb-card hb-recent" style="--i:4">
+        <div class="hb-ch"><span class="tile-i gold"><svg class="i" aria-hidden="true"><use href="#i-note"/></svg></span><h2>Your study, recently</h2><a class="hb-more" id="recent-all" href="#">Library<svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></a></div>
+        <ul class="hb-acts" id="recent"></ul>
+        <div class="hb-recent-f" id="recent-f"></div>
+      </div>
+      <div class="hb-card hb-tile hb-bible" style="--i:5" id="bible"></div>
+      <div class="hb-card hb-map" style="--i:6">
+        <div class="hb-ch"><span class="tile-i indigo"><svg class="i" aria-hidden="true"><use href="#i-library"/></svg></span><h2>The whole Bible at a glance</h2>
+          <p class="hb-legend" aria-hidden="true"><span><i></i>Not started</span><span><i class="part"></i>Started</span><span><i class="done"></i>Read</span></p></div>
+        <p class="hb-map-s">Each book is shaded by how much you’ve read. Choose one for its chapters.</p>
+        <div class="hb-divs" id="map-signed"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= guest -->
+  <section id="v-guest" aria-labelledby="hb-name" hidden>
+    <div class="hb-grid" style="margin-top:28px">
+      <div class="hb-card hb-hero" style="--i:0">
+        <div>
+          <h1 class="hb-wordmark" id="hb-name"><i data-lamp></i><span data-brand-name>Bible Lantern</span></h1>
+          <blockquote class="hb-motto"><p data-brand-line></p><footer data-brand-ref></footer></blockquote>
+          <p class="hb-hero-s">Read the whole Bible and study it closely: every cross-reference, the places and times, the Hebrew and Greek word by word, and Doré’s engravings beside the verses.</p>
+          <div class="hb-actions">
+            <a class="btn btn-primary hb-lg" id="start" href="#">Start reading</a>
+            <button class="btn btn-tinted hb-lg" type="button" data-signin>Sign in</button>
+            <button class="btn btn-plain" type="button" data-invite>I have an invite</button>
+          </div>
+        </div>
+        <dl class="hb-facts" id="facts" aria-label="Bible Lantern in numbers"></dl>
+      </div>
+      <div class="hb-card hb-feat" style="--i:1">
+        <div class="hb-ch"><span class="tile-i indigo"><svg class="i" aria-hidden="true"><use href="#i-arcs"/></svg></span><h2>Cross-references, drawn as arcs</h2></div>
+        <p class="hb-feat-s">Every link leaving a chapter, arcing out across all 66 books.</p>
+        <div class="hb-prev hb-night" id="prev-arcs"></div>
+        <a class="hb-more" data-go="43.1" href="#">See John 1’s links<svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></a>
+      </div>
+      <div class="hb-card hb-feat" style="--i:2">
+        <div class="hb-ch"><span class="tile-i teal"><svg class="i" aria-hidden="true"><use href="#i-map"/></svg></span><h2>Places and times in context</h2></div>
+        <p class="hb-feat-s">Where a book’s events happen, and when.</p>
+        <div class="hb-prev hb-ctx" id="prev-ctx"><div class="hb-mapbox" id="prev-map"></div><div class="hb-tl" id="prev-tl"></div></div>
+        <a class="hb-more" data-go="43.2" href="#">Explore John 2 in context<svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></a>
+      </div>
+      <div class="hb-card hb-feat" style="--i:3">
+        <div class="hb-ch"><span class="tile-i gold"><svg class="i" aria-hidden="true"><use href="#i-alpha"/></svg></span><h2>Hebrew and Greek, word by word</h2></div>
+        <p class="hb-feat-s">Each original word with its sound, meaning and Strong’s number.</p>
+        <div class="hb-prev hb-il" id="prev-il"></div>
+        <a class="hb-more" data-go="19.119.105" href="#">Study Psalm 119:105<svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></a>
+      </div>
+      <div class="hb-card hb-feat" style="--i:4">
+        <div class="hb-ch"><span class="tile-i red"><svg class="i" aria-hidden="true"><use href="#i-photo"/></svg></span><h2>Doré’s engravings</h2></div>
+        <p class="hb-feat-s" id="dore-s">Gustave Doré’s Bible engravings, each beside the verses it shows.</p>
+        <div class="hb-prev hb-dore" id="prev-dore"></div>
+        <a class="hb-more" data-go="1.1" href="#">Begin with Genesis 1<svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></a>
+      </div>
+      <div class="hb-card hb-map" style="--i:5">
+        <div class="hb-ch"><span class="tile-i indigo"><svg class="i" aria-hidden="true"><use href="#i-library"/></svg></span><h2>The whole Bible at a glance</h2></div>
+        <p class="hb-map-s">Choose a book, then a chapter, and start reading.</p>
+        <div class="hb-divs" id="map-guest"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="hb-foot hb-wrap">
+  <p><i data-lamp></i><span data-brand-name>Bible Lantern</span> · <span data-brand-domain></span></p>
+  <p>Scripture from the King James Version. Engravings by Gustave Doré (1832–1883), public domain.</p>
+</footer>
+
+<div class="hb-mock" role="group" aria-label="Mock-up controls">
+  <div class="segmented sm" id="hb-state" role="radiogroup" aria-label="Show the home page as"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-state="signed" aria-checked="true">Signed in</button><button type="button" role="radio" data-state="guest" aria-checked="false" tabindex="-1">Guest</button></div>
+  <button class="hb-theme" id="hb-theme" type="button" aria-pressed="false" aria-label="Dark appearance" title="Dark appearance"><svg class="i" aria-hidden="true"><use href="#i-moon"/></svg></button>
+</div>
+
+<dialog class="modal hb-viewer" id="hb-viewer" aria-labelledby="hb-viewer-t">
+  <div class="modal-head"><h2 class="modal-title" id="hb-viewer-t"></h2><button class="close-btn" type="button" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
+  <div class="modal-body"><figure><img id="hb-viewer-img" alt="" decoding="async"><figcaption id="hb-viewer-c"></figcaption></figure></div>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module">
+// ------------------------------------------------------------ the name and the line: change them here
+const BRAND = {
+  name: 'Bible Lantern',
+  domain: 'biblelantern.com',
+  line: 'Thy word is a lamp unto my feet, and a light unto my path.',
+  ref: 'Psalm 119:105',
+  refVersion: 'KJV',
+};
+// Mock links open the reader read-only (?dry), so a stray click from a mock never writes. The real home drops it.
+const APP = '../?dry';
+const DATA = '../data/';
+
+// ------------------------------------------------------------ sample personal data (mock only; the real page reads the profile)
+const SAMPLE = {
+  name: 'Ji',
+  cont: { b: 43, c: 3, v: 16, when: 'Yesterday evening' },
+  recentlyOpened: [[45, 8], [19, 119], [23, 40]],
+  streak: 12, best: 21,
+  week: [2, 3, 1, 2, 1, 3, 2],                 // chapters per day, Monday first; days after today are not shown as read
+  // chapters read per book: a count (chapters 1..n) or a list
+  read: { 1: 50, 2: 20, 8: 4, 19: [1, 2, 8, 16, 19, 23, 27, 32, 34, 40, 42, 46, 51, 62, 63, 84, 90, 91, 96, 100, 103, 104, 119, 121, 122, 139, 145, 146, 150], 20: 31, 21: 12, 23: 9, 32: 4, 40: 28, 41: 16, 42: 24, 43: 2, 44: 10, 45: 16, 48: 6, 49: 6, 50: 4, 51: 4, 58: 4, 59: 5, 62: 5, 66: 3 },
+  study: [
+    { kind: 'note', ref: [43, 3, 16], when: '2 h ago', text: 'God’s love is the motive; the gift of the Son is its measure.' },
+    { kind: 'highlight', ref: [45, 5, 8], when: 'Yesterday', colour: 'yellow' },
+    { kind: 'link', ref: [43, 3, 14], to: [4, 21, 9], when: 'Yesterday', text: 'The serpent lifted up in the wilderness' },
+    { kind: 'note', ref: [19, 119, 105], when: '3 days ago', text: 'Enough light for the next step, not the whole road.' },
+    { kind: 'highlight', ref: [23, 9, 2], when: '4 days ago', colour: 'blue' },
+  ],
+  totals: { notes: 48, highlights: 112, links: 17 },
+};
+
+// Verse of the day: a short curated list, picked by day of year (?day=N to preview another). Most have a Doré plate.
+const VOTD = [[1, 1, 3], [40, 2, 10], [19, 23, 1], [40, 14, 27], [43, 3, 16], [41, 4, 39], [20, 3, 5], [42, 15, 20], [43, 8, 12], [40, 28, 6], [23, 40, 31], [1, 28, 15], [40, 11, 28], [27, 6, 22]];
+const DIVS = [['Law', 1, 5], ['History', 6, 17], ['Wisdom', 18, 22], ['Prophets', 23, 39], ['Gospels and Acts', 40, 44], ['Letters', 45, 65], ['Revelation', 66, 66]];
+
+// ------------------------------------------------------------ helpers (as app/js/store.js and ui.js)
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const smart = s => String(s || '').replace(/(^|[\s(\[{—–-])'/g, '$1‘').replace(/'/g, '’').replace(/(^|[\s(\[{—–-])"/g, '$1“').replace(/"/g, '”');
+const RM = matchMedia('(prefers-reduced-motion: reduce)'), DARK = matchMedia('(prefers-color-scheme: dark)');
+const params = new URLSearchParams(location.search);
+const pad2 = n => String(n).padStart(2, '0');
+const f1 = n => n.toFixed(1);
+const num = n => Number(n).toLocaleString('en-GB');
+const plural = (n, w) => `${num(n)} ${w}${n === 1 ? '' : 's'}`;
+const icon = (n, cls = '') => `<svg class="i${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const later = fn => (window.requestIdleCallback || (f => setTimeout(f, 120)))(fn);
+const cache = new Map();
+const json = p => {
+  if (!cache.has(p)) cache.set(p, fetch(DATA + p).then(r => { if (!r.ok) throw new Error(`${p}: HTTP ${r.status}`); return r.json(); }).catch(e => { cache.delete(p); throw e; }));
+  return cache.get(p);
+};
+let META = null;
+const book = b => META.books[b - 1];
+const refName = (b, c, v) => `${b === 19 && c ? 'Psalm' : book(b).name}${c ? ' ' + c : ''}${v ? ':' + v : ''}`;
+const href = (b, c, v) => `${APP}#${b}/${c || 1}${v ? '/' + v : ''}`;
+const verseText = async (b, c, v) => smart((await json(`bibles/kjv/${pad2(b)}.json`))[c]?.[v - 1] || '');
+const abbr = B => B.osis.replace(/^(\d)/, '$1 ');
+const readSet = b => {
+  const r = SAMPLE.read[b], n = book(b).chapters.length;
+  return new Set(!r ? [] : Array.isArray(r) ? r.filter(c => c <= n) : Array.from({ length: Math.min(n, r) }, (_, i) => i + 1));
+};
+
+/** The lantern: monoline frame in the icon set's manner, with a lit flame. */
+const lampSVG = () => '<svg class="hb-lamp" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4.3a2 2 0 014 0"/><path d="M8.3 7.4l1.3-3.1h4.8l1.3 3.1z"/><rect x="7.7" y="7.4" width="8.6" height="10.6" rx="2"/><path d="M8.9 18l-.6 2.6h7.4l-.6-2.6"/><path class="flame" d="M12 10.4c1.3 1.3 1.95 2.4 1.95 3.45a1.95 1.95 0 01-3.9 0c0-1.05.65-2.15 1.95-3.45z"/></svg>';
+
+function fillBrand() {
+  $$('[data-lamp]').forEach(el => { el.outerHTML = lampSVG(); });
+  $$('[data-brand-name]').forEach(el => { el.textContent = BRAND.name; });
+  $$('[data-brand-domain]').forEach(el => { el.textContent = BRAND.domain; });
+  $$('[data-brand-line]').forEach(el => { el.textContent = `“${BRAND.line}”`; });
+  $$('[data-brand-ref]').forEach(el => { el.textContent = `${BRAND.ref} (${BRAND.refVersion})`; });
+}
+
+// ------------------------------------------------------------ toast, dialog, radio (same behaviour as main.js / ui.js)
+let toastT = 0;
+function toast(msg) {
+  const t = $('#toast'); clearTimeout(toastT);
+  t.classList.remove('out'); t.hidden = false;
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span>`;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  toastT = setTimeout(() => { t.classList.add('out'); toastT = setTimeout(() => { t.hidden = true; t.classList.remove('out'); }, RM.matches ? 0 : 300); }, 4200);
+}
+function showDialog(d) { clearTimeout(d._closeT); d._closeT = 0; d.classList.remove('closing'); if (!d.open) d.showModal(); }
+function closeDialog(d) {
+  if (!d.open || d.classList.contains('closing')) return;
+  d.classList.add('closing'); clearTimeout(d._closeT);
+  d._closeT = setTimeout(() => { d._closeT = 0; if (!d.classList.contains('closing')) return; d.close(); d.classList.remove('closing'); }, RM.matches ? 0 : 180);
+}
+function moveInd(seg, still) {
+  const act = seg.querySelector('[aria-checked="true"]'), ind = seg.querySelector('.seg-ind');
+  if (!act || !ind || !act.offsetWidth) return;
+  if (still) seg.classList.add('no-anim');
+  ind.style.width = act.offsetWidth + 'px'; ind.style.transform = `translateX(${act.offsetLeft}px)`;
+  if (still) requestAnimationFrame(() => requestAnimationFrame(() => seg.classList.remove('no-anim')));
+}
+
+// ------------------------------------------------------------ rings and small charts
+function ringSVG(p, size, sw) {
+  const r = (size - sw) / 2, C = 2 * Math.PI * r, h = size / 2;
+  return `<svg class="hb-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle class="trk" cx="${h}" cy="${h}" r="${f1(r)}" stroke-width="${sw}"/><circle class="val" cx="${h}" cy="${h}" r="${f1(r)}" stroke-width="${sw}" stroke-dasharray="${C.toFixed(2)}" style="--off:${(C * (1 - Math.min(1, p))).toFixed(2)};--c:${C.toFixed(2)}" transform="rotate(-90 ${h} ${h})"/></svg>`;
+}
+const today = (() => {
+  const d = new Date(), y = d.getFullYear();
+  const doy = Math.round((Date.UTC(y, d.getMonth(), d.getDate()) - Date.UTC(y, 0, 0)) / 864e5);
+  return { d, doy, wd: (d.getDay() + 6) % 7 };   // wd: Monday = 0
+})();
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// ------------------------------------------------------------ signed in: Today
+async function renderSigned() {
+  const { d, wd } = today, h = d.getHours();
+  $('#hb-date').textContent = `${DAYS[wd]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  $('#hb-greet').textContent = `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${SAMPLE.name}`;
+  renderStats();
+  bookMap($('#map-signed'), true);
+  await Promise.all([renderContinue(), renderVotd(), renderRecent()].map(p => p.catch(err => console.error(err))));
+}
+
+async function renderContinue() {
+  const { b, c, v, when } = SAMPLE.cont, B = book(b), nv = B.chapters[c - 1], nch = B.chapters.length, p = v / nv;
+  $('#cont-when').textContent = when;
+  const done = readSet(b);
+  const path = Array.from({ length: nch }, (_, i) => `<li class="${done.has(i + 1) ? 'read' : i + 1 === c ? 'now' : ''}"><i></i></li>`).join('');
+  $('#cont-body').innerHTML = `<div>
+      <p class="hb-cont-t"><a href="${href(b, c, v)}">${esc(refName(b, c))}</a><span>Verse ${v} of ${nv}</span></p>
+      <p class="hb-quote" id="cont-q"></p>
+      <div class="hb-path"><ol aria-hidden="true">${path}</ol><p><span>${esc(B.name)} · chapter ${c} of ${nch}</span><span>${plural(done.size, 'chapter')} read</span></p></div>
+      <div class="hb-actions"><a class="btn btn-primary hb-lg" href="${href(b, c, v)}">Resume</a>${SAMPLE.recentlyOpened.map(([rb, rc]) => `<a class="chip" href="${href(rb, rc)}">${esc(refName(rb, rc))}</a>`).join('')}</div>
+    </div>
+    <div class="hb-ringbox">${ringSVG(p, 118, 11)}<span class="hb-ring-l"><b>${Math.round(p * 100)}%</b><small>of ${esc(refName(b, c))}</small></span></div>`;
+  $('#cont-q').textContent = await verseText(b, c, v);
+}
+
+async function renderVotd() {
+  const n = params.has('day') ? Math.max(0, +params.get('day') || 0) : today.doy;
+  const [b, c, v] = VOTD[n % VOTD.length];
+  const [text, art] = await Promise.all([verseText(b, c, v), json('art.json').catch(() => ({ plates: [] }))]);
+  const inRef = r => Array.isArray(r) && r[0] === b && r[1] === c && v >= r[2] && v <= (r[3] || r[2]);
+  const plate = (art.plates || []).find(p => inRef(p.ref) || (p.also || []).some(inRef));
+  const { d } = today;
+  $('#votd').innerHTML = `<div class="hb-ch">${lampSVG()}<h2>Verse of the day</h2><span class="hb-meta">${d.getDate()} ${MONTHS[d.getMonth()]}</span></div>
+    <div class="hb-votd-main"><blockquote class="hb-votd-q${text.length > 120 ? ' long' : text.length < 70 ? ' short' : ''}"><p>${esc(text)}</p></blockquote>
+    <p class="hb-votd-ref"><a class="hb-stretch" href="${href(b, c, v)}">${esc(refName(b, c, v))}<span class="sr">, open the verse</span></a><span>KJV</span>${icon('chev-right')}</p></div>
+    ${plate ? `<figure class="hb-plate"><button class="hb-plate-btn" type="button" data-plate="${esc(plate.id)}" title="View full screen"><img src="${DATA}art/${esc(plate.id)}-s.jpg" width="${plate.sw}" height="${plate.sh}" alt="${esc(altOf(plate))}" decoding="async"></button>
+      <figcaption><b>${esc(smart(plate.title))}</b>Gustave Doré, 1866<br><button type="button" data-plate="${esc(plate.id)}">View the engraving</button></figcaption></figure>` : ''}`;
+}
+const altOf = p => { const s = smart(p.scene || '').trim(); return smart(p.title) + (s ? `. ${s}${/[.!?…]["'”’]?$/.test(s) ? '' : '.'}` : ''); };
+
+function renderStats() {
+  const { wd } = today, letters = 'MTWTFSS';
+  const streakDays = SAMPLE.week.map((_, i) => i <= wd && wd - i < SAMPLE.streak);
+  $('#streak').innerHTML = `<div class="hb-ch"><span class="tile-i orange">${icon('flame')}</span><h2>Reading streak</h2></div>
+    <p class="hb-num">${SAMPLE.streak}<small>days</small></p><p class="hb-sub">Best: ${SAMPLE.best} days</p>
+    <ol class="hb-week-dots" aria-label="This week">${letters.split('').map((l, i) => `<li class="${streakDays[i] ? 'on' : ''}${i === wd ? ' today' : ''}"><i></i><span aria-hidden="true">${l}</span><span class="sr">${DAYS[i]}${i > wd ? ', not yet' : streakDays[i] ? ', read' : ', not read'}</span></li>`).join('')}</ol>`;
+  const week = SAMPLE.week.map((n, i) => (i <= wd ? n : 0)), total = week.reduce((a, z) => a + z, 0), max = Math.max(1, ...week);
+  $('#week').innerHTML = `<div class="hb-ch"><span class="tile-i blue">${icon('calendar')}</span><h2>This week</h2></div>
+    <p class="hb-num">${total}<small>${total === 1 ? 'chapter' : 'chapters'} this week</small></p><p class="hb-sub">${(total / (wd + 1)).toFixed(1)} a day on average</p>
+    <ol class="hb-bars" aria-label="Chapters read each day this week">${week.map((n, i) => `<li class="${i > wd ? 'later' : n ? '' : 'z'}${i === wd ? ' today' : ''}"><i style="--h:${(n / max).toFixed(3)};--n:${i}"></i><span aria-hidden="true">${letters[i]}</span><span class="sr">${DAYS[i]}: ${i > wd ? 'not yet' : plural(n, 'chapter')}</span></li>`).join('')}</ol>`;
+  // whole Bible
+  const tally = (a, z) => { let got = 0, tot = 0; for (let b = a; b <= z; b++) { got += readSet(b).size; tot += book(b).chapters.length; } return [got, tot]; };
+  const [got, tot] = tally(1, 66), [og, ot] = tally(1, 39), [ng, nt] = tally(40, 66), p = got / tot;
+  const begun = META.books.filter(B => readSet(B.n).size).length, finished = META.books.filter(B => readSet(B.n).size === B.chapters.length).length;
+  $('#bible').innerHTML = `<div class="hb-ch"><span class="tile-i indigo">${icon('book')}</span><h2>Whole Bible</h2></div>
+    <div class="hb-bible-body"><div class="hb-bible-in"><div class="hb-ringbox">${ringSVG(p, 96, 10)}<span class="hb-ring-l"><b>${Math.round(p * 100)}%</b></span></div>
+      <div><p class="hb-num" style="font-size:24px">${num(got)}<small>of ${num(tot)} chapters</small></p><p class="hb-sub">Old Testament ${Math.round(og / ot * 100)}% · New ${Math.round(ng / nt * 100)}%<br>${plural(begun, 'book')} begun · ${num(finished)} finished</p></div></div>
+    <ul class="hb-dv" aria-label="Read by division">${DIVS.map(([name, a, z]) => { const [g, t] = tally(a, z); return `<li><span>${esc(name)}</span><i aria-hidden="true" style="--p:${(g / t).toFixed(3)};--c:var(--${a < 40 ? 'ot' : 'nt'})"><b></b></i><span>${Math.round(g / t * 100)}%</span></li>`; }).join('')}</ul></div>`;
+}
+
+async function renderRecent() {
+  const rows = await Promise.all(SAMPLE.study.map(async s => {
+    const [b, c, v] = s.ref, ref = refName(b, c, v);
+    if (s.kind === 'note') return `<li><a class="hb-act" href="${href(b, c, v)}"><span class="tile-i gold">${icon('note')}</span><span class="hb-act-b"><span class="hb-act-t"><b>${esc(ref)}</b> <span>· Note</span></span><span class="hb-act-s">${esc(s.text)}</span></span><time>${esc(s.when)}</time></a></li>`;
+    if (s.kind === 'link') { const [tb, tc, tv] = s.to; return `<li><a class="hb-act" href="${href(b, c, v)}"><span class="tile-i indigo">${icon('link-node')}</span><span class="hb-act-b"><span class="hb-act-t"><b>${esc(ref)}</b> <span>to</span> <b>${esc(refName(tb, tc, tv))}</b> <span>· Link</span></span><span class="hb-act-s">${esc(s.text)}</span></span><time>${esc(s.when)}</time></a></li>`; }
+    const text = await verseText(b, c, v).catch(() => '');
+    return `<li><a class="hb-act" href="${href(b, c, v)}"><span class="hb-sw" style="--sw:var(--sw-${s.colour})" aria-hidden="true"></span><span class="hb-act-b"><span class="hb-act-t"><b>${esc(ref)}</b> <span>· Highlight, ${esc(s.colour)}</span></span><span class="hb-act-s"><mark class="${esc(s.colour)}">${esc(text)}</mark></span></span><time>${esc(s.when)}</time></a></li>`;
+  }));
+  $('#recent').innerHTML = rows.join('');
+  const t = SAMPLE.totals;
+  $('#recent-f').innerHTML = `<span>${plural(t.notes, 'note')} · ${plural(t.highlights, 'highlight')} · ${plural(t.links, 'link')}</span>`;
+  $('#recent-all').href = APP;
+}
+
+// ------------------------------------------------------------ the book map (both states)
+function bookMap(host, progress) {
+  const id = host.id;
+  host.innerHTML = DIVS.map(([name, a, z], di) => {
+    const bs = META.books.slice(a - 1, z);
+    const tot = bs.reduce((s, B) => s + B.chapters.length, 0), got = progress ? bs.reduce((s, B) => s + readSet(B.n).size, 0) : 0;
+    const tiles = bs.map(B => {
+      const n = B.chapters.length, r = progress ? readSet(B.n).size : 0, p = r / n, here = progress && B.n === SAMPLE.cont.b;
+      const label = progress ? `${B.name}, ${r} of ${plural(n, 'chapter')} read${here ? ', reading now' : ''}` : `${B.name}, ${plural(n, 'chapter')}`;
+      return `<button class="hb-bk${p >= 1 ? ' done' : p > 0 ? ' part' : ''}${here ? ' here' : ''}" type="button" data-b="${B.n}" aria-expanded="false" aria-controls="${id}-ch${di}" aria-label="${esc(label)}" title="${esc(B.name)}" style="--p:${p.toFixed(3)}">${esc(abbr(B))}</button>`;
+    }).join('');
+    const sub = progress ? `${num(got)} of ${num(tot)} chapters read` : `${plural(bs.length, 'book')} · ${num(tot)} chapters`;
+    return `<div class="hb-div" role="group" aria-labelledby="${id}-d${di}"><div class="hb-div-h"><h3 id="${id}-d${di}">${esc(name)}</h3><p>${sub}</p></div>
+      <div class="hb-books">${tiles}</div><div class="hb-chs" id="${id}-ch${di}" hidden></div></div>`;
+  }).join('');
+  host.dataset.progress = progress ? '1' : '';
+}
+function openBook(btn) {
+  const host = btn.closest('.hb-divs'), panel = document.getElementById(btn.getAttribute('aria-controls'));
+  const was = btn.getAttribute('aria-expanded') === 'true';
+  $$('.hb-bk[aria-expanded="true"]', host).forEach(x => x.setAttribute('aria-expanded', 'false'));
+  $$('.hb-chs', host).forEach(p => { p.hidden = true; p.innerHTML = ''; });
+  if (was) return;
+  const b = +btn.dataset.b, B = book(b), progress = !!host.dataset.progress, read = progress ? readSet(b) : new Set();
+  const here = progress && b === SAMPLE.cont.b ? SAMPLE.cont.c : 0;
+  const next = here || (read.size && read.size < B.chapters.length ? B.chapters.findIndex((_, i) => !read.has(i + 1)) + 1 : 0);
+  btn.setAttribute('aria-expanded', 'true');
+  panel.innerHTML = `<div class="hb-chs-h"><h4>${esc(B.name)}</h4><span>${plural(B.chapters.length, 'chapter')}${progress ? ` · ${num(read.size)} read` : ''}</span>
+      <a class="btn btn-tinted sm" href="${href(b, next || 1)}">${next ? `Continue with ${esc(refName(b, next))}` : `Open ${esc(refName(b, 1))}`}</a><button class="close-btn" type="button" data-close-book aria-label="Close ${esc(B.name)}">${icon('xmark')}</button></div>
+    <ol class="hb-cgrid" aria-label="${esc(B.name)} chapters">${B.chapters.map((_, i) => { const c = i + 1, r = read.has(c); return `<li><a class="hb-c${r ? ' read' : ''}${c === here ? ' here' : ''}" href="${href(b, c)}" aria-label="${esc(refName(b, c))}${r ? ', read' : c === here ? ', reading now' : ''}">${c}</a></li>`; }).join('')}</ol>`;
+  panel.hidden = false;
+}
+function bindMaps() {
+  $$('.hb-divs').forEach(host => {
+    host.addEventListener('click', e => {
+      const bk = e.target.closest('.hb-bk'); if (bk) { openBook(bk); return; }
+      const x = e.target.closest('[data-close-book]'); if (x) { const btn = $('.hb-bk[aria-expanded="true"]', host); if (btn) { openBook(btn); btn.focus(); } }
+    });
+    host.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const btn = $('.hb-bk[aria-expanded="true"]', host); if (!btn) return;
+      e.preventDefault(); openBook(btn); btn.focus();
+    });
+  });
+}
+
+// ------------------------------------------------------------ guest
+let guestDone = false;
+async function renderGuest() {
+  const verses = META.books.reduce((s, B) => s + B.chapters.reduce((a, z) => a + z, 0), 0);
+  const links = META.books.reduce((s, B) => s + Object.values(B.xo || {}).reduce((a, z) => a + z, 0), 0);
+  const facts = [['books', 66], ['verses', verses], ['cross-references', links], ['Doré engravings', null]];
+  const drawFacts = plates => { $('#facts').innerHTML = facts.map(([l, n]) => `<div><dt>${esc(l)}</dt><dd>${n == null ? (plates ? num(plates) : '—') : num(n)}</dd></div>`).join(''); };
+  drawFacts(0);
+  bookMap($('#map-guest'), false);
+  if (guestDone) return;
+  guestDone = true;
+  const art = await json('art.json').catch(() => null);
+  if (art) { drawFacts(art.plates.length); renderDore(art); }
+  await Promise.all([renderArcs(), renderCtx(), renderInterlinear()].map(p => p.catch(err => console.error(err))));
+}
+
+// cross-reference arcs from John 1 (canon geometry as viz.js: chapter-weighted segments)
+const ARC = { b: 43, c: 1 };
+let arcData = null;
+async function renderArcs() {
+  arcData = arcData || await json(`xref/${pad2(ARC.b)}.json`);
+  drawArcs(!RM.matches);
+}
+function drawArcs(animate) {
+  const host = $('#prev-arcs'), W = Math.max(240, Math.round(host.clientWidth)), H = Math.max(200, Math.round(host.clientHeight));
+  if (!arcData || !host.clientWidth) return;
+  host.dataset.w = Math.round(host.clientWidth);
+  const books = META.books, chs = books.map(B => B.chapters.length), total = chs.reduce((a, z) => a + z, 0), pad = 14, usable = W - pad * 2;
+  let ws = chs.map(n => Math.max(2, usable * n / total)); const sum = ws.reduce((a, z) => a + z, 0); ws = ws.map(w => w * usable / sum);
+  const segs = []; let x = pad; ws.forEach(w => { segs.push([x, x + w]); x += w; });
+  const xAt = (b, c, v) => { const s = segs[b - 1], B = books[b - 1]; const f = ((c - 1) + (v ? (v - 0.5) / Math.max(1, B.chapters[c - 1] || 1) : 0.5)) / B.chapters.length; return s[0] + Math.min(1, Math.max(0, f)) * (s[1] - s[0]); };
+  const base = H - 30, links = [];
+  for (const [k, list] of Object.entries(arcData)) {
+    const [c, v] = k.split(':').map(Number); if (c !== ARC.c) continue;
+    for (const t of list) links.push({ v, b: t[0], c: t[1], tv: t[2], votes: Math.max(0, Math.round(+t[4]) || 0) });
+  }
+  const shown = links.sort((a, z) => z.votes - a.votes).slice(0, 320).reverse(), max = Math.max(1, ...shown.map(l => l.votes));
+  let paths = ''; const drawn = [];
+  shown.forEach((l, i) => {
+    const x1 = xAt(ARC.b, ARC.c, l.v), x2 = xAt(l.b, l.c, l.tv), dx = Math.abs(x2 - x1); if (dx < 1.5) return;
+    drawn.push(l);
+    const ah = Math.max(4, (base - 34) * Math.pow(dx / usable, 0.62)), t = Math.sqrt(l.votes / max);
+    paths += `<path class="arc ${l.b <= 39 ? 'ot' : 'nt'}" pathLength="1" style="--o:${(0.12 + 0.74 * t).toFixed(2)};--w:${(0.6 + 1.9 * t).toFixed(2)}px;--d:${Math.round(i * 2)}" d="M${f1(x1)} ${base}Q${f1((x1 + x2) / 2)} ${f1(base - 2 * ah)} ${f1(x2)} ${base}"/>`;
+  });
+  const bar = segs.map(([a, z], i) => `<rect class="cb ${i < 39 ? 'ot' : 'nt'}${i + 1 === ARC.b ? ' cur' : ''}" x="${f1(a)}" y="${base + 4}" width="${f1(Math.max(0.6, z - a - 0.7))}" height="4" rx="1"/>`).join('');
+  // the current chapter's label wins; an end label it would touch is left out
+  const cur = refName(ARC.b, ARC.c), cw = cur.length * 6.6, lx = Math.min(W - pad - cw / 2, Math.max(pad + cw / 2, (segs[ARC.b - 1][0] + segs[ARC.b - 1][1]) / 2));
+  const labels = (lx - cw / 2 > pad + 56 ? `<text class="lbl" x="${pad}" y="${base + 22}">Genesis</text>` : '') + `<text class="lbl cur" x="${f1(lx)}" y="${base + 22}" text-anchor="middle">${esc(cur)}</text>`
+    + (lx + cw / 2 < W - pad - 70 ? `<text class="lbl" x="${W - pad}" y="${base + 22}" text-anchor="end">Revelation</text>` : '');
+  const ot = drawn.filter(l => l.b <= 39).length;
+  host.innerHTML = `<p class="hb-arc-cap"><b>${num(links.length)} links</b> leave ${esc(refName(ARC.b, ARC.c))}</p><svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(`Arcs from ${refName(ARC.b, ARC.c)} to the rest of the Bible: the ${drawn.length} strongest of ${links.length} links, ${ot} to the Old Testament and ${drawn.length - ot} to the New`)}"><g class="hb-arcs${animate ? ' anim' : ''}">${paths}</g>${bar}${labels}</svg>`;
+}
+
+// context: John's places on the stylised Levant (viz.js LEVANT and mapSVG, simplified) and its events by year
+const LEVANT = {
+  coast: [[34.2, 35.62], [33.9, 35.47], [33.56, 35.37], [33.27, 35.2], [33.09, 35.1], [32.93, 35.07], [32.83, 34.96], [32.61, 34.92], [32.5, 34.89], [32.2, 34.81], [32.05, 34.75], [31.8, 34.63], [31.67, 34.55], [31.52, 34.44], [31.3, 34.24], [31.15, 33.8], [31.08, 33.3], [31.05, 32.6]],
+  galilee: [[32.9, 35.6], [32.88, 35.64], [32.82, 35.65], [32.75, 35.64], [32.7, 35.59], [32.72, 35.55], [32.79, 35.52], [32.86, 35.54]],
+  dead: [[31.77, 35.52], [31.76, 35.58], [31.66, 35.57], [31.53, 35.51], [31.42, 35.51], [31.3, 35.5], [31.18, 35.47], [31.08, 35.43], [31.05, 35.39], [31.13, 35.38], [31.3, 35.4], [31.45, 35.43], [31.6, 35.46], [31.72, 35.47]],
+  jordanN: [[33.26, 35.63], [33.12, 35.61], [33.02, 35.63], [32.91, 35.61]],
+  jordanS: [[32.71, 35.57], [32.62, 35.58], [32.52, 35.56], [32.4, 35.555], [32.3, 35.565], [32.18, 35.53], [32.05, 35.525], [31.93, 35.535], [31.84, 35.545], [31.77, 35.55]],
+  regions: [['GALILEE', 32.86, 35.3], ['SAMARIA', 32.24, 35.19], ['JUDEA', 31.5, 34.98], ['PEREA', 32.0, 35.78]],
+};
+function smoothPath(pts, closed) {
+  if (pts.length < 3) return 'M' + pts.map(p => p.map(f1).join(' ')).join('L');
+  const Q = closed ? [pts[pts.length - 1], ...pts, pts[0], pts[1]] : [pts[0], ...pts, pts[pts.length - 1]];
+  let d = `M${f1(Q[1][0])} ${f1(Q[1][1])}`;
+  for (let i = 1; i < Q.length - 2; i++) {
+    const [p0, p1, p2, p3] = [Q[i - 1], Q[i], Q[i + 1], Q[i + 2]];
+    d += `C${f1(p1[0] + (p2[0] - p0[0]) / 6)} ${f1(p1[1] + (p2[1] - p0[1]) / 6)} ${f1(p2[0] - (p3[0] - p1[0]) / 6)} ${f1(p2[1] - (p3[1] - p1[1]) / 6)} ${f1(p2[0])} ${f1(p2[1])}`;
+  }
+  return d + (closed ? 'Z' : '');
+}
+let ctxData = null;
+async function renderCtx() {
+  if (!ctxData) {
+    const [ctx, places, events] = await Promise.all([json('context/43.json'), json('places.json'), json('events.json')]);
+    const pc = new Map(), ec = new Set();
+    for (const ch of Object.values(ctx)) for (const x of Object.values(ch.v || {})) { (x.pl || []).forEach(id => pc.set(id, (pc.get(id) || 0) + 1)); (x.e || []).forEach(id => ec.add(id)); }
+    // towns and sites only (regions and waters are drawn by the base map); nearby duplicates keep the most-mentioned
+    const pts = [];
+    [...pc.entries()].map(([id, n]) => ({ ...places[id], id, n2: n })).filter(p => p && p.lat && p.lon && !/region|water|river|sea|lake|mountain|hill|valley|wilderness/i.test(p.ft || ''))
+      .sort((a, z) => z.n2 - a.n2).forEach(p => { if (!pts.some(q => Math.abs(q.lat - p.lat) < 0.03 && Math.abs(q.lon - p.lon) < 0.03)) pts.push(p); });
+    const evs = [...ec].map(id => events[id]).filter(e => e && Number.isFinite(e.y) && !/satan|devil|angel/i.test(e.t || ''));
+    ctxData = { pts, evs };
+  }
+  drawCtx();
+}
+function drawCtx() {
+  const host = $('#prev-map'), W = Math.round(host.clientWidth), H = Math.max(150, Math.round(host.clientHeight));
+  if (!ctxData || !W) return;
+  host.dataset.w = W;
+  const pts = ctxData.pts;
+  let la0 = Math.min(...pts.map(p => p.lat)), la1 = Math.max(...pts.map(p => p.lat)), lo0 = Math.min(...pts.map(p => p.lon)), lo1 = Math.max(...pts.map(p => p.lon));
+  la0 -= 0.12; la1 += 0.1; lo0 -= 0.3; lo1 += 0.3;
+  const kx = Math.cos(((la0 + la1) / 2) * Math.PI / 180), scale = Math.min(W / ((lo1 - lo0) * kx), H / (la1 - la0));
+  const cLo = (lo0 + lo1) / 2 - 0.12, cLa = (la0 + la1) / 2, PJ = (la, lo) => [W / 2 + (lo - cLo) * kx * scale, H / 2 - (la - cLa) * scale];
+  const boxes = [], free = b => b[0] >= 2 && b[2] <= W - 2 && b[1] >= 2 && b[3] <= H - 2 && !boxes.some(q => b[0] < q[2] && b[2] > q[0] && b[1] < q[3] && b[3] > q[1]);
+  const proj = pts.map(p => { const [x, y] = PJ(p.lat, p.lon); return { p, x, y }; });
+  proj.forEach(q => boxes.push([q.x - 5, q.y - 5, q.x + 5, q.y + 5]));
+  let labels = ''; const named = new Set();
+  proj.slice(0, 10).forEach(({ p, x, y }) => {
+    if (named.has(p.n)) return;
+    const w = String(p.n).length * 6.4 + 2;
+    const c = [[x + 8, y + 4, 'start', [x + 7, y - 6, x + 8 + w, y + 6]], [x - 8, y + 4, 'end', [x - 8 - w, y - 6, x - 7, y + 6]], [x, y - 9, 'middle', [x - w / 2, y - 19, x + w / 2, y - 6]], [x, y + 17, 'middle', [x - w / 2, y + 6, x + w / 2, y + 19]]].find(k => free(k[3]));
+    if (!c) return;
+    boxes.push(c[3]); named.add(p.n);
+    labels += `<text class="pt-l" x="${f1(c[0])}" y="${f1(c[1])}" text-anchor="${c[2]}">${esc(p.n)}</text>`;
+  });
+  const coast = LEVANT.coast.map(p => PJ(p[0], p[1])), far = [PJ(30, 30), PJ(36, 30), PJ(36, 35.7)];
+  let base = `<path class="sea" d="${smoothPath(coast, false)}L${far.map(p => p.map(f1).join(' ')).join('L')}Z"/><path class="coast" d="${smoothPath(coast, false)}"/>`;
+  base += `<path class="sea lake" d="${smoothPath(LEVANT.galilee.map(p => PJ(p[0], p[1])), true)}"/><path class="sea lake" d="${smoothPath(LEVANT.dead.map(p => PJ(p[0], p[1])), true)}"/>`;
+  base += `<path class="river" d="${smoothPath(LEVANT.jordanN.map(p => PJ(p[0], p[1])), false)}"/><path class="river" d="${smoothPath(LEVANT.jordanS.map(p => PJ(p[0], p[1])), false)}"/>`;
+  LEVANT.regions.forEach(([n, la, lo]) => { const [x, y] = PJ(la, lo), w = n.length * 7.9, b = [x - w / 2, y - 8, x + w / 2, y + 2]; if (!free(b)) return; boxes.push(b); base += `<text class="region" x="${f1(x)}" y="${f1(y)}" text-anchor="middle">${n}</text>`; });
+  const pins = proj.map(({ x, y }) => `<circle class="pt" cx="${f1(x)}" cy="${f1(y)}" r="4"/>`).join('');
+  host.innerHTML = `<svg class="lev" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Map of places in John: ${pts.map(p => p.n).join(', ')}`)}">${base}${pins}${labels}</svg>`;
+  // timeline: events placed by year, spread within each year
+  const tl = $('#prev-tl'), TW = Math.round(tl.clientWidth - 28), evs = ctxData.evs;
+  if (!evs.length || TW < 100) { tl.hidden = true; return; }
+  const y0 = Math.min(...evs.map(e => e.y)), y1 = Math.max(...evs.map(e => e.y)), span = y1 - y0 + 1, yw = (TW - 12) / span;
+  const byYear = new Map(); evs.forEach(e => { byYear.set(e.y, [...(byYear.get(e.y) || []), e]); });
+  let dots = '', ticks = '';
+  for (let y = y0; y <= y1; y++) {
+    const x = 6 + (y - y0) * yw;
+    ticks += `<path class="tick" d="M${f1(x)} 16v6"/><text class="yr" x="${f1(x + 2)}" y="34">AD ${y}</text>`;
+    (byYear.get(y) || []).forEach((e, i, a) => { dots += `<circle class="ev" cx="${f1(x + yw * (i + 0.5) / a.length)}" cy="10" r="4"><title>${esc(smart(e.t))}, AD ${e.y}</title></circle>`; });
+  }
+  tl.innerHTML = `<svg viewBox="0 0 ${TW} 34" role="img" aria-label="${esc(`Timeline of John: ${evs.length} events from AD ${y0} to AD ${y1}`)}"><path class="axis" d="M0 10H${TW}"/>${ticks}${dots}</svg><p>${plural(evs.length, 'event')} in John, from AD ${y0} to AD ${y1}</p>`;
+}
+
+// Word by word: the lamp verse itself in Hebrew, Psalm 119:105, then the light of John 1:5 in Greek
+async function renderInterlinear() {
+  const [heb, grk] = await Promise.all([json('orig/19.json'), json('orig/43.json')]);
+  const clean = s => String(s || '').replace(/[\[\]]/g, '').replace(/[.,;]+$/, '').trim();
+  const li = w => `<li><span class="w" lang="${w[3][0] === 'H' ? 'he' : 'grc'}">${esc(String(w[0]).replace(/[׃־,.;·]/g, ''))}</span><span class="t">${esc(String(w[1]).replace(/-$/, '').replace(/'/g, 'ʼ'))}</span><span class="g">${esc(clean(w[2]))}</span><span class="s">${esc(w[3])}</span></li>`;
+  $('#prev-il').innerHTML = `<p class="hb-il-en">${esc(BRAND.line)}<small>${esc(BRAND.ref)}, read from right to left</small></p>
+    <ol class="hb-il-row" aria-label="Psalm 119:105 in Hebrew, word by word">${(heb['119:105'] || []).map(li).join('')}</ol>
+    <ol class="hb-il-row is-grk" aria-label="John 1:5 in Greek, word by word: the light shines in the darkness">${(grk['1:5'] || []).slice(1, 7).map(li).join('')}</ol>
+    <p class="hb-il-cap">John 1:5, the light shines in the darkness</p>`;
+}
+
+// three engravings, the first with light falling across it
+function renderDore(art) {
+  const pick = ['dore-001', 'dore-184', 'dore-021'].map(id => art.plates.find(p => p.id === id)).filter(Boolean);
+  $('#dore-s').textContent = `${num(art.plates.length)} engravings by Gustave Doré, each beside the verses it shows.`;
+  $('#prev-dore').innerHTML = pick.map(p => `<button type="button" data-plate="${esc(p.id)}" title="View full screen"><img src="${DATA}art/${esc(p.id)}-s.jpg" width="${p.sw}" height="${p.sh}" alt="${esc(altOf(p))}" loading="lazy" decoding="async"><span aria-hidden="true">${esc(smart(p.title))}</span></button>`).join('');
+}
+
+// ------------------------------------------------------------ engraving viewer
+async function openPlate(id) {
+  const art = await json('art.json'), p = art.plates.find(x => x.id === id); if (!p) return;
+  const d = $('#hb-viewer'), img = $('#hb-viewer-img'), r = p.ref || [];
+  $('#hb-viewer-t').textContent = smart(p.title);
+  img.src = `${DATA}art/${p.id}-s.jpg`; img.srcset = `${DATA}art/${p.id}-s.jpg ${p.sw}w, ${DATA}art/${p.id}.jpg ${p.w}w`; img.sizes = '(max-width: 760px) 100vw, 680px';
+  img.width = p.w; img.height = p.h; img.alt = altOf(p);
+  $('#hb-viewer-c').innerHTML = `${esc(smart(p.scene || ''))}<small>${r[0] ? esc(`${refName(r[0], r[1], r[2])}${r[3] && r[3] !== r[2] ? '–' + r[3] : ''} · `) : ''}Gustave Doré, La Grande Bible de Tours, 1866 · Public domain</small>`;
+  showDialog(d);
+}
+
+// ------------------------------------------------------------ search (mock: references jump to the reader)
+function parseRef(q) {
+  const m = q.trim().match(/^([1-3]?\s*[a-z][a-z .]*?)\.?\s*(\d+)?(?:\s*[:.]\s*(\d+))?$/i); if (!m) return null;
+  const key = m[1].replace(/[\s.]+/g, '').toLowerCase(), norm = s => s.replace(/\s+/g, '').toLowerCase();
+  const B = META.books.find(b => [b.name, b.osis, b.short].some(n => norm(n) === key)) || (key === 'songofsolomon' && META.books[21]) || (key.length >= 3 ? META.books.find(b => norm(b.name).startsWith(key)) : null);
+  if (!B) return null;
+  const c = m[2] ? +m[2] : 1, v = m[3] ? +m[3] : 0;
+  if (c < 1 || c > B.chapters.length || (m[3] && v < 1) || v > B.chapters[c - 1]) return null;
+  return [B.n, c, v];
+}
+
+// ------------------------------------------------------------ state and theme
+function setState(s, write) {
+  document.body.dataset.state = s;
+  $('#v-signed').hidden = s !== 'signed'; $('#v-guest').hidden = s !== 'guest';
+  const seg = $('#hb-state');
+  $$('[role=radio]', seg).forEach(b => { const on = b.dataset.state === s; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+  moveInd(seg, !write);
+  if (write) {
+    const u = new URL(location.href);
+    if (s === 'guest') u.searchParams.set('state', 'guest'); else u.searchParams.delete('state');
+    history.replaceState(null, '', u);
+  }
+  document.title = s === 'guest' ? `${BRAND.name} · ${BRAND.line.split(',')[0]}` : `Today · ${BRAND.name}`;
+  if (s === 'guest') renderGuest().catch(err => console.error(err));
+}
+const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : DARK.matches; };
+const syncTheme = () => $('#hb-theme').setAttribute('aria-pressed', String(isDark()));
+
+function bind() {
+  const seg = $('#hb-state');
+  seg.addEventListener('click', e => { const b = e.target.closest('[role=radio]'); if (b) setState(b.dataset.state, true); });
+  seg.addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const items = $$('[role=radio]', seg); let i = items.findIndex(b => b.getAttribute('aria-checked') === 'true');
+    const fwd = e.key === 'ArrowRight' || e.key === 'ArrowDown';
+    i = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (fwd ? 1 : -1) + items.length) % items.length;
+    items[i].focus(); setState(items[i].dataset.state, true);
+  });
+  $('#hb-theme').addEventListener('click', () => {
+    const t = isDark() ? 'light' : 'dark', u = new URL(location.href);
+    document.documentElement.dataset.theme = t; u.searchParams.set('theme', t); history.replaceState(null, '', u);
+    syncTheme();
+  });
+  DARK.addEventListener('change', syncTheme);
+  $('#hb-search').addEventListener('submit', e => {
+    e.preventDefault();
+    const q = $('#hb-q').value.trim(); if (!q) return;
+    const r = parseRef(q);
+    if (r) { location.href = href(...r); return; }
+    toast(`In the full app, this searches every verse, word and Strong’s number for “${q}”.`);
+  });
+  document.addEventListener('click', e => {
+    const pl = e.target.closest('[data-plate]'); if (pl) { openPlate(pl.dataset.plate).catch(err => console.error(err)); return; }
+    if (e.target.closest('[data-signin]')) { setState('signed', true); scrollTo({ top: 0, behavior: RM.matches ? 'auto' : 'smooth' }); $('#main').focus({ preventScroll: true }); toast('Signed in. This is the home page a returning reader sees.'); return; }
+    if (e.target.closest('[data-invite]')) toast('In the full app, an invite opens the form to create your profile.');
+  });
+  const viewer = $('#hb-viewer');
+  viewer.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target === viewer) closeDialog(viewer); });
+  viewer.addEventListener('cancel', e => { e.preventDefault(); closeDialog(viewer); });
+  bindMaps();
+  // redraw the measured previews when their tiles change size (debounced, without the draw-in)
+  let rT = 0;
+  const grew = el => el.dataset.w && Math.round(el.clientWidth) !== +el.dataset.w;   // not on first show, so the draw-in plays
+  const redraw = () => { clearTimeout(rT); rT = setTimeout(() => { if (grew($('#prev-arcs'))) drawArcs(false); if (grew($('#prev-map'))) drawCtx(); }, 200); };
+  new ResizeObserver(redraw).observe($('#v-guest'));
+  addEventListener('resize', () => { moveInd(seg, true); redraw(); });
+}
+
+// ------------------------------------------------------------ start
+const th = params.get('theme');
+if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th;
+fillBrand();
+$$('a[data-go]').forEach(a => { a.href = href(...a.dataset.go.split('.').map(Number)); });
+$('#start').href = href(43, 1);
+syncTheme();
+bind();
+try {
+  META = await json('meta.json');
+  await renderSigned();
+} catch (err) {
+  console.error(err);
+  toast('The Bible data could not be loaded. Is the server running with --dev?');
+}
+setState(params.get('state') === 'guest' ? 'guest' : 'signed', false);
+</script>
+</body>
+</html>
