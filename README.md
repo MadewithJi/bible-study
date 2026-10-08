@@ -1,4 +1,4 @@
-# Bible Study
+# Bible Lantern
 
 A local, single-user Bible study app: read the whole Bible, click any verse to open a side drawer with ranked cross-references (readable in context), historical context (dated events, people, places on a map, book introductions), the Hebrew/Greek behind every word with Strong's definitions and a full concordance, your own notes/highlights/tags, and YouTube videos saved to verses and played in-app. Visual link views: a whole-Bible cross-reference arc diagram, a force-directed link graph, a timeline and maps.
 
@@ -33,7 +33,7 @@ Data layout (`notes/` unless `--data-dir`):
 | `users.json` | profiles (email, name, password hash; never the password) |
 | `sessions.json` | signed-in browsers (only a SHA-256 of each session token) |
 | `profiles/<id>/notes.json`, `library.json` | one profile's notes and bookmarks/progress |
-| `deleted/<id>-<date>/` | a deleted profile's files (remove by hand to erase them for good) |
+| `deleted/<id>-<date>/` | a deleted profile's files on your Mac (remove by hand to erase them for good); on the site a deleted profile is erased at once and nothing is kept here |
 | `profiles/<id>/user.json` | who owns that folder (email and name, never the password hash) |
 | `*.bak` | a daily backup taken before a notes, library or `users.json` file is overwritten |
 
@@ -55,6 +55,7 @@ Keys: ESV at <https://api.esv.org/> · NLT at <https://api.nlt.to/>.
 
 ## Features & shortcuts
 
+- **Home** `h` (or the Bible Lantern wordmark) — a URL without a chapter opens Home rather than the last chapter. Signed in, or as a guest on your own computer, it shows the verse of the day with its Doré engraving, Continue reading (where you left off), your latest notes, highlights and links, your streak and chapters this week, and the whole Bible as a map shaded by what you've read. A hosted site's guest sees the welcome page instead. `#43/3` still opens John 3 directly, and Back returns to Home.
 - **Links** tab — OpenBible.info cross-references ranked by community votes; expand any to read it with two verses of context, jump to it (↶ brings you back), or drop a `[[reference]]` into your note. Topics that cite the verse are listed underneath.
 - **Context** tab — year of the events, writer, the chapter's events on a whole-Bible timeline, people (lifespans, relations, Easton's dictionary), places (mini map), and an introduction to the book (author, date, audience, setting, purpose, themes, outline).
 - **Original** tab / `o` — word-by-word Hebrew (Leningrad codex) or Greek (all major editions; amber = textual variant between the KJV's Greek and modern editions) with transliteration, gloss, parsed morphology, Strong's number → definition and every occurrence.
@@ -67,11 +68,13 @@ Keys: ESV at <https://api.esv.org/> · NLT at <https://api.nlt.to/>.
 Optional: the same code can also run as a small invite-only website, with the reader on Vercel and the server and your data on Railway. Local use doesn’t change. With none of the variables below set, `python3 serve.py` behaves exactly as described above.
 
 ```
-browser ──► Vercel (project bible-study): app/ as static files on Vercel’s CDN
+browser ──► Vercel (team koum-studio, project bible-study): app/ as static files on Vercel’s CDN
               └─ /api/* proxied by vercel.json ──► Railway (project bible-study, service api): python3 serve.py
                                                       └─ volume /data: profiles, notes, links, highlights, library, settings
 GitHub (public repo) ── push to main ──► both redeploy
 ```
+
+The live site is https://www.biblelantern.com (the apex `biblelantern.com` redirects to it), with the server at `api-production-7fa2.up.railway.app`. The Vercel project also answers on `bible-study-seven-blond.vercel.app`.
 
 - The browser only ever talks to the Vercel domain. `vercel.json` proxies `/api/*` to Railway, so the session cookie, the same-origin checks and the `X-BS-Scope` header work as they do locally.
 - Railway serves `app/` as well, so its own domain is a working fallback.
@@ -79,9 +82,9 @@ GitHub (public repo) ── push to main ──► both redeploy
 
 | File | What |
 |---|---|
-| `vercel.json` | serves `app/` with no build step, proxies `/api/*` to `RAILWAY_HOST`, sets cache and security headers |
+| `vercel.json` | serves `app/` with no build step, proxies `/api/*` to the Railway domain, sets cache and security headers |
 | `.vercelignore` | sends only `app/` (without `app/mock/` and dotfiles) and `vercel.json` to Vercel |
-| `railway.json` | Railpack build, `python3 serve.py`, healthcheck `/api/health`, restart on failure |
+| `railway.json` | Railpack build, `python3 serve.py`, healthcheck `/api/health`, restart policy Always |
 | `.python-version` | Python 3.12 on Railway (the code still runs on the Mac’s Python 3.9) |
 | `requirements.txt` | only a comment: nothing needs installing, it only tells Railway’s builder that this is a Python app |
 
@@ -93,25 +96,27 @@ Caching: `index.html`, `js/` and `css/` revalidate on every load (cheap 304s, an
 2. **Railway.** Create a project named bible-study, deploy the repo’s `main` branch into it and name the service api. On the service:
    - add a volume mounted at `/data`;
    - set the variables below;
-   - under Settings → Networking, generate a domain. That domain (for example `bible-study-api.up.railway.app`) is `RAILWAY_HOST`;
-   - check that the start command is `python3 serve.py`, the healthcheck path `/api/health` and the restart policy “On failure”. Railway reads `railway.json` only for services that still use config as code, so a new service takes these from its settings. Keep one replica: the data lives in files on one volume.
-3. **Vercel.** In `vercel.json`, replace `RAILWAY_HOST` with that domain, then commit and push. Create a project named bible-study from the repo, with the repo root as its root directory. The framework preset (Other), the output directory and the empty build all come from `vercel.json`, and Vercel needs no variables.
-4. Add the Vercel domain (and any custom domain) to `BS_ALLOWED_HOSTS` and `BS_ALLOWED_ORIGINS` on Railway.
-5. Check both ends: `https://<your-site>/api/health` and `https://<RAILWAY_HOST>/api/health` both answer `{"ok":true}`.
+   - under Settings → Networking, generate a domain (the live one is `api-production-7fa2.up.railway.app`);
+   - check that the start command is `python3 serve.py`, the healthcheck path `/api/health` and the restart policy “Always”. Railway reads `railway.json` only for services that still use config as code, so a new service takes these from its settings. Keep one replica: the data lives in files on one volume.
+3. **Vercel.** `vercel.json` rewrites `/api/*` to that Railway domain: change it there if yours differs, then commit and push. Create a project named bible-study from the repo, with the repo root as its root directory. The framework preset (Other), the output directory and the empty build all come from `vercel.json`, and Vercel needs no variables. Add the custom domain (www, with the apex redirecting to it) under the project’s Domains.
+4. **Hosts and origins.** Through the rewrite, serve.py always sees `Host` = the Railway domain, so `BS_ALLOWED_HOSTS` needs only that domain. `BS_ALLOWED_ORIGINS` must list every origin a browser uses for the site, or its writes (sign-in included) get 403 “Cross-site request blocked”: `https://www.biblelantern.com`, `https://biblelantern.com` and `https://bible-study-seven-blond.vercel.app`.
+5. Check both ends: `https://www.biblelantern.com/api/health` and `https://api-production-7fa2.up.railway.app/api/health` both answer `{"ok":true}`.
 6. Open the site and sign up with an owner email (no invite needed).
 
-**Railway variables.** All are optional: with none set, the server behaves exactly as it does on your Mac.
+**Railway variables.** All are optional locally (with none set, the server behaves exactly as it does on your Mac); with `BS_HOSTED` set, `BS_DATA_DIR` is required.
 
 | Variable | On Railway | What |
 |---|---|---|
 | `PORT` | set by Railway | the port to listen on (default for `--port`) |
 | `HOST` | `0.0.0.0` | listen on every interface (default for `--host`; locally it is `127.0.0.1`) |
-| `BS_DATA_DIR` | `/data` | where profiles, notes and settings live (default for `--data-dir`): the volume |
+| `BS_DATA_DIR` | `/data` | where profiles, notes and settings live (default for `--data-dir`): the volume. Required when `BS_HOSTED` is set: the server refuses to start on the container disk, and refuses when `RAILWAY_VOLUME_MOUNT_PATH` is set and the directory is not on that mount |
 | `BS_HOSTED` | `1` | hosted mode, below |
-| `BS_ALLOWED_HOSTS` | `bible-study-api.up.railway.app,bible-study.vercel.app` | Host names answered besides localhost (comma list; `*.up.railway.app` patterns work). Railway’s health check (Host `healthcheck.railway.app`) is answered without being listed. |
-| `BS_ALLOWED_ORIGINS` | `https://bible-study.vercel.app` | origins whose writes pass the same-origin check, besides the request’s own host (comma list) |
+| `BS_ALLOWED_HOSTS` | `api-production-7fa2.up.railway.app` | Host names answered besides localhost (comma list; `*.up.railway.app` patterns work). Behind the Vercel rewrite this is the only Host serve.py sees. Railway’s health check (Host `healthcheck.railway.app`) is answered without being listed. |
+| `BS_ALLOWED_ORIGINS` | `https://www.biblelantern.com,https://biblelantern.com,https://bible-study-seven-blond.vercel.app` | origins whose writes pass the same-origin check, besides the request’s own host (comma list): every origin a browser uses for the site |
 | `BS_TRUST_PROXY` | `1` | take the visitor’s IP from the first `X-Forwarded-For` hop (for the sign-in and sign-up rate limits and the auth log) and the scheme from `X-Forwarded-Proto`; never set it locally |
 | `BS_OWNER_EMAILS` | your email | comma list: these emails sign up without an invite, manage invites and use ESV/NLT |
+| `BS_PROXY_SECRET` | a long random string | when a request carries this value in an `X-BS-Proxy-Secret` header it came through Vercel, and the visitor’s address is read from `X-Vercel-Forwarded-For` (else `X-Real-IP`, else `X-Forwarded-For`); add the same header to the `/api` rewrite in Vercel (Routing Middleware). Without it, the auth log and the sign-in windows see Vercel’s egress address, keyed per email |
+| `BS_OWNER_SETUP_TOKEN` | a long random string | an owner email signs up without an invite only until a profile has claimed it (`DATA/owner-claims.json`); afterwards sign-up with that email needs an invite, or this token sent as `setupToken` in the sign-up body (for example after the owner profile was deleted or the data restored) |
 
 **Hosted mode** (`BS_HOSTED=1`):
 
@@ -119,6 +124,15 @@ Caching: `index.html`, `js/` and `css/` revalidate on every load (cheap 304s, an
 - Sign-up needs an invite code, except for the owner emails.
 - ESV and NLT are served only to owners, because the keys are personal-use licences. Everyone else reads KJV and BSB, and NIV, NKJV and LSB open on their own sites as usual.
 - The session cookie is also `Secure`.
+- The owner’s profile cannot change its email to a non-owner address (409: add the address to `BS_OWNER_EMAILS` first) and the last owner profile cannot be deleted.
+
+**Preview deployments.** Every branch pushed to GitHub gets a Vercel preview (`bible-study-git-<branch>-koum-studio.vercel.app`). Its `/api` goes to the production server too, where its origin is not allowed, so a preview reads production as a guest and can’t sign in or save (a sign-in there fails with “Cross-site request blocked”). That is the safe default: never add preview origins to `BS_ALLOWED_ORIGINS` on production. A staging Railway environment for previews is optional.
+
+**Backups.** Railway volume backups are turned on for the `/data` volume (since 2026-10-08). To restore one: open the volume in Railway, choose Backups → Restore on the snapshot you want; Railway stages it as a new volume at `/data`, and the next deploy applies it. Now and then also keep a copy off Railway: Profile → Export profile downloads your whole profile as one JSON file, which Import profile file brings back.
+
+**Monitoring.** `/api/health` answers 200 `{"ok":true}` (GET or HEAD) only after a successful write to the data directory and a readable `users.json`; otherwise 503 `{"ok":false}` with an `[error]` line in the Railway log (a healthy answer is reused for 5 seconds, so a burst of probes costs the volume one write). Railway’s own health check uses it, and an external uptime check (HEAD is fine) belongs at `https://www.biblelantern.com/api/health`, which covers Vercel, the rewrite and Railway. Railway’s service logs show every refused request with its reason.
+
+**Deleting a profile.** Profile → Delete profile on the site removes the person’s notes, bookmarks, links, highlights and reading progress and erases the files at once (the dialog says so); copies linger only in the volume’s own backups until those age out. Locally the files move to `deleted/<id>-<date>/` until you remove them.
 
 **Invites.** In Profile → Invites (owners only), create a code, with a note to remember who it’s for if you like, and copy it straight away: it is shown once, and only a hash of it is stored. The person enters it as their invite code when they sign up. The list shows each code’s last four characters, how often it has been used and its note, and Revoke stops a code from working.
 

@@ -215,6 +215,7 @@ export function session() {
 // ------------------------------------------------------------ active time, idle detection
 function counting() {
   if (!sess || !shown) return false;
+  if (state.home) return false; // Home covers the reader (home-build brief §1): no chapter is being read
   if (document.visibilityState !== 'visible') return false;
   if (Date.now() - lastInput >= CFG.IDLE_MS) return false;
   if (document.querySelector('dialog[open]')) return false;
@@ -343,6 +344,8 @@ function capturePosition() {
   lastPosSig = sig;
   track('position', { b: sess.b, c: sess.c, v, scrollFrac: sf, tr });
 }
+/** Capture the reading place now, not after the debounce: main.js calls it just before Home empties the reader. */
+export function capturePositionNow() { capturePosition(); }
 
 // ------------------------------------------------------------ study signals from other modules (§5.14)
 function refParts(key) {

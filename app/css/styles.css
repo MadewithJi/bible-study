@@ -8,26 +8,29 @@
    ===================================================================== */
 
 /* =====================================================================
-   1. Design tokens (spec sec. 1, verbatim)
+   1. Design tokens (spec sec. 1). Light surfaces are a warm paper off-white
+   (Ji, 2026-10-07: easier on the eyes than near-white). The text tokens
+   (secondary labels, link, tint text, warn, danger, words of Jesus) and the
+   OT / NT marks are a shade darker to keep their contrast on it.
    ===================================================================== */
 :root {
-  /* surfaces & labels */
-  --bg: #fbfbfd; --bg-elev: #ffffff; --bg-2: #f5f5f7; --bg-3: #ebebf0;
-  --label: #1d1d1f; --label-2: #6e6e73; --label-3: #86868b; --label-4: #aeaeb2;
+  /* surfaces & labels (cards and the sheet's cells stay a touch lighter than the page) */
+  --bg: #f5f3ee; --bg-elev: #fbfaf7; --bg-2: #efece6; --bg-3: #e5e1d9;
+  --label: #1d1d1f; --label-2: #646469; --label-3: #808085; --label-4: #a8a8ac;
   --read: #1d1d1f;
-  --sep: rgba(0,0,0,.08); --sep-2: rgba(0,0,0,.14); --sep-strong: #d2d2d7;
-  --fill: rgba(118,118,128,.12); --fill-2: rgba(118,118,128,.08); --fill-3: rgba(118,118,128,.05);
+  --sep: rgba(0,0,0,.08); --sep-2: rgba(0,0,0,.14); --sep-strong: #d4d0c8;
+  --fill: rgba(120,114,104,.12); --fill-2: rgba(120,114,104,.08); --fill-3: rgba(120,114,104,.05);
   /* accent (UI only: interactive, selected, you-are-here) */
-  --accent: #0071e3; --accent-hover: #0077ed; --accent-press: #006edb; --link: #0066cc;
+  --accent: #0071e3; --accent-hover: #0077ed; --accent-press: #006edb; --link: #0062c5;
   --accent-fill: #0071e3; --accent-fill-hover: #0068d1; --accent-fill-press: #0062c4; --danger-fill: #d70015;   /* behind white text: ≥ 4.5:1 */
-  --woc-grad: linear-gradient(100deg, #0032c0 0%, #0046dc 45%, #0050e0 100%); --woc-solid: #0046dc; /* words of Jesus: lightest stop ≥ 4.5:1 on a selected + highlighted verse */
+  --woc-grad: linear-gradient(100deg, #0032c0 0%, #0046dc 45%, #004bd3 100%); --woc-solid: #0046dc; /* words of Jesus: lightest stop ≥ 4.5:1 on a selected + highlighted verse */
   --accent-tint: rgba(0,113,227,.07); --accent-tint-2: rgba(0,113,227,.13);
-  --accent-on-tint: #0058b0;             /* accent text on --accent-tint-2 (and its hover mixes): ≥ 4.5:1 */
+  --accent-on-tint: #0051a3;             /* accent text on --accent-tint-2 (and its hover mixes): ≥ 4.5:1 */
   --focus: #0071e3;                      /* solid: meets 3:1 non-text contrast */
-  --danger: #e30000; --warn: #b64400;    /* warn = Greek textual variants */
-  --danger-text: #c00000;                /* error text (fills, rings and icons keep --danger): ≥ 4.5:1 on its 8% tint */
+  --danger: #e30000; --warn: #a03c00;    /* warn = Greek textual variants: ≥ 4.5:1 on its 14% tint */
+  --danger-text: #bb0000;                /* error text (fills, rings and icons keep --danger): ≥ 4.5:1 on its 8% tint */
   /* data (categorical) */
-  --ot: #e8590c; --nt: #11998e; --viz-ink: #1d1d1f;
+  --ot: #e4570c; --nt: #0f9489; --viz-ink: #1d1d1f;   /* marks: ≥ 3:1 on every light surface, the sheet and its vote tracks included */
   --grad-num: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 52%, #bf5af2 100%);
   --g-orange: #c96f00; --g-teal: #1f8fa3; --g-coral: #e8562a;   /* division numeral stops: ≥ 3:1 on --bg / --bg-elev */
   /* highlights (verse text background) and swatches */
@@ -38,10 +41,10 @@
   --bm-red: #ff3b30; --bm-orange: #ff9500; --bm-yellow: #ffcc00; --bm-green: #34c759; --bm-blue: #007aff; --bm-purple: #af52de;
   --tile-green: #248a3d; --tile-orange: #c93400; --av-grad: linear-gradient(180deg, #6e7380, #555a66);
   /* maps */
-  --map-land: #f7f7f9; --map-sea: #e3ecf4; --map-water: #8fb1d1;
-  /* materials */
-  --glass: rgba(251,251,253,.76); --glass-2: rgba(255,255,255,.8); --glass-edge: rgba(255,255,255,.8);
-  --sheet: rgba(242,242,246,.8); --sheet-solid: #f2f2f6; --cell: rgba(255,255,255,.88); --seg-thumb: #ffffff;
+  --map-land: #f1eee8; --map-sea: #dae4ed; --map-water: #8fb1d1;
+  /* materials (tinted to the paper surfaces above) */
+  --glass: rgba(245,243,238,.76); --glass-2: rgba(251,250,247,.8); --glass-edge: rgba(255,253,248,.8);
+  --sheet: rgba(238,235,229,.8); --sheet-solid: #eeebe5; --cell: rgba(251,250,247,.88); --seg-thumb: #fbfaf7;
   --scrim: rgba(0,0,0,.22); --toast: rgba(29,29,31,.92); --toast-fg: #f5f5f7;
   /* shadows */
   --sh-1: 0 0 0 .5px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
@@ -695,7 +698,7 @@ body.sheet-modal .scrim { opacity: 1; pointer-events: auto; }
 .outline button { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; text-align: left; font-size: 14px; line-height: 1.35; transition: background-color var(--d-1); }
 .outline .rng { font: 600 13px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--label-2); }
 .outline .here { font: 600 11px/1 var(--sans); color: var(--accent-on-tint); background: var(--accent-tint-2); padding: 4px 8px; border-radius: var(--r-pill); white-space: nowrap; }
-.outline li.cur .rng { color: var(--accent); }
+.outline li.cur .rng { color: var(--link); }   /* text: --accent is for fills and icons */
 .credit { margin: 14px 2px 0; font-size: 12px; line-height: 1.45; color: var(--label-2); }
 /* Original tab */
 .lang-eyebrow { margin: 2px 4px 6px; font: 600 12px/1.2 var(--sans); color: var(--label-2); letter-spacing: .01em; }
@@ -1165,6 +1168,7 @@ kbd.k { display: inline-grid; place-items: center; min-width: 26px; height: 26px
   .ib.search-open { grid-area: 1 / 2; margin: 0; }
   .gnav.searching .search { grid-row: 1; }
   .gnav-right { grid-area: 2 / 1 / 3 / 3; justify-content: flex-start; gap: 6px; padding: 5px 8px; margin: 0 calc(-1 * max(8px, env(safe-area-inset-right))) 0 calc(-1 * max(8px, env(safe-area-inset-left))); }
+  .gnav-right #btn-account { order: -1; } /* Sign in (or the profile) leads the strip, so a phone sees it without scrolling sideways */
   .gnav.hide { transform: translateY(-100%); }
   .vsep.hide-m { display: none; }
   .tools button { width: 34px; }
@@ -1310,6 +1314,15 @@ dialog.auth { max-width: 440px; }
 .auth-opts { margin-top: 14px; }
 .frow > label small.frow-sub { display: block; margin-top: 2px; font-size: 12px; line-height: 1.35; color: var(--label-2); }
 .frow.bad input { box-shadow: inset 0 0 0 1px var(--danger), 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent); animation: shake .4s var(--ease-io); }
+/* the invite code on an invite-only site: its own box above the other fields, the code large and spaced out */
+.auth-invite { margin-bottom: 12px; box-shadow: var(--sh-1), inset 0 0 0 1px var(--accent-tint-2); }
+.auth-invite[hidden] { display: none; }
+.auth-invite .frow { flex-wrap: wrap; align-items: baseline; row-gap: 6px; padding: 12px 16px 10px; }
+.auth-invite .frow > label { flex: none; width: auto; white-space: nowrap; font-weight: 600; }
+.auth-invite .frow input:not([type=checkbox]) { flex: 1 1 100%; width: 100%; height: 44px; order: 1; font: 500 20px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.auth-invite .frow input::placeholder { text-transform: none; letter-spacing: .08em; font-weight: 400; }
+.auth-invite .frow .frow-sub { flex: 1 1 0; min-width: 0; margin: 0; font-size: 12px; line-height: 1.35; color: var(--label-2); text-align: right; }
+.auth-invite + .form-err { margin-top: -4px; }
 .pw-eye { flex: none; width: 30px; height: 30px; margin-left: -8px; display: grid; place-items: center; border-radius: 8px; color: var(--label-3); transition: background-color var(--d-1), color var(--d-1); }
 .pw-eye:hover { background: var(--fill-2); color: var(--label); }
 .pw-eye[aria-pressed="true"] { color: var(--accent); }
@@ -1346,7 +1359,6 @@ dialog.auth { max-width: 440px; }
 .inv-last { font-family: var(--mono); font-weight: 500; letter-spacing: .04em; }
 .inv-row.off .cell-title { color: var(--label-2); }
 .inv-row .btn { flex: none; }
-#auth-invite-row > label { white-space: nowrap; } /* one line at the phone's 72px label width, as the other rows */
 .note-card.guest-save { padding: 0; }
 .note-card.guest-save .empty { padding: 24px 20px 22px; }
 .note-card.guest-save .btn { margin-top: 6px; }
@@ -1492,6 +1504,8 @@ body.mode-side.drawer-open dialog > .resume, body.mode-side.drawer-open dialog >
   .lib-bars { height: 56px; gap: 1px; }
   .lib-books { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   .auth-fields .frow > label, .prof-fields .frow > label, .confirm .frow > label { width: 72px; }
+  .auth-invite .frow > label { width: auto; } /* the invite box: its label keeps one line, and the hint takes its own line under the code */
+  .auth-invite .frow .frow-sub { flex-basis: 100%; order: 2; text-align: left; }
   body.has-resume .toast { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px); }
   .resume { bottom: max(16px, env(safe-area-inset-bottom)); }
 }
@@ -1908,7 +1922,7 @@ dialog.video-modal { width: min(calc(100% - 32px), calc((100vh - 210px) * 16 / 9
 :root {
   --sel-bg: color-mix(in srgb, var(--accent) 36%, transparent);   /* selected words: text ≥ 4.5:1 over it */
   --verse-cur: color-mix(in srgb, var(--accent) 11%, transparent); /* the clicked verse */
-  --woc-hl: #0040c0;                                                /* words of Jesus over a highlight: ≥ 4.5:1 */
+  --woc-hl: #003db8;                                                /* words of Jesus over a highlight: ≥ 4.5:1 */
   --mk-yellow: color-mix(in srgb, var(--bm-yellow) 40%, transparent); --mk-green: color-mix(in srgb, var(--bm-green) 28%, transparent);
   --mk-blue: color-mix(in srgb, var(--bm-blue) 20%, transparent); --mk-pink: color-mix(in srgb, var(--sw-pink) 20%, transparent);
   --mk-purple: color-mix(in srgb, var(--bm-purple) 22%, transparent); --mk-orange: color-mix(in srgb, var(--bm-orange) 32%, transparent);

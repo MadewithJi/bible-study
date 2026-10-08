@@ -121,7 +121,7 @@ export function themeOf(el) {
   return resolvedTheme();
 }
 const TOKEN_FALLBACK = {
-  light: { land: '#f7f7f9', sea: '#e3ecf4', water: '#8fb1d1', label: '#1d1d1f', label2: '#6e6e73', label3: '#86868b', nt: '#11998e', surface: '#fbfbfd' },
+  light: { land: '#f1eee8', sea: '#dae4ed', water: '#8fb1d1', label: '#1d1d1f', label2: '#646469', label3: '#808085', nt: '#0f9489', surface: '#f5f3ee' },
   dark: { land: '#1c1c1e', sea: '#0f1822', water: '#3c5f82', label: '#f5f5f7', label2: '#a1a1a6', label3: '#86868b', nt: '#1fa99b', surface: '#000000' },
 };
 function readTokens(el, theme) {
@@ -666,7 +666,7 @@ export function createMap(host, opts = {}) {
     setLabels(!roman);
     // Outside the atlas' coverage the background shows through: a tone between the atlas' sea (#b0c5d8)
     // and land (#b9ccae), dimmed like the atlas itself on the night stage, so its edge does not stand out.
-    if (map.getLayer('background')) map.setPaintProperty('background', 'background-color', roman ? (dark ? '#848a8b' : '#b5c6c6') : (C.tokens || {}).land || (dark ? '#141418' : '#f7f7f9'));
+    if (map.getLayer('background')) map.setPaintProperty('background', 'background-color', roman ? (dark ? '#848a8b' : '#b5c6c6') : (C.tokens || {}).land || (dark ? '#141418' : '#f1eee8'));
     const ids = DARE_PARTS.map((b, i) => 'dare' + i);
     if (roman && !map.getSource(ids[0])) {
       const before = map.getLayer('paul-casing') ? 'paul-casing' : map.getLayer(SHADOW) ? SHADOW : undefined;

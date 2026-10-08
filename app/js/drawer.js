@@ -992,7 +992,7 @@ async function exportObsidian() {
     else if (r.lost) {
       const u = state.auth.user || {};
       A.toast(`You’ve been signed out. Sign in to export ${u.name ? u.name + '’s' : 'your'} notes.`, { label: 'Sign in', run: () => import('./account.js').then(m => m.openAuth?.('signin', { email: u.email || '', reason: 'lost' })).catch(() => {}) });
-    } else if (r.offline) A.toast('Can’t reach serve.py. Try again when it’s running.');
+    } else if (r.offline) A.toast(S.offlineMsg());
     else if (!r.ok && !r.mismatch) A.toast(`Export failed${r.data?.message ? ': ' + r.data.message : '.'}`);
     else if (r.pending) A.toast(`This export is missing ${plural(r.pending, 'unsaved change')}. Try again once your notes are saved.`);
   } finally { exporting = false; }
@@ -1148,6 +1148,10 @@ function mediaTab(b, c, v) {
       <button class="cell" type="button" data-play="${esc(x.id)}" data-start="${+x.start || 0}"><span class="thumb"><img src="https://i.ytimg.com/vi/${encodeURIComponent(x.id || '')}/mqdefault.jpg" alt="" loading="lazy"><span class="play">${icon('play', 'f')}</span></span><span class="cell-body"><span class="cell-title">${esc(title)}</span><span class="cell-sub">${bookOf(p[0]) ? esc(refLabel(p[0], p[1], p[2])) : ''}${x.start ? ' · from ' + fmtTs(+x.start) : ''}</span></span></button>
       <button class="more-btn" type="button" data-menu aria-haspopup="menu" aria-expanded="false" aria-label="More actions for ${esc(title)}">${icon('ellipsis')}</button>
     </li>`; }).join('')}</ul>`).join('');
+  // hosted, a guest's form would save nothing: the same sign-in card as the Notes tab stands in its place (hosting brief §2)
+  if (S.readOnlyGuest()) {
+    return `<section class="card note-card guest-save"><div class="empty"><span class="tile-i blue">${icon('lock')}</span><h4>Your videos</h4><p>${esc(S.SIGN_IN_MSG)}</p><button class="btn btn-primary sm" type="button" data-sign-in>Sign in</button></div></section>${list}`;
+  }
   return `<form id="video-form" class="card form-card" novalidate>
       <label class="field" id="url-field">${icon('link')}<input name="url" value="${draft('url')}" placeholder="YouTube link: watch, youtu.be, shorts" aria-label="YouTube link" aria-describedby="url-msg" autocomplete="off" spellcheck="false"></label>
       <p class="field-msg" id="url-msg" hidden>That doesn’t look like a YouTube link.</p>

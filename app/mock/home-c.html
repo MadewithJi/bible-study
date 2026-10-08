@@ -975,7 +975,7 @@ async function boot() {
   let n = 0; OFF = BOOKS.map(b => { const o = n; n += b.chapters.length; return o; }); TOTAL = n;
   art.plates.forEach(p => PLATES.set(p.id, p));
   CREDIT = T(art.credit);
-  $('#credit').textContent = `Scripture from the King James Version. Engravings: ${CREDIT}.`;
+  $('#credit').textContent = `Scripture from the King James Version. Engravings: ${CREDIT}. Visualization inspired by Chris Harrison & Christoph Römhild (2007). Cross-reference data: OpenBible.info.`;
   Object.entries(SAMPLE.read).forEach(([b, s]) => READ.set(+b, parseRanges(s)));
   await setState(q.get('state'), false);
   document.documentElement.dataset.ready = '1';

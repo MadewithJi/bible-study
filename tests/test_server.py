@@ -105,7 +105,7 @@ def record_accounts(path, entries, renamed=None):
 
 # The hosting variables (hosting brief §1). The test server never inherits them: each test sets the ones it is about.
 HOSTING_ENV = ("PORT", "HOST", "BS_DATA_DIR", "BS_HOSTED", "BS_ALLOWED_HOSTS", "BS_ALLOWED_ORIGINS", "BS_TRUST_PROXY",
-               "BS_OWNER_EMAILS")
+               "BS_OWNER_EMAILS", "BS_PROXY_SECRET", "BS_OWNER_SETUP_TOKEN", "RAILWAY_VOLUME_MOUNT_PATH")
 
 
 def server_env(extra=None):
@@ -1807,6 +1807,30 @@ class T11_Unit(Base):
         d0 = datetime.date.min  # an imported streak that reaches back to day one ends there
         lib["days"] = {(d0 + datetime.timedelta(days=i)).isoformat(): dict(accounts.new_day(), s=600) for i in range(366)}
         self.assertEqual(accounts.compute_stats(lib, 0, "0002-01-01")["streak"]["current"], 366)
+
+    def test_i15_window_table_stays_bounded(self):
+        """QC 2: hosted, AUTH_WINDOW counts per visitor address and email (Handler._client_key), keys a client makes up
+        freely; 5,000 sign-in attempts with distinct emails from one address must not grow the server by 5,000 keys."""
+        import serve
+        w = serve.Window(30, 60, cap=serve.AUTH_WINDOW.cap)
+        t = [1000.0]; w.clock = lambda: t[0]
+        key = lambda email: f"203.0.113.9|{hashlib.sha256(email.encode('utf-8')).hexdigest()[:16]}"
+        for i in range(5000):
+            self.assertEqual(w.check(key(f"ghost{i}-{RUN}@example.test")), 0); t[0] += 0.001
+        self.assertEqual(serve.AUTH_WINDOW.cap, 4096)
+        self.assertLessEqual(len(w.hits), w.cap, "past the cap the least recently hit keys go")
+        self.assertIn(key(f"ghost4999-{RUN}@example.test"), w.hits)
+        self.assertNotIn(key(f"ghost0-{RUN}@example.test"), w.hits)
+        self.assertEqual(len(w.hits[key(f"ghost4999-{RUN}@example.test")]), 1, "a kept key still counts its hits")
+        t[0] += 61  # every hit has aged out: the next hit past the cap sweeps them all
+        self.assertEqual(w.check(key("fresh@example.test")), 0)
+        self.assertEqual(list(w.hits), [key("fresh@example.test")])
+        w.unrecord(key("fresh@example.test"))  # given back (the backstop refused): nothing is kept for it
+        self.assertEqual(w.hits, {})
+        self.assertEqual(w.check(key("look@example.test"), record=False), 0)
+        self.assertEqual(w.hits, {}, "a look without a hit leaves nothing behind")
+        for _ in range(30): w.check("*")
+        self.assertEqual(w.check("*"), 60, "the limit itself is unchanged")
 
 
 # ======================================================================= K-O. regression tests for the security/integrity review
@@ -3693,7 +3717,9 @@ class T22_Hosted(Base):
                                  ("up.railway.app", "/api/auth/me", 403), ("evil.example.test", "/api/auth/me", 403)]:
             status, _, body = raw_req("GET", path, headers={"Host": host})
             self.assertEqual(status, want, (host, path, body[:200]))
-        self.assertEqual(raw_req("HEAD", "/api/health", headers={"Host": "healthcheck.railway.app"})[0], 403, "GET only")
+        st, hdrs, body = raw_req("HEAD", "/api/health", headers={"Host": "healthcheck.railway.app"})
+        self.assertEqual((st, body, hdrs.get("content-length")), (200, b"", str(len(b'{"ok": true}'))), "HEAD: uptime monitors")
+        self.assertEqual(raw_req("HEAD", "/api/notes", headers={"Host": "healthcheck.railway.app"})[0], 403)
 
     def test_w03_guests_read_but_never_write(self):
         g = HostedClient()
@@ -3730,7 +3756,8 @@ class T22_Hosted(Base):
             r = HostedClient().signup(email, pw, invite=invite)
             self.assertErr(r, 403, "invite_required", "invite")
             self.assertEqual(r.json["message"], "Sign-up needs an invite code.")
-        self.assertErr(HostedClient().signup(self.owner_email, secrets.token_urlsafe(18)), 409, "email_taken", "email")
+        # A claimed owner email is an ordinary sign-up (QC 0): the invite comes first, so nothing says a profile exists.
+        self.assertErr(HostedClient().signup(self.owner_email, secrets.token_urlsafe(18)), 403, "invite_required", "invite")
 
     def test_w06_owner_makes_invites_hashed_at_rest(self):
         r = self.owner.req("POST", "/api/invites", {"note": "  For  Sam ", "maxUses": 2})
@@ -3845,7 +3872,7 @@ class T22_Hosted(Base):
         """One sign-up window for every client behind the proxy: a made-up X-Forwarded-For does not get a fresh one."""
         statuses = []
         for i in range(12):
-            r = HostedClient(ip=f"203.0.113.{i + 1}").signup(f"xff{i}-{RUN}@example.test", secrets.token_urlsafe(18), invite="ABCDEFGHJK")
+            r = HostedClient(ip=f"203.0.113.{i + 1}").signup(f"xff-{RUN}@example.test", secrets.token_urlsafe(18), invite="ABCDEFGHJK")
             statuses.append(r.status)
             if r.status == 429:
                 break
@@ -3864,18 +3891,23 @@ class T23_TrustProxy(Base):
     def tearDownClass(cls):
         H.restart()
 
-    def attempt(self, ip, i):
-        return HostedClient(ip=ip).signup(f"proxy{i}-{RUN}@example.test", secrets.token_urlsafe(18), invite="ABCDEFGHJK")
+    def attempt(self, ip, i, email=None):
+        email = email or f"proxy{i}-{RUN}@example.test"
+        return HostedClient(ip=ip).signup(email, secrets.token_urlsafe(18), invite="ABCDEFGHJK")
 
     def test_x01_sign_up_window_per_client(self):
+        """The window is per (address, email) on the site (QC 2): visitors behind one proxy address get their own."""
+        one = f"proxy-one-{RUN}@example.test"
         for i in range(10):
-            self.assertErr(self.attempt("203.0.113.5", i), 403, "invite_required")
-        r = self.attempt("203.0.113.5", 10)
+            self.assertErr(self.attempt("203.0.113.5", i, one), 403, "invite_required")
+        r = self.attempt("203.0.113.5", 10, one)
         self.assertErr(r, 429, "rate_limited")
-        self.assertErr(self.attempt("203.0.113.6", 11), 403, "invite_required")  # another client: its own window
-        self.assertErr(self.attempt("198.51.100.7, 203.0.113.5", 12), 403, "invite_required")  # the first hop counts
-        self.assertErr(self.attempt("203.0.113.5, 198.51.100.7", 13), 429, "rate_limited")
-        self.assertErr(self.attempt("not-an-ip", 14), 403, "invite_required")  # no usable hop: the socket's peer
+        self.assertEqual(r.json["message"], "Too many attempts. Try again in about an hour.")
+        self.assertErr(self.attempt("203.0.113.5", 11), 403, "invite_required")  # same address, another email: its own
+        self.assertErr(self.attempt("203.0.113.6", 12, one), 403, "invite_required")  # another client: its own window
+        self.assertErr(self.attempt("198.51.100.7, 203.0.113.5", 13, one), 403, "invite_required")  # the first hop counts
+        self.assertErr(self.attempt("203.0.113.5, 198.51.100.7", 14, one), 429, "rate_limited")
+        self.assertErr(self.attempt("not-an-ip", 15, one), 403, "invite_required")  # no usable hop: the socket's peer
         with open(H.log_path, encoding="utf-8", errors="replace") as f:
             log = f.read()
         self.assertRegex(log, r"invite-refused ip=203\.0\.113\.5")
@@ -3980,12 +4012,355 @@ class T24_ProfileImport(Base):
         self.assertEqual((r.status, r.json["skipped"], r.json["changed"]), (200, 3, False), r)
         self.assertNotIn("99.1.1", dst.req("GET", "/api/notes").json["refs"])
         status, _, body = raw_req("POST", "/api/profile/import", headers={"Content-Type": "application/json",
+                                                                           "Cookie": f"{H.cookie}={dst.token()}",
                                                                            "Content-Length": str(25 * 1024 * 1024 + 1)})
         self.assertEqual(status, 413, body[:200])
+        status, _, body = raw_req("POST", "/api/profile/import", headers={"Content-Type": "application/json",
+                                                                           "Content-Length": str(25 * 1024 * 1024 + 1)})
+        self.assertEqual((status, json.loads(body)["error"]), (401, "not_signed_in"), "no profile: refused before the size")
         r = dst.req("POST", "/api/profile/import", dict(ok, notes={"refs": {"20.1.1": {"text": "No time"}}}), scoped=True)
         self.assertEqual((r.status, r.json["imported"]["notes"]), (200, 1), "a record without times still imports")
         r = dst.req("POST", "/api/profile/import", dict(ok, notes={"refs": {"20.1.1": {"text": "No time"}}}), scoped=True)
         self.assertEqual(r.json["changed"], False, "and only once")
+
+
+class T25_Release1Fixes(Base):
+    """Release 1 QC fixes (.design/release1-fixes-brief.md, Server group): owner claims, bodies read only after the auth
+    check, the visitor's address behind two proxies, per-visitor windows, per-client lockouts, a real health probe, the
+    purge on delete, readable waits, site wording, log severity and the refused Origin."""
+    restart = False
+    secret, setup_token = secrets.token_urlsafe(24), secrets.token_urlsafe(24)
+    vercel_headers = {"X-Vercel-Forwarded-For": "203.0.113.77", "X-Real-IP": "203.0.113.77", "X-Forwarded-For": "13.57.253.50"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = os.path.join(H.tmp, "r1-data")
+        cls.owner_email, cls.owner_pw = H.account("owner-r1", "Release 1: owner")
+        cls.owner2_email = f"owner-r1b-{RUN}@example.test"  # a second owner address, claimed by an email change
+        cls.hosted_env = {"BS_HOSTED": "1", "BS_TRUST_PROXY": "1", "BS_PROXY_SECRET": cls.secret,
+                          "BS_OWNER_SETUP_TOKEN": cls.setup_token, "BS_OWNER_EMAILS": f"{cls.owner_email}, {cls.owner2_email}",
+                          "BS_ALLOWED_ORIGINS": "https://site.example.test"}
+        H.restart("--data-dir", cls.data, env=cls.hosted_env)
+        cls.owner = HostedClient(ip="203.0.113.1")
+
+    @classmethod
+    def tearDownClass(cls):
+        H.restart()
+
+    def log(self):
+        with open(H.log_path, encoding="utf-8", errors="replace") as f:
+            return f.read()
+
+    def users(self):
+        return read_json_file(os.path.join(self.data, "users.json"))["users"]
+
+    def claims(self):
+        return read_json_file(os.path.join(self.data, "owner-claims.json"))
+
+    @staticmethod
+    def keep(email, pw, purpose):
+        entry = {"email": email, "password": pw, "purpose": purpose}
+        H.accounts.append(entry)
+        H.passwords.add(pw)
+        record_accounts(ACCOUNTS_FILE, [entry])
+
+    def test_r01_an_owner_email_is_claimed_once(self):
+        r = self.owner.signup(self.owner_email, self.owner_pw, name="Owner")
+        self.assertEqual(r.status, 201, r)
+        T25_Release1Fixes.owner_uid = uid = r.json["user"]["uid"]
+        claims = self.claims()
+        self.assertEqual(list(claims), [accounts.claim_key(self.owner_email)])
+        self.assertEqual(claims[accounts.claim_key(self.owner_email)]["uid"], uid)
+        with open(os.path.join(self.data, "owner-claims.json"), "rb") as f:
+            self.assertNotIn(b"@example.test", f.read(), "no plain email at rest")
+        # The profile cannot drop its owner rights by moving to an address that is not an owner's.
+        r = self.owner.req("PATCH", "/api/account", {"email": f"owner-moved-{RUN}@example.test", "password": self.owner_pw})
+        self.assertErr(r, 409, "owner_email", "email")
+        self.assertIn("BS_OWNER_EMAILS", r.json["message"])
+        self.assertTrue(self.owner.me().json["owner"])
+        # Another owner address is fine, and is claimed too.
+        r = self.owner.req("PATCH", "/api/account", {"email": self.owner2_email.upper(), "password": self.owner_pw})
+        self.assertEqual(r.status, 200, r)
+        H.update_account(self.owner_email, email=self.owner2_email)
+        self.assertTrue(self.owner.me().json["owner"])
+        self.assertEqual(set(self.claims()), {accounts.claim_key(self.owner_email), accounts.claim_key(self.owner2_email)})
+        # The first address is free in users.json but claimed: a stranger needs an invite like anyone else...
+        stranger = HostedClient(ip="198.51.100.9")
+        self.assertErr(stranger.signup(self.owner_email, secrets.token_urlsafe(18)), 403, "invite_required", "invite")
+        self.assertErr(stranger.signup(self.owner_email, secrets.token_urlsafe(18), invite="ABCDEFGHJK"), 403, "invite_required", "invite")
+        # ...while the owner comes back with the setup token.
+        back, pw = HostedClient(ip="203.0.113.2"), secrets.token_urlsafe(18)
+        body = {"email": self.owner_email, "name": "Owner again", "password": pw, "setupToken": "wrong-" + self.setup_token}
+        self.assertErr(back.req("POST", "/api/auth/signup", body), 403, "invite_required", "invite")
+        body["setupToken"] = self.setup_token
+        r = back.req("POST", "/api/auth/signup", body)
+        self.assertEqual(r.status, 201, r)
+        back.scope = r.json["user"]["uid"]
+        self.keep(self.owner_email, pw, "Release 1: owner re-claimed with the setup token")
+        self.assertTrue(back.me().json["owner"])
+        self.assertEqual(self.claims()[accounts.claim_key(self.owner_email)]["uid"], back.scope, "the claim follows the profile")
+        T25_Release1Fixes.back, T25_Release1Fixes.back_pw = back, pw
+
+    def test_r02_delete_erases_on_the_site_and_keeps_one_owner(self):
+        back, uid = self.back, self.back.scope
+        r = back.req("POST", "/api/invites", {"note": "Made by a profile that is then deleted"})
+        self.assertEqual(r.status, 201, r)
+        iid = r.json["invite"]["id"]
+        r = back.req("POST", "/api/notes/changes", {"set": {"43.3.16": {"text": "Soon gone", "updated": now_ms()}}}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        self.assertTrue(os.path.isdir(os.path.join(self.data, "profiles", uid)))
+        r = back.req("POST", "/api/account/delete", {"password": self.back_pw})
+        self.assertEqual((r.status, r.json), (200, {"ok": True}), r)
+        self.assertFalse(os.path.exists(os.path.join(self.data, "profiles", uid)), "erased, not moved aside")
+        deleted = os.path.join(self.data, "deleted")
+        self.assertFalse(os.path.isdir(deleted) and any(d.startswith(uid) for d in os.listdir(deleted)), "nothing kept")
+        self.assertNotIn(uid, self.users())
+        with open(os.path.join(self.data, "sessions.json"), "rb") as f:
+            self.assertNotIn(uid.encode(), f.read(), "no session left")
+        invites = read_json_file(os.path.join(self.data, "invites.json"))
+        self.assertEqual([i["by"] for i in invites.values() if i["id"] == iid], [None], "the invite no longer names who made it")
+        self.assertFalse(back.me().json["signedIn"])
+        self.assertIn(f"account-delete uid={uid}", self.log())
+        # The claim stays, so the address still needs an invite or the setup token.
+        self.assertErr(HostedClient(ip="198.51.100.10").signup(self.owner_email, secrets.token_urlsafe(18)), 403, "invite_required")
+        # The remaining owner is the last one: that profile cannot be deleted.
+        r = self.owner.req("POST", "/api/account/delete", {"password": self.owner_pw})
+        self.assertErr(r, 409, "last_owner")
+        self.assertEqual(r.json["message"], "This is the site owner’s profile. Add another owner email first.")
+        self.assertTrue(self.owner.me().json["signedIn"])
+        self.assertTrue(os.path.isdir(os.path.join(self.data, "profiles", self.owner_uid)))
+
+    def test_r03_guest_bodies_are_refused_before_they_are_read(self):
+        g = HostedClient(ip="198.51.100.20")
+        bad = b"{" + b"x" * 1024  # not JSON: a server that parsed it would say 400
+        self.assertErr(g.req("POST", "/api/profile/import", raw=bad, scoped=True), 401, "not_signed_in")
+        self.assertErr(g.req("POST", "/api/profile/import", raw=b"{" + b"x" * (2 * 1024 * 1024), scoped=True), 401, "not_signed_in")
+        self.assertErr(g.req("POST", "/api/notes/changes", raw=bad, scoped=True), 401, "sign_in_required")
+        self.assertErr(g.req("POST", "/api/notes/changes", raw=bad, scoped=True, headers={"Content-Type": "text/plain"}),
+                       401, "sign_in_required")
+        self.assertErr(g.req("PATCH", "/api/account", raw=bad), 401, "not_signed_in")
+        self.assertErr(g.req("POST", "/api/notes/changes", raw=bad, scoped=True, headers={"Origin": "https://evil.example.test"}),
+                       403, "csrf")  # the Origin check still comes first
+        self.assertRegex(self.log(), r"csrf-block path=/api/notes/changes reason=origin origin=https://evil\.example\.test")
+
+    def test_r04_the_visitor_address_behind_vercel_needs_the_secret(self):
+        def refused(i, headers):
+            body = {"email": f"viaproxy{i}-{RUN}@example.test", "name": "Via", "password": secrets.token_urlsafe(18), "invite": "ABCDEFGHJK"}
+            self.assertErr(HostedClient().req("POST", "/api/auth/signup", body, headers=headers), 403, "invite_required")
+        # Straight to the API host (no secret): X-Forwarded-For, which the host's own proxy wrote, is the client.
+        refused(1, self.vercel_headers)
+        self.assertRegex(self.log(), r"invite-refused ip=13\.57\.253\.50")
+        self.assertNotRegex(self.log(), r"ip=203\.0\.113\.77")
+        # Through Vercel, proved by the secret: Vercel's own header names the visitor.
+        refused(2, dict(self.vercel_headers, **{"X-BS-Proxy-Secret": self.secret}))
+        self.assertRegex(self.log(), r"invite-refused ip=203\.0\.113\.77")
+        # A wrong secret is no proof.
+        refused(3, {"X-Vercel-Forwarded-For": "203.0.113.78", "X-Forwarded-For": "13.57.253.51", "X-BS-Proxy-Secret": self.secret[:-1] + "x"})
+        self.assertRegex(self.log(), r"invite-refused ip=13\.57\.253\.51")
+        self.assertNotRegex(self.log(), r"ip=203\.0\.113\.78")
+        # Without X-Vercel-Forwarded-For, X-Real-IP; without either, X-Forwarded-For.
+        refused(4, {"X-Real-IP": "203.0.113.79", "X-Forwarded-For": "13.57.253.52", "X-BS-Proxy-Secret": self.secret})
+        self.assertRegex(self.log(), r"invite-refused ip=203\.0\.113\.79")
+        refused(5, {"X-Forwarded-For": "13.57.253.53", "X-BS-Proxy-Secret": self.secret})
+        self.assertRegex(self.log(), r"invite-refused ip=13\.57\.253\.53")
+
+    def test_r05_windows_are_per_visitor_and_waits_are_readable(self):
+        one = f"window-one-{RUN}@example.test"
+        a, b = HostedClient(ip="203.0.113.40"), HostedClient(ip="203.0.113.41")
+        for _ in range(10):
+            self.assertErr(a.signup(one, secrets.token_urlsafe(18), invite="ABCDEFGHJK"), 403, "invite_required")
+        r = a.signup(one, secrets.token_urlsafe(18), invite="ABCDEFGHJK")
+        self.assertErr(r, 429, "rate_limited")
+        self.assertEqual(r.json["message"], "Too many attempts. Try again in about an hour.")
+        self.assertEqual(r.json["retryAfter"], int(r.headers["Retry-After"]))
+        self.assertGreater(r.json["retryAfter"], 3500)
+        self.assertErr(a.signup(f"window-two-{RUN}@example.test", secrets.token_urlsafe(18), invite="ABCDEFGHJK"), 403, "invite_required")
+        self.assertErr(b.signup(one, secrets.token_urlsafe(18), invite="ABCDEFGHJK"), 403, "invite_required")
+        self.assertRegex(self.log(), r"rate-limit uid=unknown ip=203\.0\.113\.40")
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ResourceWarning)
+            import serve  # noqa: E402
+        self.assertEqual([serve.wait_text(s) for s in (0, 1, 2, 59, 60, 61, 120, 900, 3594, 3600, 3601, 7200)],
+                         ["1 second", "1 second", "2 seconds", "59 seconds", "about 1 minute", "about 2 minutes",
+                          "about 2 minutes", "about 15 minutes", "about an hour", "about an hour", "about 2 hours", "about 2 hours"])
+
+    def test_r06_a_lockout_is_per_client_and_forgets_after_a_day(self):
+        code = self.owner.req("POST", "/api/invites", {"note": "Lockout test"}).json["code"]
+        email, pw = H.account("member-r1", "Release 1: member locked by a stranger")
+        member = HostedClient(ip="203.0.113.50")
+        self.assertEqual(member.signup(email, pw, name="Member", invite=code).status, 201)
+        uid = member.scope
+        stranger = HostedClient(ip="198.51.100.60")
+        for _ in range(5):
+            self.assertErr(stranger.login(email, "nope-" + secrets.token_urlsafe(6)), 401, "bad_credentials")
+        r = stranger.login(email, pw)
+        self.assertErr(r, 429, "rate_limited")
+        self.assertEqual((r.json["message"], r.json["retryAfter"]), ("Too many attempts. Try again in 1 second.", 1))
+        u = self.users()[uid]
+        self.assertEqual((u["failedLogins"], u["lockUntil"]), (5, 0), "counted, but the account itself is never locked")
+        self.assertGreater(u["lastFail"], 0)
+        self.assertRegex(self.log(), rf"lockout uid={uid} seconds=1 ip=198\.51\.100\.60")
+        # The member signs in from another address at once.
+        other = HostedClient(ip="203.0.113.51")
+        self.assertEqual(other.login(email, pw).status, 200)
+        u = self.users()[uid]
+        self.assertEqual((u["failedLogins"], u["lockUntil"]), (0, 0))
+        # A quiet day forgets old failures: 10 failures 25 hours ago, then one more, count as 1.
+        path = os.path.join(self.data, "users.json")
+        users = read_json_file(path)
+        users["users"][uid].update(failedLogins=10, lastFail=now_ms() - 25 * 3600 * 1000)
+        put_raw(path, json.dumps(users).encode("utf-8"))
+        self.assertErr(HostedClient(ip="198.51.100.61").login(email, "nope-" + secrets.token_urlsafe(6)), 401, "bad_credentials")
+        self.assertEqual(self.users()[uid]["failedLogins"], 1)
+        # On the site a lock is at most a minute (configure_hosting lowers accounts.LOCK_MAX).
+        old = accounts.LOCK_MAX
+        try:
+            accounts.LOCK_MAX = 60
+            self.assertEqual([accounts.lock_seconds(f) for f in (4, 5, 10, 11, 12, 30)], [0, 1, 32, 60, 60, 60])
+        finally:
+            accounts.LOCK_MAX = old
+        T25_Release1Fixes.member, T25_Release1Fixes.member_email, T25_Release1Fixes.member_pw = other, email, pw
+
+    def test_r07_health_probes_the_data_directory(self):
+        st, hdrs, body = raw_req("HEAD", "/api/health")
+        self.assertEqual((st, body, hdrs.get("content-length")), (200, b"", "12"))
+        self.assertEqual(HostedClient().req("GET", "/api/health").json, {"ok": True})
+        self.assertEqual([n for n in os.listdir(self.data) if n.startswith(".health-")], [], "the probe file is removed")
+        os.chmod(self.data, 0o500)
+        try:
+            for _ in range(70):  # a healthy verdict is reused for HEALTH_TTL (5 s): a burst of probes costs one fsync
+                r = HostedClient().req("GET", "/api/health")
+                if r.status != 200: break
+                time.sleep(0.1)
+            self.assertEqual((r.status, r.json), (503, {"ok": False}))
+            self.assertEqual(raw_req("HEAD", "/api/health")[0], 503)
+        finally:
+            os.chmod(self.data, 0o700)
+        self.assertRegex(self.log(), r"\[error\] \S+ health: cannot write to ")
+        self.assertEqual(HostedClient().req("GET", "/api/health").json, {"ok": True}, "a problem is probed again at once")
+
+    def test_r08_a_hosted_start_needs_the_volume(self):
+        def run(args, env):
+            return subprocess.run([PY, SERVE, "--port", str(free_port()), *args], capture_output=True, text=True, timeout=30,
+                                  env=server_env(env))
+        p = run([], {"BS_HOSTED": "1"})
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("BS_DATA_DIR", p.stderr)
+        fake = os.path.join(H.tmp, "fake-volume")
+        os.makedirs(fake, exist_ok=True)
+        p = run(["--data-dir", os.path.join(H.tmp, "elsewhere")], {"BS_HOSTED": "1", "RAILWAY_VOLUME_MOUNT_PATH": fake})
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("not on the volume", p.stderr)
+        self.assertFalse(os.path.exists(os.path.join(H.tmp, "elsewhere")), "nothing is created before the check")
+        # under the mount path but not a mount point (a bind mount looks like that): starts, with a warning in the log
+        port, d = free_port(), os.path.join(fake, "data")
+        proc, _ = spawn_server({"BS_HOSTED": "1", "BS_DATA_DIR": d, "RAILWAY_VOLUME_MOUNT_PATH": fake,
+                                "BS_OWNER_EMAILS": self.owner_email, "BS_ALLOWED_ORIGINS": "https://site.example.test"}, "--port", str(port))
+        try:
+            self.assertEqual(wait_health(port, proc), {"ok": True}, "a data dir under the mount path starts")
+        finally:
+            stop_proc(proc)
+        port, d = free_port(), os.path.join(H.tmp, "on-a-real-mount")
+        proc, _ = spawn_server({"BS_HOSTED": "1", "BS_DATA_DIR": d, "RAILWAY_VOLUME_MOUNT_PATH": "/",
+                                "BS_OWNER_EMAILS": self.owner_email, "BS_ALLOWED_ORIGINS": "https://site.example.test"}, "--port", str(port))
+        try:
+            self.assertEqual(wait_health(port, proc), {"ok": True}, "a data dir on a real mount point starts")
+        finally:
+            stop_proc(proc)
+
+    def test_r09_a_refused_large_body_still_gets_its_json_error(self):
+        big = b'{"set": {"pad": "' + b"x" * (6 * 1024 * 1024) + b'"}}'
+        # A wrong Origin: 403 csrf, the body read in full and the socket closed cleanly (a reset would become a proxy's 502).
+        st, _, body = raw_req("POST", "/api/links/changes", big, {"Content-Type": "application/json", "X-BS-Scope": "guest",
+                                                                 "Origin": "https://evil.example.test"})
+        self.assertEqual((st, json.loads(body)["error"]), (403, "csrf"))
+        # Too large for the route (1 MiB), from a signed-in member: 413 too_large.
+        st, _, body = raw_req("POST", "/api/links/changes", big, {"Content-Type": "application/json", "X-BS-Scope": self.member.scope,
+                                                                 "Cookie": f"{H.cookie}={self.member.tok}"})
+        self.assertEqual((st, json.loads(body)["error"]), (413, "too_large"))
+
+    def test_r10_site_wording(self):
+        r = HostedClient(ip="198.51.100.70").login(f"nobody-{RUN}@example.test", "x" * 12)
+        self.assertErr(r, 401, "bad_credentials")
+        self.assertEqual(r.json["message"], "That email and password don’t match a profile on this site.")
+        st, _, body = raw_req("GET", "/api/auth/me", headers={"Host": "evil.example.test"})
+        self.assertEqual((st, json.loads(body)["message"]), (403, "This server doesn’t answer for that host name."))
+        path = os.path.join(self.data, "users.json")
+        with open(path, "rb") as f:
+            good = f.read()
+        put_raw(path, b"{not json")  # damaged: moved aside at the next read, and profiles are unavailable
+        try:
+            r = HostedClient(ip="198.51.100.71").login(self.member_email, self.member_pw)
+            self.assertErr(r, 503, "registry_unavailable")
+            self.assertEqual(r.json["message"], "Profiles are unavailable right now. Try again later.")
+        finally:
+            put_raw(path, good)
+            for n in os.listdir(self.data):
+                if n.startswith("users.json.corrupt-"):
+                    os.unlink(os.path.join(self.data, n))
+        self.assertEqual(HostedClient(ip="198.51.100.72").login(self.member_email, self.member_pw).status, 200)
+
+    def test_r11_routine_lines_go_to_stdout(self):
+        port, d = free_port(), os.path.join(H.tmp, f"severity-data-{RUN}")
+        out, err = os.path.join(H.tmp, "severity-out.log"), os.path.join(H.tmp, "severity-err.log")
+        with open(out, "wb") as fo, open(err, "wb") as fe:
+            proc = subprocess.Popen([PY, SERVE, "--port", str(port), "--data-dir", d], stdout=fo, stderr=fe, stdin=subprocess.DEVNULL,
+                                    env=server_env({"BS_HOSTED": "1", "BS_OWNER_EMAILS": self.owner_email,
+                                                    "BS_ALLOWED_ORIGINS": "https://site.example.test"}))
+        try:
+            self.assertEqual(wait_health(port, proc), {"ok": True})
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            for path, body, origin, want in [("/api/auth/login", {"email": f"ghost-{RUN}@example.test", "password": "x" * 12}, None, 401),
+                                             ("/api/auth/logout", {}, "https://evil.example.test", 403)]:
+                hdrs = {"Content-Type": "application/json"}
+                if origin:
+                    hdrs["Origin"] = origin
+                req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=json.dumps(body).encode("utf-8"), method="POST", headers=hdrs)
+                try:
+                    opener.open(req, timeout=10)
+                    self.fail("expected an error")
+                except urllib.error.HTTPError as e:
+                    self.assertEqual(e.code, want)
+        finally:
+            stop_proc(proc)
+        with open(out, encoding="utf-8", errors="replace") as f:
+            so = f.read()
+        with open(err, encoding="utf-8", errors="replace") as f:
+            se = f.read()
+        self.assertRegex(so, r"\[auth\] \S+ login-fail uid=unknown ip=127\.0\.0\.1")
+        self.assertRegex(so, r"csrf-block path=/api/auth/logout reason=origin origin=https://evil\.example\.test")
+        self.assertIn("POST /api/auth/login", so, "the access log")
+        self.assertEqual(se.strip(), "", "nothing routine on stderr")
+
+    def test_r12_vercel_alias_redirect_and_noindex(self):
+        with open(os.path.join(REPO, "vercel.json"), encoding="utf-8") as f:
+            v = json.load(f)
+        alias = "bible-study-seven-blond.vercel.app"
+        red = [r for r in v["redirects"] if any(h.get("type") == "host" and h.get("value") == alias for h in r.get("has", []))]
+        self.assertEqual(len(red), 1)
+        self.assertEqual((red[0]["source"], red[0]["destination"], red[0]["permanent"]),
+                         ("/:path*", "https://www.biblelantern.com/:path*", True))
+        noindex = [h for h in v["headers"] if any(c.get("type") == "host" for c in h.get("has", []))]
+        self.assertEqual(len(noindex), 1)
+        self.assertEqual(noindex[0]["headers"], [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}])
+        host_re = noindex[0]["has"][0]["value"]
+        self.assertTrue(re.fullmatch(host_re, "bible-study-git-feature-x.vercel.app"), "previews too")
+        self.assertTrue(re.fullmatch(host_re, alias))
+        self.assertIsNone(re.fullmatch(host_re, "www.biblelantern.com"))
+        with open(os.path.join(REPO, "railway.json"), encoding="utf-8") as f:
+            rw = json.load(f)
+        self.assertEqual((rw["deploy"]["healthcheckPath"], rw["deploy"]["restartPolicyType"]), ("/api/health", "ALWAYS"))
+
+    def test_r13_export_file_name_takes_the_clients_day(self):
+        def name(query):
+            r = self.member.req("GET", "/api/export/profile" + query)
+            self.assertEqual(r.status, 200, r)
+            return re.search(r'filename="([^"]+)"', r.headers["Content-Disposition"]).group(1)
+        self.assertEqual(name("?day=2026-01-02"), "bible-study-member-2026-01-02.json")
+        today = time.strftime("%Y-%m-%d")
+        for bad in ("?day=junk", "?day=2026-1-2", "?day=2026-01-02T00", "?day=", ""):
+            self.assertEqual(name(bad), f"bible-study-member-{today}.json", bad)
 
 
 class T99_Hygiene(Base):

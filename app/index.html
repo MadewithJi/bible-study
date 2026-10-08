@@ -4,10 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<title>Bible Study</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6.8C10.4 5.4 8 4.8 4 4.8v13.4c4 0 6.4.6 8 2 1.6-1.4 4-2 8-2V4.8c-4 0-6.4.6-8 2z'/%3E%3Cpath d='M12 6.8v13.4'/%3E%3C/svg%3E">
+<title>Bible Lantern</title>
+<meta name="description" content="A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.">
+<link rel="canonical" href="https://www.biblelantern.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bible Lantern">
+<meta property="og:title" content="Bible Lantern">
+<meta property="og:description" content="A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.">
+<meta property="og:url" content="https://www.biblelantern.com/">
+<meta property="og:image" content="https://www.biblelantern.com/icons/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Creation of Light, Gustave Doré, with the Bible Lantern mark">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bible Lantern">
+<meta name="twitter:description" content="A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.">
+<meta name="twitter:image" content="https://www.biblelantern.com/icons/og-image.jpg">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308080a'/%3E%3Cg fill='none' stroke='%23f5f5f7' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M27 14a5 5 0 0110 0'/%3E%3Cpath d='M22.5 20l3-6h13l3 6'/%3E%3Crect x='19' y='20' width='26' height='29' rx='6'/%3E%3Cpath d='M23 54h18'/%3E%3C/g%3E%3Cpath d='M32 27c4 4.4 5.8 7.6 5.8 10.4a5.8 5.8 0 01-11.6 0c0-2.8 1.8-6 5.8-10.4z' fill='%23ffa94d'/%3E%3C/svg%3E">
 <script>/* the saved theme, reading size and words-of-Jesus colour before the first paint (main.js applies them again) */
 try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f = +localStorage.getItem('bs-font');
   if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
@@ -15,12 +34,14 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
   if (localStorage.getItem('bs-woc') === '0') d.classList.add('woc-off'); } catch (e) { /* storage blocked */ }</script>
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/art.css">
+<link rel="stylesheet" href="css/home.css">
 </head>
 <body>
 <a class="skip" href="#reader">Skip to the text</a>
 
 <header id="topbar" class="gnav flat">
   <div class="gnav-left">
+    <a id="brand" class="wordmark" href="#home" aria-label="Bible Lantern home" title="Home (h)"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path class="fl" d="M12 10.1c1.55 1.7 2.25 2.95 2.25 4.05a2.25 2.25 0 01-4.5 0c0-1.1.7-2.35 2.25-4.05z"/></svg><span class="wm-name">Bible Lantern</span></a>
     <button id="btn-pick" class="ib" type="button" aria-label="Browse books" title="Browse books"><svg class="i" aria-hidden="true"><use href="#i-books"/></svg></button>
     <button id="btn-library" class="ib" type="button" aria-label="Library" aria-haspopup="dialog" title="Library (l)"><svg class="i" aria-hidden="true"><use href="#i-library"/></svg></button>
     <button id="cur-ref" class="refbtn" type="button" aria-haspopup="dialog" aria-controls="picker" title="Choose book and chapter"><span id="cur-ref-text">John 3</span><svg class="i" aria-hidden="true"><use href="#i-chev-down"/></svg></button>
@@ -65,6 +86,8 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
   <section id="panel" aria-labelledby="stage-title" aria-hidden="true" inert><div class="stage-clip"><div class="stage" id="stage"></div></div></section>
   <main id="layout"><section id="reader" class="reader" tabindex="-1" aria-label="Chapter text"></section></main>
 </div>
+<!-- Home (home-build brief §2): Today or Welcome, built by js/home.js the first time it shows -->
+<main id="home" class="home" tabindex="-1" hidden></main>
 
 <div class="scrim" id="scrim" aria-hidden="true"></div>
 <aside id="drawer" class="drawer" role="dialog" aria-labelledby="drawer-title" aria-modal="false" aria-hidden="true" inert>
@@ -148,6 +171,7 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
       <dt><kbd class="k">b</kbd></dt><dd>Bookmark the selected verse (or the chapter)</dd>
       <dt><kbd class="k">c</kbd></dt><dd>Link the selected verse to another verse</dd>
       <dt><kbd class="k">shift</kbd><kbd class="k">→</kbd></dt><dd>Select words to highlight or comment (or drag across them), then <kbd class="k">tab</kbd> to the options. Click highlighted words, or the speech bubble beside a verse, to open them</dd>
+      <dt><kbd class="k">h</kbd></dt><dd>Home: the verse of the day, where you left off and your recent study</dd>
       <dt><kbd class="k">l</kbd></dt><dd>Library: bookmarks, progress and history</dd>
       <dt><kbd class="k">r</kbd></dt><dd>Continue reading where you left off (while that prompt shows)</dd>
       <dt><kbd class="k">z</kbd></dt><dd>Undo, or run the action of the notice at the bottom (Alt+Z in a text field)</dd>
@@ -167,11 +191,14 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
       <div id="auth-mode" class="segmented" role="radiogroup" aria-label="Sign in or create a profile"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-mode="signin" aria-checked="true">Sign in</button><button type="button" role="radio" data-mode="signup" aria-checked="false" tabindex="-1">Create profile</button></div>
       <p id="auth-off" class="auth-off" role="note" hidden></p>
       <p id="auth-err" class="form-err" role="alert" hidden></p>
+      <ul class="group frows auth-fields auth-invite" id="auth-invite-row" hidden>
+        <li class="frow"><label for="auth-invite">Invite code</label><input id="auth-invite" name="invite" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="ABCDE-FGHJK" aria-describedby="auth-invite-help" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"><small class="frow-sub" id="auth-invite-help">From the person who invited you</small></li>
+      </ul>
+      <p id="auth-invite-err" class="form-err" role="alert" hidden></p>
       <ul class="group frows auth-fields">
         <li class="frow" data-only="signup" hidden><label for="auth-name">Name</label><input id="auth-name" name="name" autocomplete="name" maxlength="60" spellcheck="false"></li>
         <li class="frow"><label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254"></li>
         <li class="frow"><label for="auth-password">Password</label><input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="256"><button type="button" id="auth-pw-eye" class="pw-eye" aria-label="Show password" title="Show password" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg></button></li>
-        <li class="frow" id="auth-invite-row" hidden><label for="auth-invite">Invite code</label><input id="auth-invite" name="invite" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="From your invitation" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></li>
       </ul>
       <p class="group-foot" id="auth-pw-help" data-only="signup" hidden>At least 8 characters. Stored only on this computer, and only as a secure hash.</p>
       <ul class="group frows auth-opts">

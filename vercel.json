@@ -5,10 +5,23 @@
   "buildCommand": "",
   "outputDirectory": "app",
   "cleanUrls": false,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "bible-study-seven-blond.vercel.app" }],
+      "destination": "https://www.biblelantern.com/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*" }
   ],
   "headers": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "(.*)\\.vercel\\.app" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
     {
       "source": "/((?!api/).*)",
       "headers": [

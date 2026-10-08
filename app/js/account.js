@@ -1,7 +1,7 @@
 // Profiles (profiles-spec §5.1, §5.5–5.7, §5.14): who is studying, sign in / create profile, the profile
 // dialog, the account button and menu, and keeping every tab of this browser on the same profile.
 // Local email + password profiles on this computer; no email is ever sent.
-import { state, api, DRY, lsGet, lsSet, lsDel, lsKey, SCOPE_RX, esc, flushNotes, pendingNotes, flushSavers, pendingSavers, setSaveStatus, broadcast, onBroadcast, setAuthRefresher, SIGN_IN_MSG, setSignInPrompt } from './store.js';
+import { state, api, DRY, lsGet, lsSet, lsDel, lsKey, SCOPE_RX, esc, flushNotes, pendingNotes, flushSavers, pendingSavers, setSaveStatus, broadcast, onBroadcast, setAuthRefresher, SIGN_IN_MSG, setSignInPrompt, hostedMsg, likelyHosted } from './store.js';
 import { icon } from './icons.js';
 import { openMenu, closeMenu, confirmDialog, closeDialog, showDialog, longDate, setRadio, radioKeys, placeInd, moveInd } from './ui.js';
 
@@ -22,8 +22,10 @@ const MSG = {
   name: 'Enter your name (up to 60 characters).',
   get offline() { return state.auth.hosted ? 'Can’t reach the server. Check your connection and try again.' : 'Can’t reach serve.py. Is it running?'; },
   dry: 'Dry run: sign-in is turned off.',
-  badLogin: 'That email and password don’t match a profile on this computer.',
+  get badLogin() { return hostedMsg('That email and password don’t match a profile on this computer.', 'That email and password don’t match a Bible Lantern profile.'); },
   badPassword: 'That password isn’t right.',
+  get stillIn() { return hostedMsg('Can’t reach serve.py, so you’re still signed in.', 'Can’t reach the server, so you’re still signed in.'); },
+  get tryLater() { return hostedMsg('Can’t reach serve.py. Try again when it’s running.', 'Can’t reach the server. Try again in a moment.'); },
   taken: 'There’s already a profile for that email.',
   generic: 'Something went wrong. Try again.',
 };
@@ -71,6 +73,8 @@ function guestMeta(g) {
 export async function initAuth() {
   setAuthRefresher(opts => refreshAuth(opts));
   loadTracker();
+  // the site is known before its server answers (and while it can't): a guest there never saves to this browser
+  if (likelyHosted()) state.auth.hosted = true;
   const r = await api('GET', '/api/auth/me', null, { scoped: false });
   state.auth.known = true;
   if (r.ok && r.data && typeof r.data.scope === 'string' && 'signedIn' in r.data) {
@@ -80,7 +84,7 @@ export async function initAuth() {
     return state.auth;
   }
   state.auth.server = false;
-  state.auth.hosted = lsGet('bs-hosted') === '1'; // a hosted site's guest stays read-only while the server is away
+  state.auth.hosted = likelyHosted(); // a hosted site's guest stays read-only while the server is away
   const last = lsGet('bs-last-scope', 'guest') || 'guest';
   state.auth.scope = SCOPE_RX.test(last) ? last : 'guest';
   state.auth.signedIn = false; state.auth.user = null; state.auth.session = null;
@@ -240,10 +244,10 @@ export async function signOut({ all = false } = {}) {
   if (!state.auth.lost) {
     const pending = await flushAll();
     // an edit made while the flush ran is unsent too (pendingSavers: links)
-    if (pending > 0 || pendingNotes() + pendingSavers() > 0) { toast('Can’t reach serve.py, so you’re still signed in.'); return false; }
+    if (pending > 0 || pendingNotes() + pendingSavers() > 0) { toast(MSG.stillIn); return false; }
   }
   const r = await api('POST', '/api/auth/logout', all ? { all: true } : {}, { scoped: false });
-  if (!r.ok) { toast(r.offline ? 'Can’t reach serve.py, so you’re still signed in.' : ((r.data && r.data.message) || 'Couldn’t sign out. Try again.')); return false; }
+  if (!r.ok) { toast(r.offline ? MSG.stillIn : ((r.data && r.data.message) || 'Couldn’t sign out. Try again.')); return false; }
   if (!state.auth.lost) forgetLocal(uid);
   const me = (await fetchMe()) || guestMe();
   switchScope(me.signedIn ? guestMe() : me, 'signout');
@@ -393,8 +397,9 @@ function syncImportRow() {
 }
 function focusFirst() {
   const up = authMode === 'signup';
-  const name = $('#auth-name'), email = $('#auth-email'), pw = $('#auth-password');
-  const el = up ? (!name.value ? name : !email.value ? email : pw) : (!email.value ? email : pw);
+  const name = $('#auth-name'), email = $('#auth-email'), pw = $('#auth-password'), inv = $('#auth-invite');
+  // creating a profile with an invite starts at the code (the first field, and what Home's 'I have an invite' is about)
+  const el = up ? (inviteMode() && inv && !inv.value ? inv : !name.value ? name : !email.value ? email : pw) : (!email.value ? email : pw);
   el?.focus();
 }
 /** features.signup false (profile limit reached) or features.profiles false (users.json unavailable). */
@@ -410,13 +415,13 @@ function syncAvailability({ force = false } = {}) {
   const seg = $('#auth-mode [data-mode="signup"]');
   if (seg) {
     seg.disabled = off;
-    if (off) { seg.setAttribute('aria-disabled', 'true'); seg.title = 'New profiles can’t be created on this computer right now'; }
+    if (off) { seg.setAttribute('aria-disabled', 'true'); seg.title = hostedMsg('New profiles can’t be created on this computer right now', 'New profiles can’t be created on this site right now'); }
     else { seg.removeAttribute('aria-disabled'); seg.removeAttribute('title'); }
   }
   const note = $('#auth-off');
   if (note) {
-    const msg = none ? 'Profiles are unavailable right now: users.json in the data folder is missing or damaged. Restore it from users.json.bak (see README), then try again.'
-      : off ? 'This computer already has the maximum number of profiles, so a new one can’t be created. You can still sign in.' : '';
+    const msg = none ? hostedMsg('Profiles are unavailable right now: users.json in the data folder is missing or damaged. Restore it from users.json.bak (see README), then try again.', 'Profiles are unavailable right now. Try again later.')
+      : off ? hostedMsg('This computer already has the maximum number of profiles, so a new one can’t be created. You can still sign in.', 'This site has reached its profile limit, so a new one can’t be created. You can still sign in.') : '';
     note.hidden = !msg;
     const html = msg ? `${icon('info')}<span>${esc(msg)}</span>` : '';
     if (note.innerHTML !== html) note.innerHTML = html;
@@ -450,6 +455,7 @@ function showPassword(on) {
 }
 function clearErrors(root = document.getElementById('auth'), errId = 'auth-err') {
   const err = document.getElementById(errId); if (err) { err.hidden = true; err.textContent = ''; }
+  if (errId === 'auth-err') { const ie = $('#auth-invite-err'); if (ie) { ie.hidden = true; ie.textContent = ''; } } // the invite's own line
   if (root) $$('.frow.bad', root).forEach(r => r.classList.remove('bad'));
   if (root) $$('[aria-invalid]', root).forEach(i => i.removeAttribute('aria-invalid'));
 }
@@ -480,6 +486,7 @@ function bindAuthDialog() {
     if (row && row.classList.contains('bad')) row.classList.remove('bad');
     e.target.removeAttribute?.('aria-invalid');
     const err = $('#auth-err'); if (err && !err.hidden) err.hidden = true;
+    const ie = $('#auth-invite-err'); if (ie && !ie.hidden) ie.hidden = true;
   });
   $('#auth-err')?.addEventListener('click', e => {
     const sw = e.target.closest('[data-auth-switch]'); if (!sw) return;
@@ -549,7 +556,7 @@ function authError(r) {
   switch (d.error) {
     case 'invite_required':
       if ($('#auth-invite-row')?.hidden) { state.auth.signupMode = 'invite'; setMode('signup'); } // sign-up closed since the dialog opened
-      return fieldErr('auth-err', 'auth-invite', String($('#auth-invite')?.value || '').trim()
+      return fieldErr('auth-invite-err', 'auth-invite', String($('#auth-invite')?.value || '').trim() // right under the code, not above the form
         ? 'That invite code doesn’t work. Check it, or ask for a new one.' : (d.message || 'Sign-up needs an invite code.'));
     case 'bad_credentials': return fieldErr('auth-err', 'auth-password', MSG.badLogin);
     case 'email_taken': return fieldErr('auth-err', 'auth-email', MSG.taken, '<button class="link" type="button" data-auth-switch="signin">Sign in instead</button>');
@@ -758,7 +765,7 @@ async function importGuest(btn) {
   if (DRY) return profErr('Dry run: profile changes are turned off.');
   await busyWhile(btn, '', async () => {
     const pending = await flushAll();
-    if (pending > 0) return profErr('Can’t reach serve.py. Try again when it’s running.');
+    if (pending > 0) return profErr(MSG.tryLater);
     const r = await api('POST', '/api/profile/import-guest', {});
     if (!r.ok) return profileApiError(r, {});
     const parts = importedParts((r.data && r.data.imported) || {});
@@ -787,11 +794,13 @@ async function importProfileFile(btn, file) {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return profErr('That file isn’t a Bible study profile export.');
   await busyWhile(btn, '', async () => {
     const pending = await flushAll(); // the profile's own unsent edits first: the merge then sees them
-    if (pending > 0) return profErr(state.auth.hosted ? 'Your latest changes aren’t saved yet. Try again in a moment.' : 'Can’t reach serve.py. Try again when it’s running.');
-    const r = await api('POST', '/api/profile/import', json);
+    if (pending > 0) return profErr(state.auth.hosted ? 'Your latest changes aren’t saved yet. Try again in a moment.' : MSG.tryLater);
+    const r = await api('POST', '/api/profile/import', json, { timeout: 120000 }); // a large file over a slow uplink
     if (!r.ok) {
       const d = r.data || {};
       if (r.status === 413 || d.error === 'too_large') return profErr('That file is too large to import. The limit is 25 MB.');
+      // hosted, a refused body the proxy cut off arrives as its own non-JSON 502 rather than serve.py's answer
+      if (r.status === 502 && !r.data) return profErr('The file is too large or the server is busy. Try again.');
       return profileApiError(r, {});
     }
     const parts = importedParts((r.data && r.data.imported) || {}), changed = parts.length > 0 || !!(r.data && r.data.changed);
@@ -889,7 +898,7 @@ async function deleteProfile() {
   const uid = state.auth.scope;
   await confirmDialog({
     title: 'Delete this profile?',
-    body: state.auth.hosted ? `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this site.`
+    body: state.auth.hosted ? `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this site. It’s erased straight away and can’t be undone.`
       : `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this computer. Guest notes are not affected.`,
     ok: 'Delete profile', danger: true, password: true,
     onConfirm: async password => {
