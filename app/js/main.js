@@ -66,13 +66,15 @@ const A = {
     drawer.setOrigFocus(null);
     lnkCall('clearMineFocus'); // the Mine tab follows the reader again (links-spec §3.3)
     if (state.selected && state.drawerTab === 'search') state.drawerTab = 'xref';
-    if (opts.panel) state.panel = opts.panel;
+    if (opts.panel !== undefined) state.panel = opts.panel || null; // a name opens that panel; null closes the open one
     renderReader({ scroll: opts.panel ? 'top' : true });
     drawer.renderDrawer();
     renderPanel();
     updateBar(); updateHash();
   },
   step(dir) { const t = reader.stepTarget(dir); if (t) A.navigate(t.b, t.c, 0); },
+  /** Original (interlinear) on or off; from Home the chapter is drawn with it when Home is left. */
+  setOrig(on) { on = !!on; if (state.showOrig === on) return; state.showOrig = on; if (!state.home) { updateBar(); renderReader(); } },
   select(v, o = {}) {
     v = +v; if (!v) return;
     if (o.tab === 'mine' && !mineReady()) { const { tab, ...rest } = o; o = rest; }
