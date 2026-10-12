@@ -410,15 +410,32 @@ const LAKES = [[32.82, 35.59, 2, 3.4], [31.5, 35.5, 2.2, 8]];   // the Sea of Ga
 const SEAS = [['Great Sea', 32.75, 29.55], ['Red Sea', 27.4, 34.6]];
 const PL_SIDE = { 636: 'l up', 218: 'l dn', 878: 'l' };         // labels left of the dot (Egypt's goes right)
 
+// Where each tile goes: the whole card is the link (home.css stretches .tile-a over it), and it opens the feature
+// itself, not just the chapter: the arcs or the map panel, the engravings gallery beside the Transfiguration plate,
+// or Psalm 119:105 with Original on. A plain chapter link stays in the href for a new tab.
+const GO = {
+  arcs: { ref: ARCS, panel: 'arcs', label: 'Open John 1 with its arcs' },
+  dore: { ref: [40, 17, 1], panel: 'art', label: 'See the plate beside Matthew 17' },
+  ctx: { ref: [CTX.b, CTX.c], panel: 'map', label: 'Open Matthew 2 on the map' },
+  orig: { ref: ORIG, orig: true, panel: null, label: 'Read Psalm 119:105 in Hebrew' }, // no panel over the words
+};
 function tilesHtml() {
-  const tile = (id, n, kick, h, d, go, fixed = false) => `<article class="tile" aria-labelledby="hm-t-${id}" data-tile="${id}">`
+  const tile = (id, n, kick, h, d, fixed = false) => `<article class="tile" aria-labelledby="hm-t-${id}" data-tile="${id}">`
     + `<div class="tile-art${fixed ? ' fixed' : ''} dk" id="hm-${id}-art" data-fill="${id}"></div>`
     + `<p class="tile-k kick"><b aria-hidden="true">${n}</b>${kick}</p><h3 id="hm-t-${id}">${h}</h3><p class="tile-d" id="hm-${id}-d">${d}</p>`
-    + (go ? `<a class="tile-a" href="${hrefOf(...go[0])}">${esc(go[1])}${hic('arrow')}</a>` : '') + '</article>';
-  return tile('arcs', '01', 'Cross-references', 'See where a chapter echoes through Scripture', 'Every cross-reference is drawn as an arc across the whole Bible, from Genesis to Revelation.', [ARCS, `Read ${refLabel(...ARCS)}`], true)
+    + `<a class="tile-a" href="${hrefOf(...GO[id].ref)}">${esc(GO[id].label)}${hic('arrow')}</a></article>`;
+  return tile('arcs', '01', 'Cross-references', 'See where a chapter echoes through Scripture', 'Every cross-reference is drawn as an arc across the whole Bible, from Genesis to Revelation.', true)
     + tile('dore', '02', 'Doré’s engravings', 'Engravings beside the verses they show', 'Plates from Gustave Doré’s 1866 Bible, placed next to the passage each one illustrates.')
-    + tile('ctx', '03', 'Context', 'The places on a map, the events in order', 'In Matthew 2 the wise men come to Jerusalem, and Joseph takes the young child and his mother into Egypt, then home to Nazareth.', [[CTX.b, CTX.c], `Read ${refLabel(CTX.b, CTX.c)}`])
-    + tile('orig', '04', 'Hebrew and Greek', 'The original, word by word', 'Each word with its transliteration, meaning and Strong’s number. Here is Psalm 119:105 in Hebrew.', [ORIG, `Read ${refLabel(...ORIG)}`]);
+    + tile('ctx', '03', 'Context', 'The places on a map, the events in order', 'In Matthew 2 the wise men come to Jerusalem, and Joseph takes the young child and his mother into Egypt, then home to Nazareth.')
+    + tile('orig', '04', 'Hebrew and Greek', 'The original, word by word', 'Each word with its transliteration, meaning and Strong’s number. Here is Psalm 119:105 in Hebrew.');
+}
+/** A tile was chosen: open its feature in the reader (the chapter, with the panel or Original it shows off). */
+function openTile(id) {
+  const d = GO[id]; if (!d || !A?.navigate) return false;
+  const [b, c, v = 0] = d.ref;
+  if (d.orig) A.setOrig?.(true);
+  A.navigate(b, c, v, { panel: d.panel }); // null closes a panel left open by an earlier tile
+  return true;
 }
 
 // The tiles drawn to their size: art element -> draw(). A draw does nothing while its size is unchanged (or none).
@@ -595,6 +612,12 @@ function bind() {
     if (act) { A?.openAuth?.(act.dataset.act === 'invite' ? 'signup' : 'signin'); return; }
     const pl = t.closest('#hm-tiles .pl-b[data-plate]');
     if (pl) { A?.openArt?.(pl.dataset.plate, { returnFocus: pl, group: SHOWCASE }); return; }
+    const go = t.closest('#hm-tiles .tile-a');
+    if (go) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return; // a new tab keeps the plain chapter link
+      if (openTile(go.closest('.tile')?.dataset.tile)) e.preventDefault();
+      return;
+    }
     const cap = t.closest('[data-cap]');
     if (cap && cap.dataset.id) { A?.openArt?.(cap.dataset.id, { returnFocus: cap }); return; }
     if (t.closest('#hm-atlas [data-close]')) { closeBooks(true); return; }

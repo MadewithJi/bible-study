@@ -226,7 +226,15 @@ body.at-home #progress { display: none; }
 
 /* ---------- Welcome: the four previews (home.js renderPreviews draws them) ---------- */
 #home .tiles { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 56px 32px; }
-#home .tile { grid-column: span 6; min-width: 0; }
+#home .tile { position: relative; grid-column: span 6; min-width: 0; }
+/* the whole tile opens its feature: the link at its foot stretches over the card (the plates keep their own buttons
+   above it), and the picture lifts a little under the pointer */
+#home .tile-a::after { content: ''; position: absolute; inset: 0; border-radius: var(--r-xl); }
+#home .tile-a:focus-visible { outline: none; }
+#home .tile-a:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 4px; }
+#home .tile:hover .tile-art { transform: translateY(-3px); box-shadow: 0 0 0 .5px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.08), 0 26px 56px rgba(0,0,0,.2); }
+#home .tile:hover .tile-a .i { transform: translateX(3px); }
+#home .tile:hover h3 { color: var(--link); }
 #home .tile:nth-child(4n+1), #home .tile:nth-child(4n) { grid-column: span 7; }
 #home .tile:nth-child(4n+2), #home .tile:nth-child(4n+3) { grid-column: span 5; }
 #home .tile-art { position: relative; height: clamp(260px, 24vw, 330px); border-radius: var(--r-xl); overflow: hidden; background: radial-gradient(120% 90% at 50% 0%, #1b1b22 0%, #0c0c10 62%), #0c0c10; box-shadow: 0 0 0 .5px rgba(255,255,255,.08), inset 0 1px 0 rgba(255,255,255,.07), 0 2px 8px rgba(0,0,0,.06), 0 18px 48px rgba(0,0,0,.14); }
@@ -236,7 +244,7 @@ body.at-home #progress { display: none; }
 #home .tile p.tile-d { max-width: 34em; font-size: 15px; line-height: 1.5; color: var(--label-2); }
 #home .tile-a { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; font-size: 15px; font-weight: 600; }
 #home .tile-a .i { width: 14px; height: 14px; transition: transform var(--d-2) var(--ease); }
-#home .tile-a:hover .i { transform: translateX(3px); }
+#home .tile h3 { transition: color var(--d-2) var(--ease); }
 /* a tile's picture fades in once its data has come (home.js adds .is-on) */
 #home .tile-art > * { opacity: 0; transition: opacity .6s var(--ease-out); }
 #home .tile-art.is-on > * { opacity: 1; }
@@ -285,7 +293,7 @@ body.at-home #progress { display: none; }
 #home .ilin-en em { color: var(--label); }
 /* engravings */
 #home .strip { position: absolute; inset: 18px; display: flex; gap: 10px; }
-#home .pl-b { position: relative; min-width: 0; border-radius: var(--r-sm); overflow: hidden; background: #000; box-shadow: 0 0 0 .5px rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.5); }
+#home .pl-b { position: relative; z-index: 1; min-width: 0; border-radius: var(--r-sm); overflow: hidden; background: #000; box-shadow: 0 0 0 .5px rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.5); }
 #home .pl-b img { width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.1); transition: transform var(--d-4) var(--ease), filter var(--d-3); }
 #home .pl-b:hover img { transform: scale(1.04); filter: sepia(.1) brightness(1.08); }
 #home .pl-b:focus-visible { outline-offset: 2px; }
@@ -365,7 +373,7 @@ body.at-home #progress { display: none; }
   #home .plate img { transition: opacity .4s linear; transform: none; }
   #home .plate .halo, #home .plate .beam, #home .hero-in > *, #home .chs { animation: none; }
   #home .lbtn:active, .wordmark:active { transform: none; }
-  #home .vod:hover .vod-go .i, #home .tile-a:hover .i, #home .pl-b:hover img { transform: none; }
+  #home .vod:hover .vod-go .i, #home .tile:hover .tile-a .i, #home .tile:hover .tile-art, #home .pl-b:hover img { transform: none; }
   #home .tile-art > *, #home .pl-b img { transition: none; }
 }
 
@@ -387,6 +395,7 @@ body.at-home #progress { display: none; }
   #home .tile-art { forced-color-adjust: none; background: Canvas; color: CanvasText; border: 1px solid CanvasText; box-shadow: none; }
   #home .tile-art :is(span, p, li, em) { color: CanvasText; text-shadow: none; }
   #home .tile-art :focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  #home .tile-a:focus-visible::after { outline-color: Highlight; }
   #home :is(.a-ot, .a-nt, .a-ax, .m-coast) { stroke: CanvasText; } #home .m-river { stroke: GrayText; }
   #home .m-sea { fill: Canvas; } #home .m-lake { fill: GrayText; } #home .m-route { stroke: Highlight; opacity: 1; }
   #home .m-pl circle { fill: Highlight; } #home .m-pl .halo { display: none; }
