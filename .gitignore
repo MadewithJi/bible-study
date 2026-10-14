@@ -17,3 +17,10 @@ __pycache__/
 *.corrupt-*
 # Agent build tooling (not part of the app)
 .design/workflows/
+
+# Instagram feature cards (marketing sources, rendered to .design/social/out)
+app/mock/social/
+.design/social/out/
+
+# Logo explorations (sources + renders)
+.design/logo/out/

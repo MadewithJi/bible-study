@@ -45,6 +45,7 @@ const hrefOf = (b, c, v) => `#${b}/${c}${v ? `/${v}` : ''}`;
 const plural = (n, w) => `${n.toLocaleString('en-GB')} ${n === 1 ? w : w + 's'}`;
 const call = (mod, name, ...args) => { const f = mod && mod[name]; if (typeof f !== 'function') return undefined; try { return f(...args); } catch (e) { console.error(e); return undefined; } };
 const IMG_DIR = new URL('../data/art/', import.meta.url).href;
+const MARK_URL = new URL('../icons/mark.svg', import.meta.url).href;   // the engraved mark (the Welcome cover)
 const imgUrl = (p, large = false) => `${IMG_DIR}${p.id}${large ? '' : '-s'}.jpg`;
 // title + scene, ending in one full stop (as art.js writes the engravings' alt text)
 const altOf = p => { const s = tidy(p.scene); return tidy(p.title) + (s ? `. ${s}${/[.!?…]["'”’]?$/.test(s) ? '' : '.'}` : ''); };
@@ -60,7 +61,7 @@ const textTr = () => (state.tr === 'kjv' || state.tr === 'bsb' ? state.tr : 'kjv
 const dayOfYear = (d = new Date()) => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 864e5);
 const SPRITE = '<svg aria-hidden="true" width="0" height="0" style="position:absolute">'
   // the Bible Lantern mark: a monoline lantern on the app's 24px grid; the flame is the lamp colour
-  + '<symbol id="hm-lantern" viewBox="0 0 24 24"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path style="fill:var(--lamp);stroke:none" d="M12 10.1c1.55 1.7 2.25 2.95 2.25 4.05a2.25 2.25 0 01-4.5 0c0-1.1.7-2.35 2.25-4.05z"/></symbol>'
+  + '<symbol id="hm-lantern" viewBox="0 0 24 24"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path class="cr" d="M12 10.3v6.2M9.8 12.4h4.4"/></symbol>'
   + '<symbol id="hm-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>'
   + '<symbol id="hm-hl" viewBox="0 0 24 24"><path d="M14.6 4.6l4.8 4.8-8.2 8.2H6.4v-4.8z"/><path d="M12 7.2l4.8 4.8"/><path d="M4 20.5h16"/></symbol>'
   + '<symbol id="hm-comment" viewBox="0 0 24 24"><path d="M7 4.5h10A2.5 2.5 0 0119.5 7v6.5A2.5 2.5 0 0117 16h-5.5L7.5 19.5V16H7a2.5 2.5 0 01-2.5-2.5V7A2.5 2.5 0 017 4.5z"/></symbol>'
@@ -99,7 +100,7 @@ function welcomeHtml() {
     <section class="cover cover-g dk" aria-labelledby="hm-h-welcome">
       <div class="plate" data-plate="cover"><img alt="" decoding="async" fetchpriority="high"><span class="glow"></span><span class="halo"></span><span class="beam"></span><span class="shade"></span></div>
       <div class="hero-in wrap">
-        <h1 id="hm-h-welcome" class="wm" tabindex="-1">${hic('lantern', 'mark')}<span>${esc(BRAND.name)}</span></h1>
+        <h1 id="hm-h-welcome" class="wm" tabindex="-1"><img class="emark" src="${MARK_URL}" alt="" width="1024" height="1024" decoding="async"><span>${esc(BRAND.name)}</span></h1>
         <blockquote class="motto"><p><span class="half">${esc(a)},</span> <span class="half">${esc(z.join(', '))}</span></p><footer><cite>${esc(BRAND.mottoRef)}</cite> <span>· KJV</span></footer></blockquote>
         <p class="g-dek">A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.</p>
         <div class="cta">

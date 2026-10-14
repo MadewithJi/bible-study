@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #07070a; }
+  .plate { position: absolute; inset: 0; background: #000 url('../../app/data/art/dore-001.jpg') 50% 22% / cover no-repeat; opacity: .55; }
+  .plate::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7,7,10,.96) 0%, rgba(7,7,10,.82) 46%, rgba(7,7,10,.3) 100%); }
+  .mark { position: absolute; left: 36px; top: 35px; width: 560px; height: 560px; }
+  .text { position: absolute; left: 560px; top: 196px; color: #f5f0e6; font-family: "New York", "Iowan Old Style", Charter, Georgia, serif; }
+  .text h1 { margin: 0; font-size: 104px; font-weight: 600; letter-spacing: -2px; line-height: 1; white-space: nowrap; }
+  .text p { margin: 22px 0 0 4px; font: 400 26px/1.3 -apple-system, "Helvetica Neue", Arial, sans-serif; letter-spacing: 4px; text-transform: uppercase; color: rgba(245,240,230,.6); }
+  .text .dek { margin: 36px 0 0 4px; font: 400 25px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif; letter-spacing: 0; text-transform: none; color: rgba(245,240,230,.78); max-width: 580px; }
+  .url { position: absolute; left: 566px; bottom: 44px; font: 600 24px/1 -apple-system, "Helvetica Neue", Arial, sans-serif; color: #f5f0e6; }
+  .url i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ffb860; margin-right: 12px; vertical-align: 2px; box-shadow: 0 0 12px rgba(255,184,96,.8); }
+</style>
+</head>
+<body>
+<div class="plate"></div>
+<img class="mark" src="../../app/icons/mark.svg" alt="">
+<div class="text"><h1>Bible Lantern</h1><p>Thy word is a lamp unto my feet</p>
+  <div class="dek">A quiet place to read the Bible, with cross-references, maps, Hebrew and Greek, and Doré’s engravings beside the text.</div></div>
+<div class="url"><i></i>www.biblelantern.com</div>
+</body>
+</html>
