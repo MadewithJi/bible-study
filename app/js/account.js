@@ -1,7 +1,7 @@
 // Profiles (profiles-spec §5.1, §5.5–5.7, §5.14): who is studying, sign in / create profile, the profile
 // dialog, the account button and menu, and keeping every tab of this browser on the same profile.
 // Local email + password profiles on this computer; no email is ever sent.
-import { state, api, DRY, lsGet, lsSet, lsDel, lsKey, SCOPE_RX, esc, flushNotes, pendingNotes, flushSavers, pendingSavers, setSaveStatus, broadcast, onBroadcast, setAuthRefresher, SIGN_IN_MSG, setSignInPrompt, hostedMsg, likelyHosted } from './store.js';
+import { state, api, DRY, lsGet, lsSet, lsDel, lsKey, SCOPE_RX, esc, flushNotes, pendingNotes, flushSavers, pendingSavers, setSaveStatus, broadcast, onBroadcast, setAuthRefresher, SIGN_IN_MSG, setSignInPrompt, hostedMsg, likelyHosted, QUOTA_MSG, DONATE_URL, PAUSE_MSG, signupPaused } from './store.js';
 import { icon } from './icons.js';
 import { openMenu, closeMenu, confirmDialog, closeDialog, showDialog, longDate, setRadio, radioKeys, placeInd, moveInd } from './ui.js';
 
@@ -75,7 +75,7 @@ export async function initAuth() {
   loadTracker();
   // the site is known before its server answers (and while it can't): a guest there never saves to this browser
   if (likelyHosted()) state.auth.hosted = true;
-  const r = await api('GET', '/api/auth/me', null, { scoped: false });
+  const r = await api('GET', '/api/auth/me?boot=1', null, { scoped: false }); // boot=1: the server counts one app load
   state.auth.known = true;
   if (r.ok && r.data && typeof r.data.scope === 'string' && 'signedIn' in r.data) {
     applyMe(r.data);
@@ -103,10 +103,28 @@ function applyMe(me) {
   if ('hosted' in me) {
     a.hosted = me.hosted === true;
     if (a.hosted) lsSet('bs-hosted', '1'); else if (lsGet('bs-hosted')) lsDel('bs-hosted');
+    a.turnstile = turnstileOf(me); // open-signup brief §2: only a server's answer says whether the check is on
   }
-  if (me.signup === 'invite' || me.signup === 'open') a.signupMode = me.signup;
+  applySignup(me);
   a.owner = !!(a.hosted && a.signedIn && me.owner === true);
   if (document.getElementById('auth')?.open && !authBusy) syncAvailability();
+}
+/** auth/me's sign-up ('open' | 'closed') and why it is closed (donate brief §2: signupPause). A change tells Home
+ *  (bs:signup-changed), which announces the pause or takes the announcement down without a reload. */
+const PAUSES = new Set(['paused', 'storage', 'capacity']);
+function applySignup(me) {
+  if (!me || (me.signup !== 'open' && me.signup !== 'closed')) return;
+  setSignup(me.signup, me.signup === 'closed' && PAUSES.has(me.signupPause) ? me.signupPause : null);
+}
+function setSignup(mode, pause) {
+  const a = state.auth, was = `${a.signupMode} ${a.signupPause}`;
+  a.signupMode = mode; a.signupPause = pause;
+  if (`${mode} ${pause}` !== was) document.dispatchEvent(new CustomEvent('bs:signup-changed', { detail: { signup: mode, pause } }));
+}
+/** auth/me's turnstile: {siteKey} while Cloudflare Turnstile guards sign-up, else null. */
+function turnstileOf(me) {
+  const k = me && me.turnstile && typeof me.turnstile.siteKey === 'string' ? me.turnstile.siteKey.trim() : '';
+  return k && k.length <= 200 ? { siteKey: k } : null;
 }
 const guestMe = () => ({ signedIn: false, scope: 'guest', user: null, session: null, guest: state.auth.guest, limits: state.auth.limits, features: state.auth.features });
 async function fetchMe() {
@@ -344,9 +362,11 @@ async function continueAsGuest() {
 
 // ------------------------------------------------------------ sign in / create profile (§5.6)
 let authMode = 'signin', authReason = '', authBusy = false;
+let authSeq = 0; // each opening of the dialog: a sign-up still waiting for its Turnstile token belongs to an older one
 
 export function openAuth(mode = 'signin', { email = '', reason = '' } = {}) {
   const d = document.getElementById('auth'); if (!d) return;
+  authSeq++;
   closeMenu(false);
   authReason = reason || '';
   const form = document.getElementById('auth-form');
@@ -367,14 +387,22 @@ export function openAuth(mode = 'signin', { email = '', reason = '' } = {}) {
   syncAvailability();
   showDialog(d);
   placeInd($('#auth-mode'));
+  tsShow();
   setTimeout(() => focusFirst(), 40);
   // the guest summary (for "Bring over guest data") and what serve.py allows may be older than this visit: refresh
   if (state.auth.server && !state.auth.signedIn) fetchMe().then(me => {
     if (!me || me.signedIn || !d.open) return;
     state.auth.guest = me.guest || state.auth.guest;
     if (me.features) state.auth.features = me.features;
+    const was = `${state.auth.signupMode} ${tsKey()}`;
+    applySignup(me);
+    if ('hosted' in me) state.auth.turnstile = turnstileOf(me);
     syncImportRow();
-    if (!authBusy) { syncAvailability({ force: true }); moveInd($('#auth-mode')); }
+    if (!authBusy) {
+      syncAvailability({ force: true });
+      if (authMode === 'signup' && was !== `${state.auth.signupMode} ${tsKey()}`) { setMode('signup'); focusFirst(); } // paused or reopened meanwhile
+      moveInd($('#auth-mode'));
+    }
   });
 }
 /** A hosted site words two lines differently: no Terminal to reset a password, and nothing is 'on this computer'. */
@@ -388,8 +416,11 @@ function syncAuthCopy() {
   if (help.innerHTML !== help2) help.innerHTML = help2;
   if (foot.innerHTML !== foot2) foot.innerHTML = foot2;
 }
-/** Sign-up on a hosted site needs an invite code (except for the owner's email, which serve.py knows). */
-const inviteMode = () => state.auth.signupMode === 'invite';
+/** Sign-up paused (BS_SIGNUP=closed, the free-space guard or the profile cap: donate brief §2): the Create profile tab
+ *  says so, with Home's words and Help us expand, instead of showing the form. */
+const signupClosed = () => state.auth.signupMode === 'closed';
+const closedHtml = () => `${icon('info')}<div class="ac-in"><p class="ac-t">${esc(PAUSE_MSG.title)}</p><p>${esc(PAUSE_MSG.body)}</p>`
+  + `<a class="btn btn-tinted sm ac-go" href="${DONATE_URL}" target="_blank" rel="noopener">${esc(PAUSE_MSG.cta)}${icon('external')}</a></div>`;
 function syncImportRow() {
   const g = state.auth.guest, row = $('#auth-import-row'); if (!row) return;
   row.hidden = !(authMode === 'signup' && g && g.hasData);
@@ -397,13 +428,14 @@ function syncImportRow() {
 }
 function focusFirst() {
   const up = authMode === 'signup';
-  const name = $('#auth-name'), email = $('#auth-email'), pw = $('#auth-password'), inv = $('#auth-invite');
-  // creating a profile with an invite starts at the code (the first field, and what Home's 'I have an invite' is about)
-  const el = up ? (inviteMode() && inv && !inv.value ? inv : !name.value ? name : !email.value ? email : pw) : (!email.value ? email : pw);
+  const name = $('#auth-name'), email = $('#auth-email'), pw = $('#auth-password');
+  // creating a profile starts at Name (what Home's 'Create a profile' is about); paused, the note that says so is read
+  const el = up ? (signupClosed() ? $('#auth-closed') : !name.value ? name : !email.value ? email : pw) : (!email.value ? email : pw);
   el?.focus();
 }
-/** features.signup false (profile limit reached) or features.profiles false (users.json unavailable). */
-const signupOff = () => { const f = state.auth.features || {}; return f.signup === false || f.profiles === false; };
+/** features.signup false (profile limit reached) or features.profiles false (users.json unavailable). On the site a
+ *  full house is a pause like the others: the tab stays, and says why (signupClosed). */
+const signupOff = () => { const f = state.auth.features || {}; return f.profiles === false || (f.signup === false && !signupPaused()); };
 const profilesOff = () => (state.auth.features || {}).profiles === false;
 /**
  * Keep #auth in step with what serve.py allows: the Create profile segment is disabled (and #auth-off says why)
@@ -433,7 +465,11 @@ function setMode(mode) {
   authMode = mode === 'signup' && !signupOff() ? 'signup' : 'signin';
   const up = authMode === 'signup';
   $$('#auth [data-only]').forEach(el => { el.hidden = el.dataset.only !== authMode; });
-  const inv = $('#auth-invite-row'); if (inv) inv.hidden = !(up && inviteMode());
+  // sign-up paused: the Create profile tab shows why instead of the form, and Sign in works as ever
+  const closed = up && signupClosed(), note = $('#auth-closed');
+  $('#auth-form').classList.toggle('closed', closed);
+  if (note) { note.hidden = !closed; const html = closed ? closedHtml() : ''; if (note.innerHTML !== html) note.innerHTML = html; }
+  $('#auth-submit').hidden = closed;
   syncImportRow();
   $('#auth-title').textContent = up ? 'Create profile' : 'Sign in';
   if (!authBusy) $('#auth-submit').textContent = up ? 'Create profile' : 'Sign in';
@@ -442,6 +478,7 @@ function setMode(mode) {
   if (up) $('#auth-password').setAttribute('aria-describedby', 'auth-pw-help'); else $('#auth-password').removeAttribute('aria-describedby');
   setRadio($('#auth-mode'), b => b.dataset.mode === authMode);
   clearErrors();
+  if (document.getElementById('auth')?.open) tsShow(); // on opening, openAuth shows it once the dialog is up
 }
 function showPassword(on) {
   const pw = $('#auth-password'), eye = $('#auth-pw-eye'); if (!pw || !eye) return;
@@ -455,7 +492,7 @@ function showPassword(on) {
 }
 function clearErrors(root = document.getElementById('auth'), errId = 'auth-err') {
   const err = document.getElementById(errId); if (err) { err.hidden = true; err.textContent = ''; }
-  if (errId === 'auth-err') { const ie = $('#auth-invite-err'); if (ie) { ie.hidden = true; ie.textContent = ''; } } // the invite's own line
+  if (errId === 'auth-err') { const te = $('#auth-ts-err'); if (te) { te.hidden = true; te.textContent = ''; } } // the line above the button
   if (root) $$('.frow.bad', root).forEach(r => r.classList.remove('bad'));
   if (root) $$('[aria-invalid]', root).forEach(i => i.removeAttribute('aria-invalid'));
 }
@@ -486,7 +523,7 @@ function bindAuthDialog() {
     if (row && row.classList.contains('bad')) row.classList.remove('bad');
     e.target.removeAttribute?.('aria-invalid');
     const err = $('#auth-err'); if (err && !err.hidden) err.hidden = true;
-    const ie = $('#auth-invite-err'); if (ie && !ie.hidden) ie.hidden = true;
+    const te = $('#auth-ts-err'); if (te && !te.hidden && !te.classList.contains('calm')) te.hidden = true; // a pending check's prompt stays
   });
   $('#auth-err')?.addEventListener('click', e => {
     const sw = e.target.closest('[data-auth-switch]'); if (!sw) return;
@@ -501,26 +538,36 @@ async function onAuthSubmit(e) {
   if (authBusy) return;
   clearErrors();
   const up = authMode === 'signup';
+  if (up && signupClosed()) return; // the form isn't shown
   const name = cleanName($('#auth-name').value), email = normEmail($('#auth-email').value), pw = $('#auth-password').value;
   if (up && nameProblem(name)) return fieldErr('auth-err', 'auth-name', nameProblem(name));
   if (emailProblem(email)) return fieldErr('auth-err', 'auth-email', emailProblem(email));
   if (up) { const p = passwordProblem(pw, email); if (p) return fieldErr('auth-err', 'auth-password', p); }
   else if (!pw) return fieldErr('auth-err', 'auth-password', 'Enter your password.');
-  // no check here: the owner's email needs no code, and only serve.py knows which that is
-  const invite = up && inviteMode() ? String($('#auth-invite')?.value || '').trim() : '';
   if (DRY) return showErr('auth-err', MSG.dry);
   if (!state.auth.server) return showErr('auth-err', MSG.offline);
 
   const remember = !!$('#auth-remember').checked;
   const importGuest = up && !$('#auth-import-row').hidden && !!$('#auth-import').checked;
   const btn = $('#auth-submit'), dlg = document.getElementById('auth');
-  // data-busy: Esc and the backdrop leave the dialog open until serve.py answers (main.js bindDialogs)
-  authBusy = true; btn.disabled = true; btn.textContent = up ? 'Creating…' : 'Signing in…'; dlg.dataset.busy = '1';
+  authBusy = true; btn.disabled = true;
   try {
+    // Turnstile (open-signup brief §2): its token first, usually ready long before; Esc still closes while it comes
+    let turnstileToken = '';
+    if (up && tsOn()) {
+      btn.textContent = 'Checking…';
+      const seq = authSeq;
+      turnstileToken = await tsToken();
+      if (!dlg.open || authMode !== 'signup' || seq !== authSeq) return; // closed (or reopened), or Sign in chosen, meanwhile
+      if (!turnstileToken) { tsMissing(); return; }
+    }
+    // data-busy: Esc and the backdrop leave the dialog open until serve.py answers (main.js bindDialogs)
+    btn.textContent = up ? 'Creating…' : 'Signing in…'; dlg.dataset.busy = '1';
     if (!state.auth.lost) await flushAll(); // guest data is current before an import
     const r = up
-      ? await api('POST', '/api/auth/signup', { email, name, password: pw, remember, importGuest, ...(invite ? { invite } : {}) }, { scoped: false })
+      ? await api('POST', '/api/auth/signup', { email, name, password: pw, remember, importGuest, ...(turnstileToken ? { turnstileToken } : {}) }, { scoped: false })
       : await api('POST', '/api/auth/login', { email, password: pw, remember }, { scoped: false });
+    if (turnstileToken) tsReset(); // a token is good for one sign-up, whatever the answer
     if (!r.ok) { delete dlg.dataset.busy; authError(r); return; }
     $('#auth-password').value = '';
     const user = (r.data && r.data.user) || {};
@@ -546,6 +593,20 @@ async function onAuthSubmit(e) {
     syncAvailability();
   }
 }
+const PAUSED_BY = { signup_closed: 'paused', storage_full: 'storage', user_limit: 'capacity' };
+/** After a refused sign-up: auth/me says whether (and why) sign-up is closed now; an open dialog follows it. */
+function recheckSignup() {
+  if (!state.auth.server) return;
+  fetchMe().then(me => {
+    if (!me || me.signedIn || state.auth.signedIn) return;
+    const was = state.auth.signupMode;
+    if (me.features) state.auth.features = me.features;
+    applySignup(me);
+    const d = document.getElementById('auth');
+    if (d?.open && !authBusy && authMode === 'signup' && state.auth.signupMode !== was) { setMode('signup'); focusFirst(); }
+    if (d?.open && !authBusy) syncAvailability();
+  });
+}
 function authError(r) {
   const d = r.data || {};
   if (r.offline || !r.status) return showErr('auth-err', MSG.offline);
@@ -553,11 +614,19 @@ function authError(r) {
   if (d.error === 'user_limit') state.auth.features = { ...(state.auth.features || {}), signup: false };
   else if (d.error === 'registry_unavailable' && !d.field) state.auth.features = { ...(state.auth.features || {}), signup: false, profiles: false };
   const field = { email: 'auth-email', name: 'auth-name', password: 'auth-password' }[d.field];
+  // donate brief §2: paused since the dialog opened (the switch, the free-space guard or, on the site, the profile cap):
+  // the tab says so instead of the form, and auth/me is read again so Home announces it too
+  const pause = PAUSED_BY[d.error];
+  if (pause && (d.error !== 'user_limit' || state.auth.hosted)) {
+    setSignup('closed', pause); setMode('signup'); $('#auth-closed')?.focus();
+    recheckSignup();
+    return undefined;
+  }
   switch (d.error) {
-    case 'invite_required':
-      if ($('#auth-invite-row')?.hidden) { state.auth.signupMode = 'invite'; setMode('signup'); } // sign-up closed since the dialog opened
-      return fieldErr('auth-invite-err', 'auth-invite', String($('#auth-invite')?.value || '').trim() // right under the code, not above the form
-        ? 'That invite code doesn’t work. Check it, or ask for a new one.' : (d.message || 'Sign-up needs an invite code.'));
+    // open-signup brief §2: the check, on the line just above Create profile
+    case 'bot_check_failed': return tsNote(d.message || TS_MSG.failed);
+    case 'bot_check_unavailable': return tsNote(d.message || TS_MSG.unavailable);
+    case 'quota_exceeded': return tsNote(d.message || QUOTA_MSG);
     case 'bad_credentials': return fieldErr('auth-err', 'auth-password', MSG.badLogin);
     case 'email_taken': return fieldErr('auth-err', 'auth-email', MSG.taken, '<button class="link" type="button" data-auth-switch="signin">Sign in instead</button>');
     case 'rate_limited': return showErr('auth-err', rateMsg(d));
@@ -569,7 +638,107 @@ function authError(r) {
   }
 }
 
+// ------------------------------------------------------------ Cloudflare Turnstile on sign-up (open-signup brief §2)
+// On while serve.py has its keys (auth/me turnstile.siteKey). Cloudflare's script loads the first time the sign-up form
+// is shown; the widget asks for interaction only when it needs it, so most people never see it.
+const TS_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+const TS_WAIT = 10000; // how long Create profile waits for a token before it asks for the check
+const TS_MSG = {
+  load: 'The sign-up check couldn’t load. Check your connection and try again.',
+  failed: 'We couldn’t confirm you’re not a bot. Try the check again.',
+  unavailable: 'The sign-up check is unavailable right now. Try again in a minute.',
+  solve: 'Complete the check above to create your profile.',
+};
+const ts = { p: null, id: null, key: '', theme: '', token: '', err: '', interactive: false, after: false, waiters: [] };
+const tsKey = () => (state.auth.turnstile && state.auth.turnstile.siteKey) || '';
+const tsOn = () => !!tsKey() && !DRY;
+/** Cloudflare's api.js, once (a failed load is tried again the next time the form is shown). */
+function tsLoad() {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (!ts.p) {
+    ts.p = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = TS_SRC; sc.async = true; sc.defer = true;
+      sc.onload = () => (window.turnstile ? res(window.turnstile) : rej(new Error('Turnstile did not start')));
+      sc.onerror = () => { sc.remove(); rej(new Error('Turnstile failed to load')); };
+      document.head.appendChild(sc);
+    }).catch(e => { ts.p = null; throw e; });
+  }
+  return ts.p;
+}
+/** The sign-up form is showing: the check's box follows it, and the widget is rendered there (again for a new theme). */
+function tsShow() {
+  const box = $('#auth-turnstile'); if (!box) return;
+  const on = tsOn() && authMode === 'signup' && !signupClosed();
+  box.hidden = !on;
+  if (!on) return;
+  tsLoad().then(t => { if (!box.hidden) tsRender(t, box); }).catch(e => {
+    console.error(e);
+    ts.err = 'load'; tsWake();
+    if (!box.hidden && !authBusy) tsNote(TS_MSG.load);
+  });
+}
+function tsRender(t, box) {
+  const theme = ['light', 'dark'].includes(state.theme) ? state.theme : 'auto';
+  if (ts.id !== null && ts.theme === theme && ts.key === tsKey() && box.childElementCount) return;
+  if (ts.id !== null) { try { t.remove(ts.id); } catch (e) { console.error(e); } }
+  Object.assign(ts, { id: null, key: tsKey(), theme, token: '', err: '', interactive: false });
+  box.classList.remove('shown');
+  try {
+    ts.id = t.render(box, {
+      sitekey: ts.key, action: 'signup', theme, appearance: 'interaction-only', size: 'flexible',
+      callback: tok => {
+        ts.token = String(tok || ''); ts.err = ''; tsWake();
+        const te = $('#auth-ts-err'); if (te && te.classList.contains('calm')) te.hidden = true;
+        // Create profile was waiting on this challenge: carry on with it
+        const d = document.getElementById('auth'), f = document.getElementById('auth-form');
+        if (ts.after && ts.token && d?.open && authMode === 'signup' && !authBusy) { ts.after = false; f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { cancelable: true })); }
+      },
+      'expired-callback': () => { ts.token = ''; },
+      'timeout-callback': () => { ts.token = ''; },
+      'error-callback': code => { ts.token = ''; ts.err = String(code || 'error'); tsWake(); return true; },
+      'before-interactive-callback': () => { ts.interactive = true; box.classList.add('shown'); tsWake(); },
+    });
+  } catch (e) { console.error(e); ts.id = null; ts.err = 'load'; tsWake(); }
+}
+/** Wake whoever waits for a token (it came, the check failed, or it needs the person). */
+function tsWake() { ts.waiters.slice().forEach(f => f()); }
+/** The token for this sign-up: at once when the widget has one, else when it comes, up to 10 s ('' when none did). */
+function tsToken() {
+  if (ts.err) tsReset(); // a failed check tries again
+  tsShow();
+  if (ts.token) return Promise.resolve(ts.token);
+  return new Promise(res => {
+    const done = () => { clearTimeout(timer); ts.waiters = ts.waiters.filter(f => f !== done); res(ts.token); };
+    const timer = setTimeout(done, TS_WAIT);
+    ts.waiters.push(done);
+    if (ts.interactive) done(); // a challenge is up already: no point in waiting
+  });
+}
+/** No token came: say what the person can do. A challenge on show finishes the sign-up when it is solved. */
+function tsMissing() {
+  if (ts.err === 'load') return tsNote(TS_MSG.load);
+  if (ts.interactive && !ts.err) { ts.after = true; return tsNote(TS_MSG.solve, true); }
+  tsReset();
+  return tsNote(TS_MSG.failed);
+}
+/** Tokens are single-use: after each sign-up attempt (and a failed check) the widget starts over. */
+function tsReset() {
+  Object.assign(ts, { token: '', err: '', interactive: false, after: false });
+  $('#auth-turnstile')?.classList.remove('shown');
+  if (ts.id !== null && window.turnstile) { try { window.turnstile.reset(ts.id); } catch (e) { console.error(e); } }
+}
+/** The line just above Create profile; `calm` for a prompt rather than an error. */
+function tsNote(msg, calm = false) {
+  const el = $('#auth-ts-err'); if (!el) return;
+  showErr('auth-ts-err', msg);
+  el.classList.toggle('calm', calm);
+  el.scrollIntoView?.({ block: 'nearest' });
+}
+
 // ------------------------------------------------------------ profile dialog (§5.7)
+// donate brief §1: the permanent donation link, one quiet row (Settings has the same one, in index.html)
+const GIVE_ROW = `<a class="cell give" href="${DONATE_URL}" target="_blank" rel="noopener"><span class="tile-i red">${icon('heart')}</span><span class="cell-body"><span class="cell-title">Support Bible Lantern</span><span class="cell-sub">Free to read and study. Gifts keep it running and help it reach more people.</span></span><span class="cell-trail">${icon('external')}</span></a>`;
 export function openProfile() {
   const d = document.getElementById('profile'); if (!d) return;
   if (!state.auth.signedIn || !state.auth.user) { openAuth('signin'); return; }
@@ -610,14 +779,16 @@ function renderProfile() {
   ${importRow}
   ${fileRow}
 </ul>
-${a.hosted && a.owner ? invitesHtml() : ''}
+${a.hosted && a.owner ? trafficHtml() : ''}
+<h3 class="group-h">Bible Lantern</h3>
+<ul class="group av"><li>${GIVE_ROW}</li></ul>
 <h3 class="group-h">Sessions</h3>
 <ul class="group"><li><button class="cell" type="button" data-prof="signout-all"><span class="cell-body"><span class="cell-title">Sign out everywhere</span><span class="cell-sub">${a.hosted ? 'Every browser and device signed in to this profile' : 'Every window and browser on this computer'}</span></span></button></li></ul>
 <ul class="group prof-danger"><li><button class="cell danger" type="button" data-prof="delete"><span class="cell-body"><span class="cell-title">Delete profile…</span></span></button></li></ul>`;
   $('#prof-name-in').value = u.name || '';
   $('#prof-email-in').value = u.email || '';
   profShown = { name: u.name || '', email: u.email || '' };
-  if (a.hosted && a.owner) loadInvites();
+  if (a.hosted && a.owner) loadTraffic();
 }
 /** The name and email the fields were last filled with: a field still holding them has not been edited. */
 let profShown = { name: '', email: '' };
@@ -675,7 +846,6 @@ function bindProfileDialog() {
     e.preventDefault();
     const id = e.target.id;
     if (id === 'prof-pw-cur' || id === 'prof-pw-new') body.querySelector('[data-prof="password"]')?.click();
-    else if (id === 'prof-inv-note') body.querySelector('[data-prof="invite"]')?.click();
     else body.querySelector('[data-prof="save"]')?.click();
   });
   body.addEventListener('change', e => {
@@ -693,9 +863,6 @@ function bindProfileDialog() {
     else if (what === 'obsidian') exportVia('exportNotes');
     else if (what === 'import-guest') await importGuest(it);
     else if (what === 'import-file') { if (DRY) profErr('Dry run: profile changes are turned off.'); else $('#prof-import-file')?.click(); }
-    else if (what === 'invite') await createInvite(it);
-    else if (what === 'inv-copy') copyInvite();
-    else if (what === 'inv-revoke') await revokeInvite(it);
     else if (what === 'signout-all') { closeDialog(document.getElementById('profile')); signOut({ all: true }); }
     else if (what === 'delete') deleteProfile();
   });
@@ -798,6 +965,7 @@ async function importProfileFile(btn, file) {
     const r = await api('POST', '/api/profile/import', json, { timeout: 120000 }); // a large file over a slow uplink
     if (!r.ok) {
       const d = r.data || {};
+      if (d.error === 'quota_exceeded') return profErr(d.message || QUOTA_MSG); // hosted: the profile is full, not the file
       if (r.status === 413 || d.error === 'too_large') return profErr('That file is too large to import. The limit is 25 MB.');
       // hosted, a refused body the proxy cut off arrives as its own non-JSON 502 rather than serve.py's answer
       if (r.status === 502 && !r.data) return profErr('The file is too large or the server is busy. Try again.');
@@ -811,86 +979,82 @@ async function importProfileFile(btn, file) {
   });
 }
 
-// ------------------------------------------------------------ invites (hosted, owner only: hosting brief §2)
-let invites = [], invSeq = 0;
-function invitesHtml() {
-  return `<h3 class="group-h">Invites</h3>
-<ul class="group frows prof-fields">
-  <li class="frow"><label for="prof-inv-note">Note</label><input id="prof-inv-note" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Who it’s for (optional)"></li>
-</ul>
-<div class="actions"><button type="button" class="btn btn-tinted sm" data-prof="invite">Create invite code</button></div>
-<div class="inv-new" id="prof-inv-new" role="status" hidden></div>
-<ul class="group inv-list" id="prof-invites" tabindex="-1" aria-label="Invite codes"><li class="cell"><span class="cell-sub">Loading invite codes…</span></li></ul>
-<p class="group-foot">A code makes one profile. It’s shown in full only when it’s made, so copy it then.</p>`;
+// ------------------------------------------------------------ site activity (hosted, owner only: open-signup brief §2)
+// GET /api/admin/traffic: the server's own daily counts (UTC days). Anyone but an owner gets 404, and the section goes.
+const VERCEL_ANALYTICS = 'https://vercel.com/koum-studio/bible-study/analytics';
+const TRF_ROWS = [['loads', 'App loads'], ['visitors', 'Visitors', '(approx.)'], ['signups', 'Sign-ups'], ['signins', 'Sign-ins'],
+  ['signin_failed', 'Failed sign-ins'], ['bot_failed', 'Failed bot checks'], ['rate_limited', 'Rate-limited requests'],
+  ['csrf_blocked', 'Blocked cross-site requests'], ['errors_5xx', 'Server errors']];
+let trf = { at: 0, data: null }, trfSeq = 0;
+function trafficHtml() {
+  return `<h3 class="group-h" id="prof-trf-h">Site activity</h3>
+<div class="trf" id="prof-trf" role="region" aria-labelledby="prof-trf-h" aria-busy="true"><p class="group-foot trf-wait">Loading site activity…</p></div>`;
 }
-/** A new code as 'ABCDE-FGHJK', easier to read out (serve.py ignores the dash). Later only its last four are known. */
-const groupCode = c => String(c || '').replace(/^(.{5})(.+)$/, '$1-$2');
-function invRow(r) {
-  const used = `Used ${Number(r.uses || 0).toLocaleString()} of ${Number(r.maxUses || 1).toLocaleString()}`;
-  const state2 = r.revoked ? 'Revoked' : r.uses >= r.maxUses ? 'Used up' : '';
-  const made = longDate(r.created);
-  const sub = [state2 || used, made ? `made ${made}` : ''].filter(Boolean).join(' · ');
-  const live = !r.revoked && r.uses < r.maxUses;
-  return `<li class="cell inv-row${live ? '' : ' off'}"><span class="cell-body"><span class="cell-title"><span class="inv-last">…${esc(r.last4)}</span>${r.note ? ` · ${esc(r.note)}` : ''}</span><span class="cell-sub">${esc(sub)}</span></span>${live ? `<button type="button" class="btn btn-plain sm" data-prof="inv-revoke" data-inv="${esc(r.id)}" aria-label="Revoke the code ending ${esc(r.last4)}">Revoke</button>` : ''}</li>`;
+const num = n => (Number.isFinite(+n) ? Math.max(0, Math.round(+n)) : 0);
+const fmtN = n => num(n).toLocaleString();
+const isoDay = t => new Date(t).toISOString().slice(0, 10);
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayLabel = iso => { const [, m, d] = String(iso).split('-').map(Number); return m && d ? `${d} ${MON3[m - 1]}` : String(iso); };
+function fmtMB(mb) {
+  const n = Math.max(0, +mb || 0);
+  return n >= 1024 ? `${(n / 1024).toLocaleString(undefined, { maximumFractionDigits: n >= 10240 ? 0 : 1 })} GB` : `${Math.round(n).toLocaleString()} MB`;
 }
-function drawInvites() {
-  const ul = $('#prof-invites'); if (!ul) return;
-  ul.innerHTML = invites.length ? invites.map(invRow).join('') : '<li class="cell"><span class="cell-sub">No invite codes yet.</span></li>';
+/** The last 30 UTC days, oldest first, a day without traffic as zeros (the server lists only days it counted). */
+function trafficDays(d) {
+  const by = new Map((Array.isArray(d.days) ? d.days : []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x => [x.date, x]));
+  const last = [...by.keys()].sort().pop() || '', today = isoDay(Date.now());
+  const end = Date.parse(`${last > today ? last : today}T00:00:00Z`);
+  return Array.from({ length: 30 }, (_, i) => { const date = isoDay(end - (29 - i) * 86400000); return by.get(date) || { date }; });
 }
-async function loadInvites() {
-  const my = ++invSeq;
-  const r = await api('GET', '/api/invites', null, { scoped: false });
-  if (my !== invSeq || !$('#prof-invites')) return;
-  if (r.ok && r.data && Array.isArray(r.data.invites)) { invites = r.data.invites; drawInvites(); return; }
-  $('#prof-invites').innerHTML = `<li class="cell"><span class="cell-sub">${esc(r.offline ? MSG.offline : 'Couldn’t load the invite codes.')}</span></li>`;
+/** A total over the last n days: the server's own when it gives one ({last_7: {loads, …}}), else the days added up. */
+function trafficTotal(d, days, n, key) {
+  const t = d.totals && d.totals[`last_${n}`];
+  if (t && typeof t === 'object' && Number.isFinite(+t[key])) return num(t[key]);
+  return days.slice(-n).reduce((s2, x) => s2 + num(x[key]), 0);
 }
-async function createInvite(btn) {
-  clearErrors(document.getElementById('profile'), 'prof-err');
-  if (DRY) return profErr('Dry run: profile changes are turned off.');
-  const note = cleanName($('#prof-inv-note')?.value);
-  if ([...note].length > 80) return profErr('A note can be up to 80 characters.', 'prof-inv-note');
-  await busyWhile(btn, 'Creating…', async () => {
-    const r = await api('POST', '/api/invites', note ? { note } : {}, { scoped: false });
-    if (!r.ok || !r.data || !r.data.code) return profileApiError(r, { note: 'prof-inv-note' });
-    invSeq++; // a list still loading is older than this one
-    if (r.data.invite) invites = [r.data.invite, ...invites.filter(x => x.id !== r.data.invite.id)];
-    drawInvites();
-    const box = $('#prof-inv-new'), code = groupCode(r.data.code);
-    if (box) {
-      box.innerHTML = `<div class="inv-code-row"><code class="inv-code" id="prof-inv-code">${esc(code)}</code><button type="button" class="btn btn-tinted sm" data-prof="inv-copy">Copy</button></div><small>Shown only this once. Copy it now and send it to the person you’re inviting.</small>`;
-      box.dataset.code = code; box.hidden = false;
-    }
-    const ni = $('#prof-inv-note'); if (ni) ni.value = '';
-    setTimeout(() => $('#prof-inv-new [data-prof="inv-copy"]')?.focus(), 0); // after busyWhile hands focus back
-  });
+function trafficBars(days, key, what) {
+  const v = days.map(x => num(x[key])), max = Math.max(1, ...v);
+  let top = -1; v.forEach((x, i) => { if (x > 0 && (top < 0 || x >= v[top])) top = i; });
+  const aria = top < 0 ? `${what[0].toUpperCase() + what.slice(1)} per day for the last 30 days: none yet.`
+    : `${what[0].toUpperCase() + what.slice(1)} per day for the last 30 days, most recent on the right. Busiest day: ${dayLabel(days[top].date)}, ${fmtN(v[top])}.`;
+  const bars = v.map((x, i) => `<i${x ? '' : ' class="z"'} style="--h:${(x / max).toFixed(3)}" title="${esc(`${dayLabel(days[i].date)} · ${fmtN(x)} ${what}`)}"></i>`).join('');
+  return `<div class="trf-bars" role="img" aria-label="${esc(aria)}">${bars}</div>`;
 }
-/** Put text on the clipboard (a hidden field and execCommand when the Clipboard API is refused); true when it worked. */
-async function copyText(text) {
-  try { await navigator.clipboard.writeText(text); return true; } catch (e) {
-    const a = document.activeElement, ta = document.createElement('textarea'); let ok = false;
-    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
-    (document.getElementById('profile') || document.body).appendChild(ta); ta.select(); // inside the modal: the page is inert
-    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
-    ta.remove(); if (a && a !== document.body && a.isConnected) a.focus({ preventScroll: true });
-    return ok;
-  }
+function drawTraffic(d) {
+  const box = $('#prof-trf'); if (!box) return;
+  const days = trafficDays(d), today = days[days.length - 1], T = d.totals || {}, st = d.storage || {};
+  const rows = TRF_ROWS.map(([k, label, note]) => `<tr><th scope="row">${esc(label)}${note ? ` <small>${esc(note)}</small>` : ''}</th><td>${fmtN(today[k])}</td><td>${fmtN(trafficTotal(d, days, 7, k))}</td><td>${fmtN(trafficTotal(d, days, 30, k))}</td></tr>`).join('');
+  const facts = [
+    ['Profiles', fmtN(T.profiles)],
+    Number.isFinite(+T.guests_today) ? ['Guests today (approx.)', fmtN(T.guests_today)] : null,
+    ['Storage left', Number.isFinite(+st.free_mb) ? `${fmtMB(st.free_mb)}${Number.isFinite(+st.used_mb) ? ` · ${fmtMB(st.used_mb)} used` : ''}` : 'Unknown'],
+    ['Cloudflare Turnstile', d.turnstile ? 'On' : 'Off'],
+    ['Sign-up', d.signup === 'closed' ? 'Paused' : 'Open'],
+  ].filter(Boolean);
+  box.innerHTML = `<table class="group trf-tbl">
+  <caption class="sr">Site activity: today and the last 7 and 30 days, by UTC day</caption>
+  <thead><tr><td></td><th scope="col">Today</th><th scope="col">7 days</th><th scope="col">30 days</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="trf-chart">
+  <div class="trf-line"><span class="trf-lab" aria-hidden="true">App loads</span>${trafficBars(days, 'loads', 'app loads')}</div>
+  <div class="trf-line su"><span class="trf-lab" aria-hidden="true">Sign-ups</span>${trafficBars(days, 'signups', 'sign-ups')}</div>
+  <div class="lib-axis trf-axis" aria-hidden="true"><span>${esc(dayLabel(days[0].date))}</span><span>${esc(dayLabel(days[15].date))}</span><span>Today</span></div>
+</div>
+<dl class="group trf-facts" aria-label="The site now">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+<p class="group-foot">Counted by the server per UTC day; visitors are estimated without keeping addresses. <a class="link" href="${VERCEL_ANALYTICS}" target="_blank" rel="noopener noreferrer">Open Vercel Analytics</a></p>`;
+  box.removeAttribute('aria-busy');
 }
-async function copyInvite() {
-  const code = $('#prof-inv-new')?.dataset.code; if (!code) return;
-  toast(await copyText(code) ? `Copied the invite code ${code}.` : 'Couldn’t copy. Select the code and copy it yourself.');
-}
-async function revokeInvite(btn) {
-  const id = btn.dataset.inv, r0 = invites.find(x => x.id === id); if (!r0) return;
-  clearErrors(document.getElementById('profile'), 'prof-err');
-  const { ok } = await confirmDialog({ title: 'Revoke this invite code?', body: `The code ending ${r0.last4} won’t make a profile any more. Profiles already made with it stay.`, ok: 'Revoke', danger: true });
-  if (!ok || !document.getElementById('profile')?.open) return;
-  if (DRY) return profErr('Dry run: profile changes are turned off.');
-  const r = await api('POST', '/api/invites/revoke', { id }, { scoped: false });
-  if (!r.ok) return profileApiError(r, {});
-  if (r.data && r.data.invite) invites = invites.map(x => (x.id === id ? r.data.invite : x));
-  drawInvites();
-  focusAfterClose($('#prof-invites'), document.getElementById('confirm')); // its Revoke button is gone
-  toast(`Revoked the code ending ${r0.last4}.`);
+/** Loaded each time the Profile dialog opens (a redraw within a minute reuses the last answer). */
+async function loadTraffic() {
+  const my = ++trfSeq;
+  if (trf.data && Date.now() - trf.at < 60000) { drawTraffic(trf.data); return; }
+  const r = await api('GET', '/api/admin/traffic', null, { scoped: false });
+  const box = $('#prof-trf'); if (my !== trfSeq || !box) return;
+  if (r.status === 404) { box.remove(); $('#prof-trf-h')?.remove(); trf = { at: 0, data: null }; return; } // not an owner after all
+  if (r.ok && r.data && typeof r.data === 'object') { trf = { at: Date.now(), data: r.data }; drawTraffic(r.data); return; }
+  box.removeAttribute('aria-busy');
+  box.innerHTML = `<p class="group-foot trf-wait">${esc(r.offline ? MSG.offline : 'Couldn’t load site activity. Close and open Profile to try again.')}</p>`;
 }
 
 async function deleteProfile() {

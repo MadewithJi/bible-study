@@ -26,17 +26,22 @@ Profiles (local email + password, no email is ever sent), per-scope library and 
   GET  /api/export/profile   POST /api/profile/import (that file, merged into the signed-in profile)
   GET  /api/health    {"ok": true}: no auth, scope or CSRF (for a host's health checks)
 Hosted mode (all off unless set, .design/hosting-brief.md §1): PORT, HOST and BS_DATA_DIR are the defaults for --port,
---host and --data-dir; BS_HOSTED=1 makes guests read-only, sign-up invite-only (GET|POST /api/invites,
-POST /api/invites/revoke for owners), ESV/NLT and their keys owner-only and the session cookie Secure;
-BS_ALLOWED_HOSTS and BS_ALLOWED_ORIGINS widen the Host and Origin checks; BS_TRUST_PROXY=1 reads the client address
-from X-Forwarded-For and the scheme from X-Forwarded-Proto; BS_OWNER_EMAILS names the owners.
+--host and --data-dir; BS_HOSTED=1 makes guests read-only, ESV/NLT and their keys owner-only and the session cookie
+Secure; BS_ALLOWED_HOSTS and BS_ALLOWED_ORIGINS widen the Host and Origin checks; BS_TRUST_PROXY=1 reads the client
+address from X-Forwarded-For and the scheme from X-Forwarded-Proto; BS_OWNER_EMAILS names the owners.
+Open sign-up on the site (.design/open-signup-brief.md §1): anyone may sign up, behind a Cloudflare Turnstile check when
+BS_TURNSTILE_SITEKEY and BS_TURNSTILE_SECRET are set; BS_SIGNUP=closed pauses it; BS_MAX_USERS (default 5000),
+BS_PROFILE_QUOTA_MB (default 25) and a free-space guard bound what strangers can store; daily counts in metrics.json
+feed GET /api/admin/traffic (owners only, 404 for anyone else) and '[alert]' lines on stderr.
+The donation link (.design/donate-brief.md): GET or HEAD /donate and /support answer 302 to BS_DONATE_URL (default
+https://buymeacoffee.com/biblelantern), never a permanent redirect, so it can be re-pointed without changing a link.
 Data layout (DATA = --data-dir, default notes/): notes.json, guest-library.json, guest-links.json and
 guest-marks.json (guest), config.json, cache/, users.json, sessions.json (hashed tokens only),
-profiles/<uid>/{notes,library,links,marks}.json, deleted/, invites.json (hosted). Full contract: .design/profiles-spec.md,
-.design/links-spec.md and .design/annotations-brief.md
+profiles/<uid>/{notes,library,links,marks}.json, deleted/, owner-claims.json and metrics.json (hosted). Full contract:
+.design/profiles-spec.md, .design/links-spec.md and .design/annotations-brief.md
 """
-import argparse, getpass, hashlib, hmac, ipaddress, json, math, os, re, secrets, shutil, sys, threading, time, traceback
-import urllib.parse, urllib.request
+import argparse, getpass, hashlib, hmac, http.client, ipaddress, json, math, os, re, secrets, shutil, signal, sys
+import threading, time, traceback, urllib.parse, urllib.request
 from collections import OrderedDict, deque
 from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -387,9 +392,22 @@ FAILURES = AttemptFailures(cap=5000)
 HOSTED = TRUST_PROXY = False
 ENV_HOSTS = ()                 # BS_ALLOWED_HOSTS: 'name' or '*.domain' (any subdomain), with or without a port
 ALLOWED_ORIGINS = frozenset()  # BS_ALLOWED_ORIGINS: 'https://name[:port]', accepted by the CSRF Origin check
-OWNER_EMAILS = frozenset()     # BS_OWNER_EMAILS: sign up without an invite, manage invites, use ESV/NLT
+OWNER_EMAILS = frozenset()     # BS_OWNER_EMAILS: owner rights (ESV/NLT, Site activity) for the profile holding the claim
 PROXY_SECRET = ""              # BS_PROXY_SECRET: a request carrying it in X-BS-Proxy-Secret came through the site's proxy
-OWNER_SETUP_TOKEN = ""         # BS_OWNER_SETUP_TOKEN: lets an owner email sign up again, after a claim, without an invite
+OWNER_SETUP_TOKEN = ""         # BS_OWNER_SETUP_TOKEN: lets an owner email take its claim again (after a delete, say)
+SIGNUP_CLOSED = False          # BS_SIGNUP=closed: new sign-ups paused, except an owner email by the claim rules
+DONATE_DEFAULT = "https://buymeacoffee.com/biblelantern"
+DONATE_URL = DONATE_DEFAULT    # BS_DONATE_URL: where /donate and /support send people (locally too)
+DONATE_PATHS = frozenset(("/donate", "/support"))
+DONATE_URL_RE = re.compile(r"https?://[!-~]+", re.ASCII)  # printable ASCII only: it goes out in a Location header
+TURNSTILE = False              # hosted with both keys below: sign-up needs a Cloudflare Turnstile token
+TURNSTILE_SITEKEY = ""         # BS_TURNSTILE_SITEKEY: public, sent to the app in auth/me
+TURNSTILE_SECRET = ""          # BS_TURNSTILE_SECRET: sent only to the verify URL, never logged
+TURNSTILE_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+TURNSTILE_VERIFY_URL = TURNSTILE_URL  # BS_TURNSTILE_VERIFY_URL (the tests' fake Cloudflare)
+ORIGIN_HOSTS = frozenset()     # the host names in BS_ALLOWED_ORIGINS: where a Turnstile token may have been made
+HOSTED_MAX_USERS = 5000        # BS_MAX_USERS: the profile cap on the site (locally --max-users, default 50)
+MIN_FREE_BYTES = 200 * MIB     # BS_MIN_FREE_MB: with less free on the volume (or under 5%), new sign-ups get 507
 PROXY_HEADER = "X-BS-Proxy-Secret"
 HOST_NAME_RE = re.compile(r"(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*", re.ASCII)
 ORIGIN_RE = re.compile(r"https?://[a-z0-9.-]+(:[0-9]{1,5})?", re.ASCII)
@@ -403,14 +421,40 @@ def _env_flag(v): return (v or "").strip().lower() in ("1", "true", "yes", "on")
 def _env_list(v): return [x.strip().lower() for x in (v or "").split(",") if x.strip()]
 
 
+def _env_count(env, name, default, bad, low=1):
+    """A whole-number variable (>= low), else `default`; a value that is not one is reported as ignored."""
+    v = (env.get(name) or "").strip()
+    if v and DIGITS.fullmatch(v) and int(v) >= low: return int(v)
+    if v: bad.append((name, v))
+    return default
+
+
 def configure_hosting(env):
     """Read the hosting variables from `env` (os.environ). Entries that cannot be used are ignored with a warning."""
     global HOSTED, TRUST_PROXY, ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS, PROXY_SECRET, OWNER_SETUP_TOKEN
+    global SIGNUP_CLOSED, TURNSTILE, TURNSTILE_SITEKEY, TURNSTILE_SECRET, TURNSTILE_VERIFY_URL, ORIGIN_HOSTS
+    global HOSTED_MAX_USERS, MIN_FREE_BYTES, DONATE_URL
     HOSTED, TRUST_PROXY = _env_flag(env.get("BS_HOSTED")), _env_flag(env.get("BS_TRUST_PROXY"))
     PROXY_SECRET = (env.get("BS_PROXY_SECRET") or "").strip()
     OWNER_SETUP_TOKEN = (env.get("BS_OWNER_SETUP_TOKEN") or "").strip()
     A.LOCK_MAX = 60 if HOSTED else 900  # on the site a lockout is per client, so it only needs to slow guessing (QC 8)
     hosts, origins, owners, bad = [], set(), set(), []
+    signup = (env.get("BS_SIGNUP") or "").strip().lower()
+    if signup not in ("", "open", "closed"): bad.append(("BS_SIGNUP", signup))
+    SIGNUP_CLOSED = HOSTED and signup == "closed"
+    TURNSTILE_SITEKEY = (env.get("BS_TURNSTILE_SITEKEY") or "").strip()
+    TURNSTILE_SECRET = (env.get("BS_TURNSTILE_SECRET") or "").strip()
+    TURNSTILE = HOSTED and bool(TURNSTILE_SITEKEY and TURNSTILE_SECRET)
+    url = (env.get("BS_TURNSTILE_VERIFY_URL") or "").strip()
+    if url and not re.fullmatch(r"https?://[^\s]+", url): bad.append(("BS_TURNSTILE_VERIFY_URL", url[:100])); url = ""
+    TURNSTILE_VERIFY_URL = url or TURNSTILE_URL
+    HOSTED_MAX_USERS = _env_count(env, "BS_MAX_USERS", 5000, bad)
+    quota_mb = _env_count(env, "BS_PROFILE_QUOTA_MB", 25, bad, low=0)  # 0 turns the quota off
+    A.PROFILE_QUOTA = quota_mb * MIB if HOSTED else 0  # locally there is no quota (open sign-up brief §1.3)
+    MIN_FREE_BYTES = _env_count(env, "BS_MIN_FREE_MB", 200, bad, low=0) * MIB
+    url = (env.get("BS_DONATE_URL") or "").strip()
+    if url and not DONATE_URL_RE.fullmatch(url): bad.append(("BS_DONATE_URL", url[:100])); url = ""
+    DONATE_URL = url or DONATE_DEFAULT
     for h in _env_list(env.get("BS_ALLOWED_HOSTS")):
         name = PORT_SUFFIX.sub("", h)
         if HOST_NAME_RE.fullmatch(name): hosts.append(name)
@@ -424,6 +468,7 @@ def configure_hosting(env):
         if ok: owners.add(email)
         else: bad.append(("BS_OWNER_EMAILS", "an address that is not valid"))  # never print an email
     ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS = tuple(hosts), frozenset(origins), frozenset(owners)
+    ORIGIN_HOSTS = frozenset(urllib.parse.urlsplit(o).hostname for o in origins)
     for var, v in bad: print(f"Warning: {var}: ignored {v}", file=sys.stderr)
 
 
@@ -434,7 +479,211 @@ def env_host_ok(h):
     return any(name == p or (p.startswith("*.") and name.endswith(p[1:]) and len(name) > len(p) - 1) for p in ENV_HOSTS)
 
 
+# ----------------------------------------------------------------- open sign-up (.design/open-signup-brief.md §1)
+TURNSTILE_TIMEOUT = 6
+TURNSTILE_TOKEN_MAX = 2048
+TURNSTILE_TEST_SECRET = re.compile(r"[123]x0{31}AA", re.ASCII)  # Cloudflare's published test secrets (always pass/fail)
+
+
+class TurnstileUnavailable(Exception):
+    pass
+
+
+def holds_owner_claim(user, claims):
+    """A users.json record with owner rights: hosted, its email in BS_OWNER_EMAILS and that email's claim its own."""
+    if not HOSTED or not user or user.get("email") not in OWNER_EMAILS: return False
+    rec = claims.get(A.claim_key(user["email"]))
+    return isinstance(rec, dict) and rec.get("uid") == user.get("uid")
+
+
+def turnstile_check(token, remoteip, hosts):
+    """Ask Cloudflare whether a sign-up's Turnstile token is good: made for action 'signup' on one of `hosts`. -> None
+    when it passed, else why not (a short word for the log; never the token or the secret). Raises TurnstileUnavailable
+    when Cloudflare cannot be reached in time or answers something that is not a verdict: sign-up then fails closed."""
+    form = {"secret": TURNSTILE_SECRET, "response": token}
+    if remoteip: form["remoteip"] = remoteip
+    req = urllib.request.Request(TURNSTILE_VERIFY_URL, data=urllib.parse.urlencode(form).encode("utf-8"),
+                                 headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "bible-lantern"})
+    try:
+        with urllib.request.urlopen(req, timeout=TURNSTILE_TIMEOUT) as r: out = json.loads(r.read(64 * KIB).decode("utf-8"))
+    except (OSError, ValueError, http.client.HTTPException) as e:  # URLError, HTTPError and timeouts are OSErrors
+        raise TurnstileUnavailable(e.__class__.__name__)
+    if not isinstance(out, dict) or not isinstance(out.get("success"), bool): raise TurnstileUnavailable("no verdict")
+    if not out["success"]:
+        codes = out.get("error-codes")
+        codes = [c for c in codes if isinstance(c, str)] if isinstance(codes, list) else []
+        return "failed" + (":" + ",".join(codes)[:80] if codes else "")
+    # Cloudflare's test secrets answer for "example.com" with no action, whatever the page: nothing more to check
+    if TURNSTILE_TEST_SECRET.fullmatch(TURNSTILE_SECRET): return None
+    if out.get("action") != "signup": return "action"
+    if not isinstance(out.get("hostname"), str) or out["hostname"].lower() not in hosts: return "hostname"
+    return None
+
+
+def disk_state():
+    """-> shutil.disk_usage of the data volume (total, used, free), or None when it cannot be read."""
+    try: return shutil.disk_usage(A.DATA)
+    except OSError: return None
+
+
+LOW_TTL = 15                   # seconds auth/me reuses the last free-space check (every page load asks)
+_low_seen = (None, False)      # (time.monotonic(), low) of that check
+
+
+def volume_low(du): return du is not None and (du.free < MIN_FREE_BYTES or du.free * 20 < du.total)
+
+
+def storage_low(du=None):
+    """The volume is nearly full: under 5% or under BS_MIN_FREE_MB free. Logs an [alert] (once an hour) while it is."""
+    global _low_seen
+    du = du or disk_state()
+    low = volume_low(du)
+    _low_seen = (time.monotonic(), low)
+    if low: ALERTS.fire("storage_low", f"the data volume has {du.free // MIB} MB free of {du.total // MIB} MB")
+    return low
+
+
+def storage_low_seen():
+    """storage_low() for auth/me: the last answer while it is under LOW_TTL seconds old, and no [alert] line of its own
+    (a sign-up, the health check and Site activity raise that)."""
+    global _low_seen
+    t, low = _low_seen
+    if t is None or time.monotonic() - t >= LOW_TTL:
+        low = volume_low(disk_state())
+        _low_seen = (time.monotonic(), low)
+    return low
+
+
+def signup_pause(n_users):
+    """Why new sign-ups are paused on the site (donate brief §2): 'paused' (BS_SIGNUP=closed), 'storage' (the free-space
+    guard) or 'capacity' (BS_MAX_USERS profiles), else None. Owners still get in by the claim rules while 'paused'.
+    Locally always None: the profile cap there is features.signup, as before."""
+    if not HOSTED: return None
+    if SIGNUP_CLOSED: return "paused"
+    if storage_low_seen(): return "storage"
+    if n_users >= A.MAX_USERS: return "capacity"
+    return None
+
+
+class Alerts:
+    """'[alert]' lines on stderr, at most one an hour for each kind, for a Railway log alert to watch: more than
+    LIMITS[kind] of those events within the last hour, or the volume running low (storage_low)."""
+    WINDOW = 3600
+    LIMITS = {"signups": 30, "signin_failed": 100, "bot_failed": 50, "errors_5xx": 20}
+    TEXT = {"signups": "sign-ups", "signin_failed": "failed sign-ins", "bot_failed": "failed bot checks",
+            "errors_5xx": "server errors (5xx)"}
+
+    def __init__(self, clock=time.monotonic):
+        self.clock, self.lock, self.last = clock, threading.Lock(), {}
+        # the newest LIMIT + 1 times of each kind: more than LIMIT in the hour when the oldest of them is in it
+        self.recent = {k: deque(maxlen=n + 1) for k, n in self.LIMITS.items()}
+
+    def note(self, kind):
+        with self.lock:
+            now, dq = self.clock(), self.recent[kind]
+            dq.append(now)
+            if len(dq) < dq.maxlen or dq[0] <= now - self.WINDOW: return False
+        return self.fire(kind, f"more than {self.LIMITS[kind]} {self.TEXT[kind]} in the last hour")
+
+    def fire(self, kind, text):
+        with self.lock:
+            now, last = self.clock(), self.last.get(kind)
+            if last is not None and now - last < self.WINDOW: return False
+            self.last[kind] = now
+        try: print(f"[alert] {time.strftime('%Y-%m-%dT%H:%M:%S')} {kind}: {text}", file=sys.stderr, flush=True)
+        except Exception: pass  # noqa: logging must never break a request
+        return True
+
+
+ALERTS = Alerts()
+
+METRIC_KEYS = ("loads", "visitors", "guests", "active_profiles", "signups", "signins", "signin_failed", "bot_failed",
+               "rate_limited", "csrf_blocked", "errors_5xx", "api_requests")
+
+
+class Metrics:
+    """The API's own daily counts (UTC days) for the owners' Site activity panel, in DATA/metrics.json as
+    {"v": 1, "days": {"YYYY-MM-DD": {counter: n}}}: 90 days kept, written atomically at most once a minute (flush_loop)
+    and at shutdown; a missing or damaged file starts fresh (a damaged one is moved aside). `visitors`, `guests` (signed
+    out) and `active_profiles` are approximately unique: a per-day set of SHA-256 digests of a random per-day salt and
+    the address and User-Agent (or the uid), held in memory only and dropped at midnight UTC. Only the counts are ever
+    written: no address, user agent or uid. After a restart the day's sets start empty, so a returning visitor may
+    count twice."""
+    KEEP_DAYS, FLUSH_EVERY, SET_CAP = 90, 60, 100_000
+    UNIQUE = ("visitors", "guests", "active_profiles")
+
+    def __init__(self, path, clock=time.time):
+        self.path, self.clock, self.lock, self.write_lock = path, clock, threading.Lock(), threading.Lock()
+        self.days, self.dirty, self.day, self.salt, self.seen = {}, False, None, b"", {}
+
+    def load(self):
+        d = A.read_json_strict(self.path, {})
+        days = d.get("days") if isinstance(d.get("days"), dict) else {}
+        out = {}
+        for k, row in days.items():
+            if isinstance(k, str) and A.DAY_RE.fullmatch(k) and isinstance(row, dict):
+                out[k] = {c: row[c] for c in METRIC_KEYS if A._is_int(row.get(c)) and 0 <= row[c] < 2 ** 53}
+        with self.lock: self.days = out
+        return self
+
+    def _today(self):
+        """Today's row (UTC). A new day gets a new salt and empty sets."""
+        day = time.strftime("%Y-%m-%d", time.gmtime(self.clock()))
+        if day != self.day:
+            self.day, self.salt, self.seen = day, secrets.token_bytes(16), {k: set() for k in self.UNIQUE}
+        return self.days.setdefault(day, {})
+
+    def add(self, counter, n=1):
+        with self.lock:
+            row = self._today()
+            row[counter] = row.get(counter, 0) + n
+            self.dirty = True
+
+    def unique(self, counter, *parts):
+        """Count `parts` (an address and a User-Agent, or a uid) once a day for `counter`."""
+        with self.lock:
+            row = self._today()
+            h = hashlib.sha256(self.salt + "\n".join(parts).encode("utf-8", "replace")).digest()[:16]
+            seen = self.seen[counter]
+            if h in seen: return
+            if len(seen) < self.SET_CAP: seen.add(h)  # past the cap each one counts: still a bounded set
+            row[counter] = row.get(counter, 0) + 1
+            self.dirty = True
+
+    def flush(self):
+        """Write the counts if they changed (pruned to KEEP_DAYS). A failed write is logged and retried next time."""
+        with self.write_lock:
+            with self.lock:
+                if not self.dirty: return False
+                for k in sorted(self.days)[:-self.KEEP_DAYS]: del self.days[k]
+                snap, self.dirty = {"v": 1, "days": {k: dict(v) for k, v in self.days.items()}}, False
+            try:
+                A.write_json_atomic(self.path, snap, indent=None)
+                return True
+            except (OSError, ValueError) as e:
+                with self.lock: self.dirty = True
+                A.log_error(f"metrics: cannot write {os.path.basename(self.path)}: {e.__class__.__name__}")
+                return False
+
+    def flush_loop(self, stop):
+        while not stop.wait(self.FLUSH_EVERY): self.flush()
+
+    def report(self, n=30):
+        """-> {days: the last `n` UTC days, oldest first, every counter present; last_7 and last_30: their sums}."""
+        with self.lock:
+            self._today()
+            now = self.clock()
+            dates = [time.strftime("%Y-%m-%d", time.gmtime(now - 86400 * i)) for i in range(n - 1, -1, -1)]
+            days = [dict({c: self.days.get(d, {}).get(c, 0) for c in METRIC_KEYS}, date=d) for d in dates]
+        total = lambda rows: {c: sum(r[c] for r in rows) for c in METRIC_KEYS}  # noqa: E731
+        return {"days": days, "last_7": total(days[-7:]), "last_30": total(days[-30:])}
+
+
+METRICS = None  # a Metrics when hosted (main); locally nothing is counted or written
+
+
 # ----------------------------------------------------------------- HTTP
+MSG_SIGNUP_PAUSED = "New sign-ups are paused for now while we expand. Reading stays open to everyone."
 MESSAGES = {
     "bad_json": "The request body must be a JSON object.",
     "invalid_email": A.MSG_EMAIL,
@@ -469,9 +718,12 @@ MESSAGES = {
     "server_error": "Something went wrong on the server.",
     "busy": "The server is busy. Try again in a moment.",
     "sign_in_required": "Sign in to save your notes, links and highlights.",
-    "invite_required": "Sign-up needs an invite code.",
     "owner_only": "Only the owner of this site can do that.",
-    "invite_limit": "You’ve reached the limit of 500 invite codes.",
+    "signup_closed": MSG_SIGNUP_PAUSED,  # signup_closed and storage_full only ever happen on the site
+    "bot_check_failed": "We couldn’t confirm you’re not a bot. Try the check again.",
+    "bot_check_unavailable": "The sign-up check is unavailable right now. Try again in a minute.",
+    "quota_exceeded": "Your profile has reached its storage limit. Delete some notes or highlights to make room.",
+    "storage_full": MSG_SIGNUP_PAUSED,
     "invalid_import": "That file isn’t a Bible study profile export.",
     "registry_unavailable": "Profiles are unavailable: users.json in the data folder is missing or damaged. "
                             "Restore it from users.json.bak (see README), then try again.",
@@ -479,7 +731,7 @@ MESSAGES = {
 HOSTED_MESSAGES = {  # the same errors on the site, where a visitor has no computer, Terminal or users.json to look at
     "bad_credentials": "That email and password don’t match a profile on this site.",
     "bad_host": "This server doesn’t answer for that host name.",
-    "user_limit": "This site has reached its profile limit.",
+    "user_limit": MSG_SIGNUP_PAUSED,  # the site's three sign-up pauses share one message (donate brief §2)
     "registry_unavailable": "Profiles are unavailable right now. Try again later.",
 }
 MSG_OWNER_TEXT = "ESV and NLT are available only to the owner of this site."
@@ -544,10 +796,13 @@ class Handler(SimpleHTTPRequestHandler):
     def _reset_state(self):
         self._scope, self._uid, self._sess = "guest", None, None
         self._cookies, self._bad_cookie, self._unread = [], False, 0
+        self._status, self._err = 0, None  # what was answered, for the daily counts (Metrics)
         cl = self.headers.get("Content-Length")
         if cl is not None and DIGITS.fullmatch(cl.strip()): self._unread = int(cl.strip())
 
     def _raw_path(self): return self.path.split("?", 1)[0].split("#", 1)[0]
+
+    def _query(self): return urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
 
     def _is_api(self): return getattr(self, "path", "").startswith("/api/")
 
@@ -579,8 +834,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+        # --dev lets the app's own origin frame it (the mock harnesses and the social-card renders); live it is never framed
+        self.send_header("X-Frame-Options", "SAMEORIGIN" if self.serve_mocks else "DENY")
+        self.send_header("Content-Security-Policy", "frame-ancestors 'self'" if self.serve_mocks else "frame-ancestors 'none'")
         # Static files: always revalidate (cheap 304s), so a rebuild or an app update shows up on the next load.
         if not self._is_api(): self.send_header("Cache-Control", "no-cache")
         super().end_headers()
@@ -619,6 +875,7 @@ class Handler(SimpleHTTPRequestHandler):
     # ------------------------------------------------------------ responses
     def send_json(self, obj, status=200, headers=()):
         body = json.dumps(obj, ensure_ascii=False, allow_nan=False).encode("utf-8")  # never answer invalid JSON
+        self._status = status
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -629,7 +886,19 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         if self.command != "HEAD": self.wfile.write(body)
 
+    def send_redirect(self, url):
+        """302 to `url` (the donation link). Never a permanent redirect and never cached, so it can be re-pointed."""
+        body = f"Found: {url}\n".encode("utf-8")
+        self._status = 302
+        self.send_response(302)
+        self.send_header("Location", url)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()  # adds Cache-Control: no-cache
+        if self.command != "HEAD": self.wfile.write(body)
+
     def send_download(self, data, ctype, filename):
+        self._status = 200
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
@@ -709,6 +978,15 @@ class Handler(SimpleHTTPRequestHandler):
                 except ValueError: pass
         return str(self.client_address[0]) if self.client_address else "?"
 
+    def stats_ip(self):
+        """The visitor's address for the daily visitor count only, never for security: Vercel's own visitor headers even
+        without the proxy secret, else the address the rate limits use (open sign-up brief §1.4)."""
+        for name in ("X-Vercel-Forwarded-For", "X-Real-IP"):
+            first = ",".join(self.headers.get_all(name) or []).split(",")[0].strip()
+            try: return str(ipaddress.ip_address(first))
+            except ValueError: pass
+        return self.client_ip()
+
     def _per_client(self): return HOSTED or TRUST_PROXY
 
     def _ip_log(self): return {"ip": self.client_ip()} if self._per_client() else {}
@@ -735,13 +1013,29 @@ class Handler(SimpleHTTPRequestHandler):
         if key != "*": backstop.unrecord()
 
     def is_owner(self, user=None):
-        """Hosted mode only: the signed-in profile's email is in BS_OWNER_EMAILS. Locally nobody is an owner."""
+        """Hosted mode only: the signed-in profile's email is in BS_OWNER_EMAILS and the profile holds that email's
+        claim (owner-claims.json), so a stranger who signs up with a freed owner address is an ordinary profile.
+        Locally nobody is an owner."""
         if not HOSTED or not self._uid: return False
-        user = user if user is not None else self.load_user(self._uid)
-        return bool(user) and user.get("email") in OWNER_EMAILS
+        with A.auth_lock():
+            user = user if user is not None else A.load_users()["users"].get(self._uid)
+            return holds_owner_claim(user, A.load_owner_claims())
 
     def owner_or_403(self):
         if not self.is_owner(): raise ApiError(403, "owner_only")
+
+    def _owner_claim_ok(self, email, body, claims=None):
+        """Hosted: may this sign-up take the owner rights that come with `email`? An owner email no profile has claimed
+        yet, or any owner email with the setup token (the owner coming back after a delete or an email change, QC 0).
+        Anyone else signing up with an owner email gets an ordinary profile: never refused, so the address cannot be
+        squatted or probed, and never an owner."""
+        if not HOSTED or email not in OWNER_EMAILS: return False
+        token = body.get("setupToken")
+        if OWNER_SETUP_TOKEN and isinstance(token, str) and hmac.compare_digest(token.encode("utf-8"), OWNER_SETUP_TOKEN.encode("utf-8")):
+            return True
+        if claims is None:
+            with A.auth_lock(): claims = A.load_owner_claims()
+        return A.claim_key(email) not in claims
 
     # ------------------------------------------------------------ CSRF pipeline and body (§3.4)
     def check_same_origin(self):
@@ -801,11 +1095,13 @@ class Handler(SimpleHTTPRequestHandler):
     # ------------------------------------------------------------ dispatch
     def do_GET(self):
         if self._is_api(): return self.api("GET")
+        if self._raw_path() in DONATE_PATHS: return self.send_redirect(DONATE_URL)
         if self._raw_path() == "/": self.path = "/index.html" + self.path[1:]
         return super().do_GET()
 
     def do_HEAD(self):
         if self._is_api(): return self.api("HEAD")
+        if self._raw_path() in DONATE_PATHS: return self.send_redirect(DONATE_URL)
         return super().do_HEAD()
 
     def _other(self, method):
@@ -820,7 +1116,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def api(self, method):
         path = self._raw_path()
-        q = urllib.parse.parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+        q = self._query()
         try:
             self.resolve_auth()
             methods, arg = ROUTES.get(path), None
@@ -828,6 +1124,7 @@ class Handler(SimpleHTTPRequestHandler):
                 m = BOOKMARK_PATH.fullmatch(path)
                 if m: methods, arg = BOOKMARK_ROUTES, m.group(1)
             if methods is None or (path in HOSTED_ONLY and not HOSTED): raise ApiError(404, "not_found")
+            if path in OWNERS_ONLY and not self.is_owner(): raise ApiError(404, "not_found")  # as if it did not exist
             # HEAD is only for the health check (uptime monitors ask that way, QC 10): answered like GET, with no body.
             route = methods.get("GET" if method == "HEAD" and path == HEALTH else method)
             if route is None or method == "OPTIONS":
@@ -843,8 +1140,12 @@ class Handler(SimpleHTTPRequestHandler):
             if route.scope: self.check_scope(required=True)
             route.fn(self, body, q, arg)
         except ApiError as e:
+            self._err = e.code
             if e.retry_after is not None: e.headers = list(e.headers) + [("Retry-After", str(int(e.retry_after)))]
             self.send_json(e.body(), e.status, e.headers)
+        except A.QuotaExceeded:  # nothing was written (accounts.py: per-profile storage quota)
+            A.log("quota", self._uid)
+            self.send_json(ApiError(413, "quota_exceeded").body(), 413)
         except A.Busy:
             self.send_json(ApiError(503, "busy", retry_after=2).body(), 503, [("Retry-After", "2")])
         except A.ProfileGone:
@@ -858,6 +1159,29 @@ class Handler(SimpleHTTPRequestHandler):
             except OSError: pass
         finally:
             self._drain()
+            if METRICS is not None and path != HEALTH:  # the host's health probes are not traffic
+                try: self._count(method, path)
+                except Exception: A.log_error(f"metrics: {traceback.format_exc()}")  # noqa: never breaks a request
+
+    def _count(self, method, path):
+        """One API request in today's counts (open sign-up brief §1.4), and the counts the [alert] lines watch."""
+        m, st, err = METRICS, self._status, self._err
+        m.add("api_requests")
+        if self._uid: m.unique("active_profiles", self._uid)
+        if st == 429: m.add("rate_limited")
+        if st >= 500 and err != "storage_full": m.add("errors_5xx"); ALERTS.note("errors_5xx")  # 507 has its own alert
+        if err == "csrf": m.add("csrf_blocked")
+        if err == "bot_check_failed": m.add("bot_failed"); ALERTS.note("bot_failed")
+        if path == "/api/auth/me" and method == "GET" and st == 200:
+            if "boot" in self._query(): m.add("loads")  # ?boot=1 is the app's one call per page load
+            m.unique("visitors", self.stats_ip(), self.ua())
+            if not self._uid: m.unique("guests", self.stats_ip(), self.ua())
+        elif path == "/api/auth/signup" and st == 201:
+            m.add("signups"); ALERTS.note("signups")
+        elif path == "/api/auth/login" and st == 200:
+            m.add("signins")
+        elif path == "/api/auth/login" and err == "bad_credentials":
+            m.add("signin_failed"); ALERTS.note("signin_failed")
 
     # ------------------------------------------------------------ auth helpers
     def load_user(self, uid):
@@ -962,15 +1286,19 @@ class Handler(SimpleHTTPRequestHandler):
             user = users["users"].get(self._uid) if self._uid else None
             n_users = len(users["users"])
             registry_ok = A.registry_problem() is None
-        return {
+        pause = signup_pause(n_users)
+        out = {
             "signedIn": bool(user), "scope": self._scope,
             "user": A.public_user(user) if user else None,
             "session": {"remember": bool(self._sess.get("remember")), "expires": self._sess.get("expires")} if user else None,
             "guest": g,
             "limits": {"passwordMin": A.PASSWORD_MIN, "passwordMax": A.PASSWORD_MAX, "nameMax": A.NAME_MAX, "labelMax": A.LABEL_MAX},
             "features": {"signup": n_users < A.MAX_USERS and registry_ok, "profiles": registry_ok},
-            "hosted": HOSTED, "signup": "invite" if HOSTED else "open", "owner": self.is_owner(user) if user else False,
+            "hosted": HOSTED, "signup": "closed" if pause else "open", "signupPause": pause,
+            "owner": self.is_owner(user) if user else False,
         }
+        if TURNSTILE: out["turnstile"] = {"siteKey": TURNSTILE_SITEKEY}  # only when sign-up needs the check
+        return out
 
     # ------------------------------------------------------------ 1-7 auth and account
     def h_me(self, body, q, arg):
@@ -988,12 +1316,28 @@ class Handler(SimpleHTTPRequestHandler):
         if not ok: raise ApiError(400, code, msg, field="password")
         remember = body.get("remember") is True
         import_guest = body.get("importGuest") is True and not HOSTED  # hosted guests save nothing to import
+        # Sign-up is open to anyone (an `invite` field is ignored). Paused with BS_SIGNUP=closed, it still lets an owner
+        # email in by the claim rules, so the owner can always get back in. A body with a setup token is refused only
+        # under the auth lock below, after the rate limits, so the token cannot be guessed at full speed.
+        if SIGNUP_CLOSED and "setupToken" not in body and not self._owner_claim_ok(email, body):
+            raise ApiError(403, "signup_closed")
         self.auth_window_or_429(email)
         wait, rkey = self._hit(SIGNUP_WINDOW, SIGNUP_BACKSTOP, email)  # checked and counted atomically (no burst overshoots)
         if wait: raise rate_limited(wait, **self._ip_log())
-        # Hosted: an invite first (a wrong code counts against the window), so no one without one learns which
-        # emails have profiles. An owner email needs none until a profile has claimed it (QC 0).
-        ikey = self._invite_or_403(body.get("invite")) if HOSTED and not self._owner_claim_free(email, body) else None
+        try:
+            if HOSTED and storage_low():  # the volume is nearly full: existing profiles keep writing, new ones wait
+                A.log("signup-storage-full", **self._ip_log())
+                raise ApiError(507, "storage_full")
+            # The bot check comes before anything says whether the email has a profile, and before the hash. A failed
+            # check counts against the window like any failed attempt; Cloudflare being unreachable does not.
+            if TURNSTILE: self._turnstile_or_403(body.get("turnstileToken"))
+        except TurnstileUnavailable as e:
+            self._unhit(SIGNUP_WINDOW, SIGNUP_BACKSTOP, rkey)
+            A.log_error(f"turnstile: siteverify unavailable ({e}); sign-up refused (503)")
+            raise ApiError(503, "bot_check_unavailable")
+        except ApiError as e:
+            if e.code != "bot_check_failed": self._unhit(SIGNUP_WINDOW, SIGNUP_BACKSTOP, rkey)
+            raise
         try:
             with A.auth_lock():
                 users = A.load_users()
@@ -1034,16 +1378,13 @@ class Handler(SimpleHTTPRequestHandler):
                 self.registry_or_503(users, email)
                 if len(users["users"]) >= A.MAX_USERS: raise ApiError(403, "user_limit")
                 if A.find_user_by_email(users, email): raise ApiError(409, "email_taken", field="email")
-                if ikey:  # used up only now, under the lock, so two sign-ups cannot share an invite's last use
-                    invites = A.load_invites(); inv = invites.get(ikey)
-                    if not A.invite_usable(inv): raise ApiError(403, "invite_required", field="invite")
-                    inv["uses"] += 1
-                    A.save_invites(invites)
+                owner = self._owner_claim_ok(email, body, A.load_owner_claims())  # again, under the lock
+                if SIGNUP_CLOSED and not owner: raise ApiError(403, "signup_closed")
                 user = {"uid": uid, "email": email, "name": name, "pw": pw_hash, "created": now, "updated": now,
                         "lastLogin": now, "pwChanged": now, "failedLogins": 0, "lockUntil": 0, "lastFail": 0}
                 users["users"][uid] = user
                 A.save_users(users)
-                if HOSTED and email in OWNER_EMAILS: self._record_owner_claim(email, uid, now)
+                if owner: self._record_owner_claim(email, uid, now)
                 if self._sess: A.revoke_session(self._sess["key"])
                 token, sess = A.create_session(uid, remember, self.ua())
         except BaseException:
@@ -1051,34 +1392,34 @@ class Handler(SimpleHTTPRequestHandler):
             raise
         self._write_owner(user)  # after users.json, so an owner file always means "users.json knew this profile"
         A.log("signup", uid)
+        if HOSTED and email in OWNER_EMAILS and not owner: A.log("owner-email-unclaimed", uid)  # an ordinary profile
         self._uid, self._sess, self._scope = uid, sess, uid
         self.set_session_cookie(token, remember)
         self.send_json({"ok": True, "user": A.public_user(user), "session": {"remember": remember, "expires": sess["expires"]},
                         "imported": imported}, 201)
 
-    def _invite_or_403(self, raw):
-        """-> the stored key of a usable invite code, else 403 invite_required (missing, unknown, revoked or used up
-        all answer the same)."""
-        code = A.normalize_invite(raw)
-        if code:
-            key = A.invite_key(code)
-            with A.auth_lock():
-                if A.invite_usable(A.load_invites().get(key)): return key
-        A.log("invite-refused", **self._ip_log())
-        raise ApiError(403, "invite_required", field="invite")
+    def _site_hosts(self):
+        """Where this site's pages live: the request's own host and the BS_ALLOWED_ORIGINS hosts (behind the Vercel
+        rewrite the request's host is Railway's, the page's www.biblelantern.com)."""
+        return ORIGIN_HOSTS | {PORT_SUFFIX.sub("", (self.headers.get("Host") or "").strip().lower())}
 
-    def _owner_claim_free(self, email, body):
-        """Hosted: may `email` sign up with no invite? An owner email no profile has claimed yet; or any owner email
-        with the setup token, so the owner can come back after a delete or an email change (QC 0)."""
-        if email not in OWNER_EMAILS: return False
-        token = body.get("setupToken")
-        if OWNER_SETUP_TOKEN and isinstance(token, str) and hmac.compare_digest(token.encode("utf-8"), OWNER_SETUP_TOKEN.encode("utf-8")):
-            return True
-        with A.auth_lock(): return A.claim_key(email) not in A.load_owner_claims()
+    def _turnstile_or_403(self, token):
+        """403 bot_check_failed unless Cloudflare passes the sign-up's Turnstile token (TurnstileUnavailable when it
+        cannot say). The token and the secret never reach the log."""
+        why = "missing"
+        if isinstance(token, str) and 0 < len(token) <= TURNSTILE_TOKEN_MAX:
+            # remoteip is optional: it is sent only when Vercel's headers name the visitor (via_proxy), since without
+            # them client_ip() is a proxy's address, which tells Cloudflare nothing and could fail a real sign-up
+            remoteip = self.client_ip() if TRUST_PROXY and self.via_proxy() else ""
+            why = turnstile_check(token, remoteip, self._site_hosts())
+        if why:
+            A.log("bot-check-fail", reason=why, **self._ip_log())
+            raise ApiError(403, "bot_check_failed")
 
     @staticmethod
     def _record_owner_claim(email, uid, now):
-        """Call under auth_lock(), after users.json: from now on this owner email needs an invite or the setup token."""
+        """Call under auth_lock(), after users.json: this profile now holds the owner rights of `email`, and anyone else
+        who signs up with that email later gets an ordinary profile unless they have the setup token."""
         claims = A.load_owner_claims()
         claims[A.claim_key(email)] = {"uid": uid, "claimed": now}
         A.save_owner_claims(claims)
@@ -1150,9 +1491,10 @@ class Handler(SimpleHTTPRequestHandler):
             if has_email and email != u.get("email"):
                 other = A.find_user_by_email(users, email)
                 if other and other["uid"] != self._uid: raise ApiError(409, "email_taken", field="email")
-                if HOSTED and email in OWNER_EMAILS and u.get("email") not in OWNER_EMAILS:  # owner rights come with it
+                owner = holds_owner_claim(u, A.load_owner_claims())  # an owner email alone is not enough (open sign-up)
+                if HOSTED and email in OWNER_EMAILS and not owner:  # owner rights come with it
                     raise ApiError(409, "email_taken", field="email")
-                if HOSTED and u.get("email") in OWNER_EMAILS and email not in OWNER_EMAILS:  # and would go with it (QC 0)
+                if owner and email not in OWNER_EMAILS:  # and would go with it (QC 0)
                     raise ApiError(409, "owner_email", MSG_OWNER_EMAIL, field="email")
                 u["email"] = email
                 if HOSTED and email in OWNER_EMAILS: self._record_owner_claim(email, self._uid, A.now_ms())
@@ -1189,8 +1531,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def h_delete(self, body, q, arg):
         """Locally the profile folder moves to deleted/<uid>-<stamp> (the README says how to erase it). On the site it
-        is erased at once, with the users.json entry, the sessions and the 'by' of any invite it made (QC 4); the
-        owner claim stays, so the address cannot be picked up by a stranger. The last owner cannot be deleted (QC 0)."""
+        is erased at once, with the users.json entry and the sessions (QC 4); the owner claim stays, so a stranger who
+        signs up with the address gets an ordinary profile. The last owner cannot be deleted (QC 0)."""
         self.auth_window_or_429(self._uid)
         user = self.load_user(self._uid)
         if not user: raise ApiError(401, "not_signed_in")
@@ -1199,8 +1541,9 @@ class Handler(SimpleHTTPRequestHandler):
         with A.auth_lock():
             users = A.load_users(); u = users["users"].get(uid)
             if not u: raise ApiError(401, "not_signed_in")
-            if HOSTED and u.get("email") in OWNER_EMAILS and not any(
-                    v.get("email") in OWNER_EMAILS for k, v in users["users"].items() if k != uid):
+            claims = A.load_owner_claims() if HOSTED else {}
+            if holds_owner_claim(u, claims) and not any(
+                    holds_owner_claim(v, claims) for k, v in users["users"].items() if k != uid):
                 raise ApiError(409, "last_owner", MSG_LAST_OWNER)
             with A.lock_for(uid):
                 src = A.profile_dir(uid)
@@ -1216,11 +1559,6 @@ class Handler(SimpleHTTPRequestHandler):
             del users["users"][uid]
             A.save_users(users)
             A.revoke_sessions(uid)
-            if HOSTED:
-                invites, changed = A.load_invites(), False
-                for inv in invites.values():
-                    if inv.get("by") == uid: inv["by"], changed = None, True
-                if changed: A.save_invites(invites)
         A.log("account-delete", uid)
         self._uid, self._sess, self._scope = None, None, "guest"
         self.clear_session_cookie()
@@ -1247,7 +1585,7 @@ class Handler(SimpleHTTPRequestHandler):
             new = {k: v for k, v in body.items() if k not in ("rev", "deleted", "scope")}
             new.setdefault("studies", cur["studies"])
             new["rev"], new["deleted"] = cur["rev"] + 1, {}
-            A.save_notes(self._scope, new)
+            A.save_notes(self._scope, new, quota=True)
         self.send_json({"ok": True, "saved": time.strftime("%H:%M:%S"), "rev": new["rev"]})
 
     def h_notes_changes(self, body, q, arg):
@@ -1285,7 +1623,7 @@ class Handler(SimpleHTTPRequestHandler):
             changed, conflicts = A.apply_note_changes(notes, clean_set, clean_del, clean_base)
             if changed:
                 notes["rev"] = before + 1
-                A.save_notes(self._scope, notes)
+                A.save_notes(self._scope, notes, quota=True)
             versions = A.note_versions(notes, list(clean_set) + list(clean_del), conflicts)
         self.send_json({"ok": True, "rev": notes["rev"], "changed": changed, "stale": base is not None and base < before,
                         "conflicts": conflicts, "versions": versions, "saved": time.strftime("%H:%M:%S")})
@@ -1351,7 +1689,7 @@ class Handler(SimpleHTTPRequestHandler):
                 raise ApiError(409, f"{one}_limit")
             if changed:
                 doc["rev"] = before + 1
-                getattr(A, f"save_{many}")(self._scope, doc)
+                getattr(A, f"save_{many}")(self._scope, doc, quota=True)  # its activity below is small and capped
             versions = getattr(A, f"{one}_versions")(doc, list(clean_set) + list(clean_del), conflicts)
             if created:
                 lib = A.load_library(self._scope)
@@ -1401,7 +1739,7 @@ class Handler(SimpleHTTPRequestHandler):
             lib["appliedBatches"] = (lib["appliedBatches"] + [bid])[-A.MAX_BATCH_IDS:]
             if applied: lib["rev"] += 1
             if lib.get("created") is None: lib["created"] = A.now_ms()
-            A.save_library(self._scope, lib)
+            A.save_library(self._scope, lib, quota=True)
         self.send_json({"ok": True, "rev": lib["rev"], "applied": applied, "rejected": rejected, "duplicate": False})
 
     @staticmethod
@@ -1571,17 +1909,8 @@ class Handler(SimpleHTTPRequestHandler):
         with A.lock_for(uid):
             notes, lib, links, marks = A.load_notes(uid), A.load_library(uid), A.load_links(uid), A.load_marks(uid)
             n_notes = A.merge_notes(notes, {"refs": src["notes"]}, room=A.MAX_REFS - len(notes["refs"]))
-            if n_notes:
-                notes["rev"] += 1
-                A.save_notes(uid, notes)
             n_links = A.merge_links(links, {"links": src["links"]})
-            if n_links:  # links, then marks, then library (the lock order at A.lock_for)
-                links["rev"] += 1
-                A.save_links(uid, links)
             n_marks = A.merge_marks(marks, {"marks": src["marks"]})
-            if n_marks:
-                marks["rev"] += 1
-                A.save_marks(uid, marks)
             counts = A.merge_library(lib, src["library"], "merge", now)
             imported = {"notes": n_notes, "bookmarks": counts["bookmarks"], "chapters": counts["chapters"], "links": n_links,
                         "marks": n_marks}
@@ -1591,7 +1920,15 @@ class Handler(SimpleHTTPRequestHandler):
                 A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
                 lib["rev"] += 1; lib["updated"] = now
                 if lib.get("created") is None: lib["created"] = now
-                A.save_library(uid, lib)
+            for n, doc in ((n_notes, notes), (n_links, links), (n_marks, marks)):
+                if n: doc["rev"] += 1
+            # the whole import against the quota first: all of it is written, or none
+            A.check_quota(uid, [(path(uid), doc) for n, path, doc in ((n_notes, A.notes_path, notes), (n_links, A.links_path, links),
+                                                                       (n_marks, A.marks_path, marks), (changed, A.library_path, lib)) if n])
+            if n_notes: A.save_notes(uid, notes)
+            if n_links: A.save_links(uid, links)  # links, then marks, then library (the lock order at A.lock_for)
+            if n_marks: A.save_marks(uid, marks)
+            if changed: A.save_library(uid, lib)
         A.log("profile-import", uid, changed=int(changed))
         self.send_json({"ok": True, "imported": imported, "changed": changed, "skipped": skipped,
                         "rev": {"notes": notes["rev"], "library": lib["rev"], "links": links["rev"], "marks": marks["rev"]}})
@@ -1647,51 +1984,20 @@ class Handler(SimpleHTTPRequestHandler):
         obj, status = get_passage(tr, book_n, ch)
         self.send_json(obj, status)
 
-    # ------------------------------------------------------------ hosted: invites and health (hosting brief §1)
-    def h_invites_get(self, body, q, arg):
-        self.owner_or_403()
-        with A.auth_lock(): invites = A.load_invites()
-        rows = sorted((A.public_invite(r) for r in invites.values()), key=lambda r: r["created"], reverse=True)
-        self.send_json({"invites": rows})
-
-    def h_invites_create(self, body, q, arg):
-        """-> 201 with the plain code: the only time it is ever shown (only its SHA-256 is kept)."""
-        self.owner_or_403()
-        note = body.get("note")
-        if note is not None and not isinstance(note, str): raise ApiError(400, "bad_request", "A note must be text.", field="note")
-        note = A.clean_text(note or "")
-        if len(note) > A.LABEL_MAX: raise ApiError(400, "bad_request", "A note can be up to 80 characters.", field="note")
-        mu = 1 if body.get("maxUses") is None else body["maxUses"]
-        if not (A._is_int(mu) and 1 <= mu <= A.INVITE_MAX_USES):
-            raise ApiError(400, "bad_request", f"Uses must be a whole number from 1 to {A.INVITE_MAX_USES}.", field="maxUses")
-        with A.auth_lock():
-            invites = A.load_invites()
-            if len(invites) >= A.MAX_INVITES: raise ApiError(409, "invite_limit")
-            ids = {r["id"] for r in invites.values()}
-            code = A.new_invite_code()
-            while A.invite_key(code) in invites: code = A.new_invite_code()
-            iid = "iv_" + secrets.token_hex(6)
-            while iid in ids: iid = "iv_" + secrets.token_hex(6)
-            rec = {"id": iid, "last4": code[-4:], "created": A.now_ms(), "by": self._uid, "uses": 0, "maxUses": mu,
-                   "note": note, "revoked": False}
-            invites[A.invite_key(code)] = rec
-            A.save_invites(invites)
-        A.log("invite-create", self._uid, id=iid)
-        self.send_json({"ok": True, "code": code, "invite": A.public_invite(rec)}, 201)
-
-    def h_invites_revoke(self, body, q, arg):
-        self.owner_or_403()
-        iid = body.get("id")
-        if not isinstance(iid, str) or not A.INVITE_ID_RE.fullmatch(iid): raise ApiError(404, "not_found")
-        with A.auth_lock():
-            invites = A.load_invites()
-            rec = next((r for r in invites.values() if r["id"] == iid), None)
-            if rec is None: raise ApiError(404, "not_found")
-            if not rec["revoked"]:
-                rec["revoked"] = True
-                A.save_invites(invites)
-                A.log("invite-revoke", self._uid, id=iid)
-        self.send_json({"ok": True, "invite": A.public_invite(rec)})
+    # ------------------------------------------------------------ hosted: site activity and health
+    def h_admin_traffic(self, body, q, arg):
+        """The owners' Site activity panel (open sign-up brief §1.4). api() answers 404 to everyone else."""
+        if METRICS is None: raise ApiError(404, "not_found")
+        with A.auth_lock(): n_users = len(A.load_users()["users"])
+        rep, du = METRICS.report(30), disk_state()
+        storage = {"free_mb": du.free // MIB, "used_mb": du.used // MIB, "total_mb": du.total // MIB,
+                   "low": storage_low(du)} if du else {"free_mb": None, "used_mb": None, "total_mb": None, "low": False}
+        pause = signup_pause(n_users)  # as auth/me says it, with the free-space check just made
+        self.send_json({"days": rep["days"],
+                        "totals": {"profiles": n_users, "guests_today": rep["days"][-1]["guests"], "last_7": rep["last_7"],
+                                   "last_30": rep["last_30"]},
+                        "turnstile": TURNSTILE, "signup": "closed" if pause else "open", "signupPause": pause,
+                        "storage": storage})
 
     def h_health(self, body, q, arg):
         problem = health_problem()
@@ -1699,6 +2005,7 @@ class Handler(SimpleHTTPRequestHandler):
             A.log_error(f"health: {problem}")
             self.send_json({"ok": False}, 503)
         else:
+            if HOSTED: storage_low()  # still 200 while the volume runs low, with an [alert] line once an hour
             self.send_json({"ok": True})
 
 
@@ -1775,11 +2082,11 @@ ROUTES = {
     "/api/export/obsidian": {"GET": Route(H.h_export_obsidian)},
     "/api/config": {"GET": Route(H.h_config_get), "PUT": Route(H.h_config_put, 8 * KIB)},
     "/api/passage": {"GET": Route(H.h_passage)},
-    "/api/invites": {"GET": Route(H.h_invites_get, auth=True), "POST": Route(H.h_invites_create, 4 * KIB, auth=True)},
-    "/api/invites/revoke": {"POST": Route(H.h_invites_revoke, 1 * KIB, auth=True)},
+    "/api/admin/traffic": {"GET": Route(H.h_admin_traffic)},
     HEALTH: {"GET": Route(H.h_health)},
 }
-HOSTED_ONLY = {"/api/invites", "/api/invites/revoke"}  # 404 locally, where there are no owners or invites
+HOSTED_ONLY = {"/api/admin/traffic"}  # 404 locally, where there are no owners
+OWNERS_ONLY = {"/api/admin/traffic"}  # 404 for anyone but an owner, whatever the method
 BOOKMARK_ROUTES = {"PATCH": Route(H.h_bookmark_patch, 8 * KIB, scope=True, write=True),
                    "DELETE": Route(H.h_bookmark_delete, 1 * KIB, scope=True, write=True)}
 
@@ -1844,6 +2151,17 @@ def backfill_owner_claims():
     return added
 
 
+def start_metrics(path):
+    """Hosted: load the daily counts, flush them once a minute, and on SIGTERM (a deploy or restart) stop serving so
+    main() writes them a last time."""
+    global METRICS
+    METRICS = Metrics(path).load()
+    threading.Thread(target=METRICS.flush_loop, args=(threading.Event(),), name="metrics", daemon=True).start()
+
+    def on_term(signum, frame): raise SystemExit(0)
+    signal.signal(signal.SIGTERM, on_term)
+
+
 _SERVER_LOCK_FD = None
 
 
@@ -1882,7 +2200,7 @@ def main():
     ap.add_argument("--host", default=env.get("HOST", "").strip() or "127.0.0.1")
     ap.add_argument("--data-dir", default=None, help="where notes, profiles and settings live (default: $BS_DATA_DIR, else notes/)")
     ap.add_argument("--allow-host", action="append", default=[], metavar="NAME", help="also accept this Host name")
-    ap.add_argument("--max-users", type=int, default=50)
+    ap.add_argument("--max-users", type=int, default=None, help="the profile cap (default 50; hosted $BS_MAX_USERS, else 5000)")
     ap.add_argument("--dev", action="store_true", help="also serve app/mock/ (design mocks and builder harnesses)")
     ap.add_argument("--list-users", action="store_true", help="list profiles and exit")
     ap.add_argument("--reset-password", metavar="EMAIL", help="set a new password for a profile and exit")
@@ -1909,7 +2227,8 @@ def main():
     if data == app_real or data.startswith(app_real + os.sep):
         print("--data-dir must not be inside app/", file=sys.stderr); sys.exit(1)
     os.umask(0o077)
-    A.configure(data, a.port, a.allow_host, a.max_users)
+    max_users = a.max_users if a.max_users is not None else HOSTED_MAX_USERS if HOSTED else 50
+    A.configure(data, a.port, a.allow_host, max_users)
 
     if a.list_users: sys.exit(cli_list_users())
     if a.reset_password is not None:
@@ -1931,7 +2250,12 @@ def main():
     if not _is_loopback(a.host) and not HOSTED:  # hosted, TLS ends at the host's proxy
         print("Warning: Profiles over plain HTTP on a network are visible to that network.", file=sys.stderr)
     if HOSTED and not OWNER_EMAILS:
-        print("Warning: BS_HOSTED is on but BS_OWNER_EMAILS is empty: nobody can make invites or use ESV/NLT.", file=sys.stderr)
+        print("Warning: BS_HOSTED is on but BS_OWNER_EMAILS is empty: nobody can use ESV/NLT or see Site activity.", file=sys.stderr)
+    if HOSTED and not TURNSTILE:
+        missing = " and ".join(n for n, v in (("BS_TURNSTILE_SITEKEY", TURNSTILE_SITEKEY), ("BS_TURNSTILE_SECRET", TURNSTILE_SECRET)) if not v)
+        print(f"Turnstile is off ({missing} not set): sign-up is open behind the rate limits only.", flush=True)
+    if TURNSTILE and TURNSTILE_TEST_SECRET.fullmatch(TURNSTILE_SECRET):
+        print("Warning: BS_TURNSTILE_SECRET is one of Cloudflare's test secrets: the bot check proves nothing.", file=sys.stderr)
     if HOSTED and not ALLOWED_ORIGINS:
         print("Warning: BS_ALLOWED_ORIGINS is empty: a browser on the site's own domain is refused (csrf) when the API "
               "answers under another host name.", file=sys.stderr)
@@ -1940,13 +2264,18 @@ def main():
         if problem: sys.exit(f"The data directory cannot be used: {problem}")
         n_claims = backfill_owner_claims()
         if n_claims: print(f"Recorded {n_claims} owner claim(s) for profiles made before owner-claims.json existed.", flush=True)
+        start_metrics(os.path.join(data, "metrics.json"))
     Handler.serve_mocks = a.dev
     srv = Server((a.host, a.port), Handler)
     n_users = len(A.load_users()["users"])
-    mode = f"   hosted: owners {len(OWNER_EMAILS)}{', trusting the proxy' if TRUST_PROXY else ''}" if HOSTED else ""
-    print(f"Bible study app: http://{a.host}:{a.port}   data: {data}   profiles: {n_users}   hashing: {A.PREFERRED}{mode}", flush=True)
+    mode = (f"   hosted: owners {len(OWNER_EMAILS)}, sign-up {'closed' if SIGNUP_CLOSED else 'open'}, "
+            f"Turnstile {'on' if TURNSTILE else 'off'}{', trusting the proxy' if TRUST_PROXY else ''}") if HOSTED else ""
+    print(f"Bible study app: http://{a.host}:{a.port}   data: {data}   profiles: {n_users}/{A.MAX_USERS}   "
+          f"hashing: {A.PREFERRED}{mode}", flush=True)
     try: srv.serve_forever()
     except KeyboardInterrupt: pass
+    finally:
+        if METRICS is not None: METRICS.flush()  # a deploy stops the old server with SIGTERM: today's counts are kept
 
 
 if __name__ == "__main__":

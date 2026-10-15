@@ -1,7 +1,7 @@
 // Wiring: boot, the action object A, the study-sheet state machine, top bar, stage panels, picker,
 // search, settings, dialogs, toast, keyboard, profiles (resume prompt, library marks) and the art panel.
 import { icon } from './icons.js'; // first import: injects the icon sprite
-import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted } from './store.js';
+import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted, QUOTA_MSG } from './store.js';
 import * as reader from './reader.js';
 import * as drawer from './drawer.js';
 import * as viz from './viz.js';
@@ -137,7 +137,7 @@ const A = {
   /** A typed or linked reference ('John 3:16–18'): true when it resolved and opened. */
   goReference(text) { const r = parseReference(String(text || '')); if (r) { openRef(r); return true; } toast(`Couldn’t find “${text}”.`); return false; },
   openSettings() { openSettings(); },
-  /** Home's Welcome: Sign in, or I have an invite (the sign-up form, with its invite field when the site asks for one). */
+  /** Home's Welcome: Sign in, or Create a profile (the sign-up form, Name focused). */
   openAuth(mode) { openAuth(mode === 'signup' ? 'signup' : 'signin'); },
   /** Home (the wordmark, h): byKey moves focus to its heading. */
   goHome(byKey = false) { goHome(byKey); },
@@ -1435,10 +1435,27 @@ function artViewerOpen() {
   if (has(art, 'viewerOpen')) { try { return !!art.viewerOpen(); } catch (e) { return false; } }
   return document.documentElement.classList.contains('art-viewing');
 }
+let quotaAt = 0;
 function bindProfileEvents() {
   document.addEventListener('bs:library-changed', () => A.refreshLibraryMarks());
   document.addEventListener('bs:auth-changed', e => { A.onScopeChange((e && e.detail) || {}); });
   document.addEventListener('bs:notes-replaced', onNotesReplaced);
+  // a save refused at the profile's storage quota (store.js): one notice a minute, however many savers retry. An import
+  // says so in the Profile dialog itself.
+  document.addEventListener('bs:quota', e => {
+    const d = (e && e.detail) || {};
+    if (/^\/api\/profile\/import/.test(d.url || '') || Date.now() - quotaAt < 60000) return;
+    quotaAt = Date.now(); toast(d.message || QUOTA_MSG);
+  });
+}
+/** Vercel Web Analytics (open-signup brief §2): page views, visitors, referrers and countries, without cookies. On the
+ *  production site only, never locally, on a preview deployment or in a dry run. */
+const PROD_HOSTS = new Set(['www.biblelantern.com', 'biblelantern.com']);
+function loadAnalytics() {
+  if (DRY || !PROD_HOSTS.has(location.hostname) || document.querySelector('script[src="/_vercel/insights/script.js"]')) return;
+  const s = document.createElement('script');
+  s.defer = true; s.src = '/_vercel/insights/script.js';
+  document.head.appendChild(s);
 }
 
 // ------------------------------------------------------------ boot
@@ -1456,6 +1473,7 @@ function adoptSavedTranslations(tr, tr2) {
   return changed;
 }
 async function boot() {
+  loadAnalytics();
   const meta = await data.meta(); state.meta = meta; state.books = meta.books; state.translations = meta.translations || [];
   [library, tracker, art, lnk, mrk] = await modsP;
   artCall('init', A);

@@ -11,7 +11,9 @@
       "has": [{ "type": "host", "value": "bible-study-seven-blond.vercel.app" }],
       "destination": "https://www.biblelantern.com/:path*",
       "permanent": true
-    }
+    },
+    { "source": "/donate", "destination": "https://buymeacoffee.com/biblelantern", "permanent": false },
+    { "source": "/support", "destination": "https://buymeacoffee.com/biblelantern", "permanent": false }
   ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*" }

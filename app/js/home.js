@@ -2,7 +2,7 @@
 // Doré's engravings). Today for a profile, and for a guest when the app runs locally (local guests can save);
 // Welcome for a hosted site's guest. main.js imports this module the first time Home shows, then calls show(),
 // hide() and refresh(). The personal parts come from the app's own modules (getMods), never from sample data.
-import { state, data, bookOf, refLabel, esc, smart, clip, trInfo, yearLabel } from './store.js';
+import { state, data, bookOf, refLabel, esc, smart, clip, trInfo, yearLabel, DONATE_URL, PAUSE_MSG, signupPaused } from './store.js';
 import { icon } from './icons.js';
 import { relTime, dayLabel, localDay } from './ui.js';
 
@@ -106,8 +106,9 @@ function welcomeHtml() {
         <div class="cta">
           <a class="lbtn btn-fill" href="${hrefOf(43, 1)}">Start reading <span class="btn-sub">John 1</span></a>
           <button class="lbtn btn-glass" type="button" data-act="signin" aria-haspopup="dialog">Sign in</button>
-          <button class="cta-link" type="button" data-act="invite" aria-haspopup="dialog">I have an invite</button>
+          <button class="cta-link" type="button" data-act="signup" aria-haspopup="dialog">Create a profile</button>
         </div>
+        <div class="pause-slot" id="hm-pause-w" role="status"></div>
       </div>
       <button class="plate-cap" type="button" data-cap="cover" hidden>${icon('photo')}<span><b></b><br>Gustave Doré, 1866</span></button>
     </section>
@@ -149,16 +150,19 @@ function coloHtml() {
     <div class="wrap colo-in">
       <p class="colo-b">${hic('lantern', 'mark')}<span>${esc(BRAND.name)}</span></p>
       <blockquote class="colo-m"><p>${esc(BRAND.motto)}</p><footer><cite>${esc(BRAND.mottoRef)}</cite></footer></blockquote>
+      <p class="colo-g"><a href="${DONATE_URL}" target="_blank" rel="noopener">${icon('heart')}<span>Help bring Bible Lantern to more people</span></a></p>
       <p class="colo-c" id="hm-credit"></p>
       <p class="colo-d">${esc(BRAND.domain)}</p>
     </div>
   </footer>`;
 }
+// Today's place for a sign-up pause: a slim notice just above the colophon (Welcome's is under its buttons)
+const PAUSE_SLOT = '<div class="pause-slot wrap" id="hm-pause-t" data-only="today" role="status"></div>';
 function build() {
   if (root) return true;
   const el = document.getElementById('home'); if (!el) return false;
   root = el;
-  root.innerHTML = SPRITE + todayHtml() + welcomeHtml() + paperHtml() + coloHtml();
+  root.innerHTML = SPRITE + todayHtml() + welcomeHtml() + paperHtml() + PAUSE_SLOT + coloHtml();
   bind();
   return true;
 }
@@ -576,6 +580,44 @@ function renderWelcome() {
   watchPreviews();
 }
 
+// ------------------------------------------------------------ a sign-up pause (donate brief §2)
+// While the site's sign-up is paused, Welcome's 'Create a profile' gives way to the announcement and Today has it
+// above the colophon. Both slots are live regions: written only when the pause starts or ends, so it is read once.
+let paused = false;
+function pauseHtml(btn) {
+  return `<div class="pause"><p class="pause-t">${esc(PAUSE_MSG.title)}</p><p class="pause-b">${esc(PAUSE_MSG.body)}</p>`
+    + `<a class="lbtn ${btn} pause-go" href="${DONATE_URL}" target="_blank" rel="noopener">${esc(PAUSE_MSG.cta)}${icon('external')}</a></div>`;
+}
+function renderPause() {
+  const on = signupPaused();
+  if (on === paused) return;
+  paused = on;
+  const ae = document.activeElement, make = $('.hm-welcome [data-act="signup"]'), had = !!make && ae === make;
+  const goW = $('#hm-pause-w .pause-go'), goT = $('#hm-pause-t .pause-go');   // read before the slots are rewritten
+  if (make) make.hidden = on;
+  $('#hm-pause-w').innerHTML = on ? pauseHtml('btn-glass') : '';
+  $('#hm-pause-t').innerHTML = on ? pauseHtml('btn-tint') : '';
+  if (had) $('#hm-pause-w .pause-go')?.focus({ preventScroll: true }); // its button is gone: the nearest thing to do instead
+  else if (on && make) goAfterClose(make);
+  if (on) return;
+  // the pause is over while Help us expand had focus: Create a profile is back (Welcome), the footer's link is next (Today)
+  if (goW && ae === goW) make?.focus({ preventScroll: true });
+  else if (goT && ae === goT) $('.colo-g a')?.focus({ preventScroll: true });
+}
+/** Found while a dialog is open (its own auth/me, a refused sign-up): one opened from 'Create a profile' hands focus
+ *  back to it on close, and it is hidden now. 'close' comes after that native return (still on the hidden button,
+ *  <body> only after the next frame), so once the last dialog has closed (a busy one reopens), Help us expand takes
+ *  focus unless it has found a place meanwhile. */
+function goAfterClose(make) {
+  const d = document.querySelector('dialog[open]');
+  if (!d) return;
+  d.addEventListener('close', () => {
+    if (document.querySelector('dialog[open]')) { goAfterClose(make); return; }
+    const ae = document.activeElement;
+    if (make.hidden && (!ae || ae === document.body || !ae.getClientRects().length)) $('#hm-pause-w .pause-go')?.focus({ preventScroll: true });
+  }, { once: true });
+}
+
 // ------------------------------------------------------------ render, events, API
 function renderCredit() {
   const tr = mode === 'today' ? textTr() : 'kjv';
@@ -587,7 +629,7 @@ async function render() {
   const changed = !!mode && next !== mode;
   mode = next; root.dataset.state = next;
   if (changed) { closeBooks(false); settleFocus(); }
-  renderAtlas(); renderCredit();
+  renderAtlas(); renderCredit(); renderPause();
   if (next === 'welcome') renderWelcome();
   else { renderDate(); await Promise.all([renderVod(my), renderCont(my), renderStudy(my)]); }
   if (my === seq) requestAnimationFrame(placeAll);
@@ -610,7 +652,7 @@ function bind() {
       e.preventDefault(); A?.resume?.(pos, { focus: true }); return;
     }
     const act = t.closest('[data-act]');
-    if (act) { A?.openAuth?.(act.dataset.act === 'invite' ? 'signup' : 'signin'); return; }
+    if (act) { A?.openAuth?.(act.dataset.act === 'signup' ? 'signup' : 'signin'); return; }
     const pl = t.closest('#hm-tiles .pl-b[data-plate]');
     if (pl) { A?.openArt?.(pl.dataset.plate, { returnFocus: pl, group: SHOWCASE }); return; }
     const go = t.closest('#hm-tiles .tile-a');
@@ -642,6 +684,7 @@ function bind() {
   });
   const soon = () => refresh();
   ['bs:auth-changed', 'bs:library-changed', 'bs:links-changed', 'bs:marks-changed', 'bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soon));
+  document.addEventListener('bs:signup-changed', () => renderPause()); // paused or reopened (account.js): shown or not
   let rz = 0;
   addEventListener('resize', () => {
     cancelAnimationFrame(rz);

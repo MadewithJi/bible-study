@@ -6,8 +6,9 @@ Importing this module has no side effects. Call configure(data_dir, port, ...) f
 A "scope" is whose data a request acts on: "guest" (DATA/notes.json, DATA/guest-library.json, DATA/guest-links.json,
 DATA/guest-marks.json) or a uid like "u3f9a0c1d2e4b5a69" (DATA/profiles/<uid>/notes.json, library.json, links.json,
 marks.json). See .design/profiles-spec.md for the full contract, .design/links-spec.md for My links and
-.design/annotations-brief.md for marks (highlights and comments). Hosted mode adds DATA/invites.json (sign-up invite
-codes, stored hashed) and profile import from an export file: .design/hosting-brief.md §1.
+.design/annotations-brief.md for marks (highlights and comments). Hosted mode adds DATA/owner-claims.json, profile
+import from an export file (.design/hosting-brief.md §1) and a per-profile storage quota (.design/open-signup-brief.md
+§1.3).
 """
 import base64, binascii, bisect, collections, copy, datetime, fcntl, hashlib, hmac, io, json, math, os, re
 import secrets, shutil, sys, threading, time, unicodedata, zipfile
@@ -20,7 +21,7 @@ META_PATH = os.path.join(APP, "data", "meta.json")
 # ------------------------------------------------------------------ configuration (set by configure())
 DATA = PROFILES = DELETED = USERS = SESSIONS = None
 AUTH_LOCKFILE = SERVER_LOCKFILE = GUEST_NOTES = GUEST_LIBRARY = GUEST_LINKS = GUEST_MARKS = CONFIG = CACHE = None
-INVITES = OWNER_CLAIMS = None
+OWNER_CLAIMS = None
 PORT = 8765
 ALLOWED_HOSTS = ()
 MAX_USERS = 50
@@ -31,7 +32,7 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     """Point the module at a data directory. Does not create anything on disk."""
     global DATA, PROFILES, DELETED, USERS, SESSIONS, AUTH_LOCKFILE, SERVER_LOCKFILE
     global GUEST_NOTES, GUEST_LIBRARY, GUEST_LINKS, GUEST_MARKS, CONFIG, CACHE, PORT, ALLOWED_HOSTS, MAX_USERS, COOKIE
-    global INVITES, OWNER_CLAIMS
+    global OWNER_CLAIMS
     DATA = os.path.realpath(os.path.expanduser(data_dir))
     PROFILES = os.path.join(DATA, "profiles")
     DELETED = os.path.join(DATA, "deleted")
@@ -45,7 +46,6 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     GUEST_MARKS = os.path.join(DATA, "guest-marks.json")
     CONFIG = os.path.join(DATA, "config.json")
     CACHE = os.path.join(DATA, "cache")
-    INVITES = os.path.join(DATA, "invites.json")
     OWNER_CLAIMS = os.path.join(DATA, "owner-claims.json")
     PORT = int(port)
     ALLOWED_HOSTS = tuple(h.strip().lower() for h in (allowed_hosts or ()) if h and h.strip())
@@ -390,13 +390,16 @@ def _tmp_path(path):
     return f"{path}.tmp-{os.getpid()}-{threading.get_ident()}"
 
 
-def write_json_atomic(path, obj, indent=1):
+def write_json_atomic(path, obj, indent=1, before=None):
+    """`before(n)`, when given, sees the encoded size first and may raise to stop the write (the profile quota)."""
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
     # allow_nan=False: NaN/Infinity are not JSON; written once, every later response for that file would be
     # unparseable in the browser. Raising here (a 500 for this one write) is better than storing it.
     data = json.dumps(obj, ensure_ascii=False, indent=indent, allow_nan=False).encode("utf-8")
+    if before is not None:
+        before(len(data))
     tmp = _tmp_path(path)
     try:
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -680,6 +683,7 @@ def write_profile_owner(user, only_if_missing=False):
             return
         _prepare_write(uid)
         write_json_atomic(path, {k: user.get(k) for k in ("uid", "email", "name", "created")})
+        _wrote(uid)
 
 
 def load_sessions():
@@ -813,80 +817,21 @@ def lock_seconds(f):
     return 0 if f < 5 else min(LOCK_MAX, 2 ** (f - 5))
 
 
-# ------------------------------------------------------------------ invites (hosting brief §1)
-# Hosted sign-up is by invite. DATA/invites.json is {SHA-256 of the code: {id, last4, created, by, uses, maxUses, note,
-# revoked}}: the plain code is shown once, when it is made, and never stored. The users.json rules apply: read and
-# written under auth_lock(), a daily invites.json.bak, and an unreadable file is moved aside (invites.json.corrupt-<ts>).
-INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I/L to misread
-INVITE_LEN = 10
-INVITE_ID_RE = re.compile(r"iv_[0-9a-f]{12}", re.ASCII)
-INVITE_KEY_RE = re.compile(r"[0-9a-f]{64}", re.ASCII)
-INVITE_MAX_USES = 100
-MAX_INVITES = 500
-
-
-def new_invite_code():
-    return "".join(secrets.choice(INVITE_ALPHABET) for _ in range(INVITE_LEN))
-
-
-def normalize_invite(s):
-    """What someone typed -> the code ('abcde-fghjk ' -> 'ABCDEFGHJK'), or None when it cannot be one."""
-    if not isinstance(s, str) or len(s) > 40:
-        return None
-    code = re.sub(r"[\s-]+", "", s).upper()
-    return code if len(code) == INVITE_LEN and all(ch in INVITE_ALPHABET for ch in code) else None
-
-
-def invite_key(code):
-    return hashlib.sha256(code.encode("ascii")).hexdigest()
-
-
-def _norm_invite(rec):
-    if not isinstance(rec, dict) or not isinstance(rec.get("id"), str) or not INVITE_ID_RE.fullmatch(rec["id"]):
-        return None
-    mu = _as_int(rec.get("maxUses"))
-    return dict(rec, last4=rec["last4"] if isinstance(rec.get("last4"), str) and len(rec["last4"]) == 4 else "????",
-                created=_nonneg_int(rec.get("created")), uses=_nonneg_int(rec.get("uses")),
-                maxUses=mu if mu is not None and 1 <= mu <= INVITE_MAX_USES else 1,
-                note=rec["note"] if isinstance(rec.get("note"), str) else "", revoked=rec.get("revoked") is True)
-
-
-def load_invites():
-    """-> {key: record}. Call under auth_lock(). A malformed entry is dropped (that code stops working)."""
-    d = read_json_strict(INVITES, {})
-    out = {}
-    for k, v in d.items():
-        rec = _norm_invite(v) if isinstance(k, str) and INVITE_KEY_RE.fullmatch(k) else None
-        if rec is not None:
-            out[k] = rec
-    return out
-
-
-def save_invites(invites):
-    _daily_backup(INVITES)
-    write_json_atomic(INVITES, invites)
-
-
-def invite_usable(rec):
-    return bool(rec) and not rec["revoked"] and rec["uses"] < rec["maxUses"]
-
-
-def public_invite(rec):
-    """What an owner sees of an invite: never the code (it is not kept) or its hash."""
-    return {k: rec[k] for k in ("id", "last4", "created", "uses", "maxUses", "note", "revoked")}
-
-
 # ------------------------------------------------------------------ owner claims (hosting; QC 0)
-# An address in BS_OWNER_EMAILS may sign up without an invite only until a profile has claimed it: DATA/owner-claims.json
-# is {SHA-256 of the email: {uid, claimed}}, kept for good (a delete or an email change must not reopen the address to a
-# stranger). The users.json rules apply: read and written under auth_lock(), a daily .bak, an unreadable file moved aside.
+# A profile with an address in BS_OWNER_EMAILS has owner rights only while it holds that address's claim:
+# DATA/owner-claims.json is {SHA-256 of the email: {uid, claimed}}, kept for good (a delete or an email change must not
+# reopen the address to a stranger, who would sign up as an ordinary profile). The users.json rules apply: read and
+# written under auth_lock(), a daily .bak, an unreadable file moved aside.
+CLAIM_KEY_RE = re.compile(r"[0-9a-f]{64}", re.ASCII)
+
+
 def claim_key(email):
     return hashlib.sha256(email.encode("utf-8")).hexdigest()
 
 
 def load_owner_claims():
     d = read_json_strict(OWNER_CLAIMS, {})
-    return {k: v for k, v in d.items() if isinstance(k, str) and INVITE_KEY_RE.fullmatch(k) and isinstance(v, dict)}
+    return {k: v for k, v in d.items() if isinstance(k, str) and CLAIM_KEY_RE.fullmatch(k) and isinstance(v, dict)}
 
 
 def save_owner_claims(claims):
@@ -928,6 +873,82 @@ def _prepare_write(scope):
     if scope in DELETED_UIDS:
         raise ProfileGone(scope)
     os.makedirs(profile_dir(scope), mode=0o700, exist_ok=True)
+
+
+# ------------------------------------------------------------------ per-profile storage quota (open sign-up brief §1.3)
+# Hosted, a write that would grow a profile's folder past PROFILE_QUOTA is refused before anything is written (serve.py
+# answers 413 quota_exceeded); a write that keeps or shrinks it always goes through, so deleting makes room. The size is
+# one folder's listing (never a walk of the volume), cached per uid and measured again after each write to it. The
+# daily .bak copies are not counted: they mirror the live files and would halve what a person can keep.
+PROFILE_QUOTA = 0  # bytes; 0 = no quota (local mode)
+_SIZES = {}
+_SIZES_LOCK = threading.Lock()
+
+
+class QuotaExceeded(Exception):
+    pass
+
+
+def profile_size(uid):
+    """-> bytes in DATA/profiles/<uid>/ (its live files)."""
+    with _SIZES_LOCK:
+        n = _SIZES.get(uid)
+    if n is not None:
+        return n
+    n = 0
+    try:
+        with os.scandir(profile_dir(uid)) as it:
+            for e in it:
+                if e.name.endswith(".bak") or TMP_RE.fullmatch(e.name):
+                    continue
+                try:
+                    if e.is_file(follow_symlinks=False):
+                        n += e.stat(follow_symlinks=False).st_size
+                except OSError:
+                    pass
+    except (OSError, ValueError):
+        pass
+    with _SIZES_LOCK:
+        _SIZES[uid] = n
+    return n
+
+
+def _quota_gate(scope, path, quota):
+    """-> write_json_atomic's `before` hook for a write that counts against the quota, else None."""
+    if not (quota and PROFILE_QUOTA and scope != "guest"):
+        return None
+
+    def check(n):
+        try:
+            old = os.path.getsize(path)
+        except OSError:
+            old = 0
+        if n > old and profile_size(scope) + n - old > PROFILE_QUOTA:
+            raise QuotaExceeded(scope)
+    return check
+
+
+def check_quota(scope, docs):
+    """Before a write of several files at once (an import): QuotaExceeded when their growth together would pass the
+    quota, so nothing is written rather than part of it. `docs` is [(path, obj)]."""
+    if not PROFILE_QUOTA or scope == "guest":
+        return
+    grow = 0
+    for path, obj in docs:
+        try:
+            old = os.path.getsize(path)
+        except OSError:
+            old = 0
+        grow += len(json.dumps(obj, ensure_ascii=False, indent=1, allow_nan=False).encode("utf-8")) - old
+    if grow > 0 and profile_size(scope) + grow > PROFILE_QUOTA:
+        raise QuotaExceeded(scope)
+
+
+def _wrote(scope):
+    """After a write to a scope's file: its folder is measured again when next needed."""
+    if PROFILE_QUOTA and scope != "guest":
+        with _SIZES_LOCK:
+            _SIZES.pop(scope, None)
 
 
 # ------------------------------------------------------------------ notes (§1.4, §2.4)
@@ -1005,12 +1026,13 @@ def prune_tombstones(deleted, now=None):
     return dict(items[:TOMBSTONE_MAX])
 
 
-def save_notes(scope, obj):
+def save_notes(scope, obj, quota=False):
     _prepare_write(scope)
     obj["deleted"] = prune_tombstones(obj.get("deleted") or {})
     path = notes_path(scope)
     _daily_backup(path)
-    write_json_atomic(path, obj)
+    write_json_atomic(path, obj, before=_quota_gate(scope, path, quota))
+    _wrote(scope)
 
 
 def _note_updated(n):
@@ -1411,11 +1433,12 @@ def _load_keyed(scope, path, field, id_re, clean, salvage):
     return {"version": 1, "rev": rev, field: recs, "deleted": deleted}
 
 
-def _save_keyed(scope, path, doc):
+def _save_keyed(scope, path, doc, quota=False):
     _prepare_write(scope)
     doc["deleted"] = prune_tombstones(doc.get("deleted") or {})
     _daily_backup(path)
-    write_json_atomic(path, doc)
+    write_json_atomic(path, doc, before=_quota_gate(scope, path, quota))
+    _wrote(scope)
 
 
 def _apply_keyed(doc, field, set_map, del_map, base):
@@ -1437,8 +1460,8 @@ def load_links(scope):
     return _load_keyed(scope, links_path(scope), "links", LINK_ID_RE, clean_link, _salvage_link)
 
 
-def save_links(scope, doc):
-    _save_keyed(scope, links_path(scope), doc)
+def save_links(scope, doc, quota=False):
+    _save_keyed(scope, links_path(scope), doc, quota)
 
 
 def apply_link_changes(doc, set_map, del_map, base=None):
@@ -1592,8 +1615,8 @@ def load_marks(scope):
     return _load_keyed(scope, marks_path(scope), "marks", MARK_ID_RE, clean_mark, _salvage_mark)
 
 
-def save_marks(scope, doc):
-    _save_keyed(scope, marks_path(scope), doc)
+def save_marks(scope, doc, quota=False):
+    _save_keyed(scope, marks_path(scope), doc, quota)
 
 
 def apply_mark_changes(doc, set_map, del_map, base=None):
@@ -1758,11 +1781,12 @@ def load_library(scope):
         return new_library()
 
 
-def save_library(scope, lib):
+def save_library(scope, lib, quota=False):
     _prepare_write(scope)
     path = library_path(scope)
     _daily_backup(path)
-    write_json_atomic(path, lib)
+    write_json_atomic(path, lib, before=_quota_gate(scope, path, quota))
+    _wrote(scope)
 
 
 def _min_nn(a, b):
