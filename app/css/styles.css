@@ -589,6 +589,7 @@ body.sheet-modal .scrim { opacity: 1; pointer-events: auto; }
 .cell-sub.serif { font: 400 15px/1.45 var(--serif); letter-spacing: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cell-sub.clamp3 { -webkit-line-clamp: 3; }
 .cell-sub:empty::before { content: ""; display: block; height: 11px; width: 82%; margin: 4px 0 3px; border-radius: 6px; background: linear-gradient(90deg, var(--fill-2), var(--fill), var(--fill-2)); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+a.cell, a.cell:hover { text-decoration: none; } /* a row that leaves the app (Support Bible Lantern) */
 .cell-trail { flex: none; display: flex; align-items: center; gap: 10px; color: var(--label-3); align-self: center; }
 .chev { width: 13px; height: 13px; stroke-width: 2; color: var(--label-4); transition: transform .45s var(--ease); }
 [aria-expanded="true"] > .cell-trail .chev, [aria-expanded="true"] .chev { transform: rotate(90deg); }
@@ -934,6 +935,8 @@ dialog.modal.closing::backdrop { animation: fadeOut .18s var(--ease-io) forwards
 .modal-body { flex: 1 1 auto; min-height: 0; padding: 0 24px 8px; overflow-y: auto; overscroll-behavior: contain; }
 .modal-foot { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px 20px; }
 .modal-foot .btn { height: 34px; padding: 0 18px; }
+.help-foot { justify-content: space-between; } /* Keyboard shortcuts: Support Bible Lantern at the left, Done at the right */
+.help-foot .btn-plain { padding: 0 10px; margin-left: -10px; }
 .group-h { margin: 18px 4px 8px; font: 600 13px/1.2 var(--sans); color: var(--label-2); }
 .group-h:first-child { margin-top: 4px; }
 .frows { background: var(--bg-2); box-shadow: none; overflow: visible; }
@@ -1314,15 +1317,27 @@ dialog.auth { max-width: 440px; }
 .auth-opts { margin-top: 14px; }
 .frow > label small.frow-sub { display: block; margin-top: 2px; font-size: 12px; line-height: 1.35; color: var(--label-2); }
 .frow.bad input { box-shadow: inset 0 0 0 1px var(--danger), 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent); animation: shake .4s var(--ease-io); }
-/* the invite code on an invite-only site: its own box above the other fields, the code large and spaced out */
-.auth-invite { margin-bottom: 12px; box-shadow: var(--sh-1), inset 0 0 0 1px var(--accent-tint-2); }
-.auth-invite[hidden] { display: none; }
-.auth-invite .frow { flex-wrap: wrap; align-items: baseline; row-gap: 6px; padding: 12px 16px 10px; }
-.auth-invite .frow > label { flex: none; width: auto; white-space: nowrap; font-weight: 600; }
-.auth-invite .frow input:not([type=checkbox]) { flex: 1 1 100%; width: 100%; height: 44px; order: 1; font: 500 20px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
-.auth-invite .frow input::placeholder { text-transform: none; letter-spacing: .08em; font-weight: 400; }
-.auth-invite .frow .frow-sub { flex: 1 1 0; min-width: 0; margin: 0; font-size: 12px; line-height: 1.35; color: var(--label-2); text-align: right; }
-.auth-invite + .form-err { margin-top: -4px; }
+/* open-signup brief §2, donate brief §2. Sign-up paused (BS_SIGNUP=closed, the free-space guard or the profile cap):
+   the Create profile tab says so in place of the form, with Home's words and Help us expand */
+.auth-closed { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 4px; padding: 14px 16px 16px; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); font-size: 14px; line-height: 1.45; color: var(--label-2); }
+.auth-closed[hidden] { display: none; }
+.auth-closed:focus { outline: none; }
+.auth-closed:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.auth-closed > .i { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--label-3); }
+.auth-closed .ac-in { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 4px; }
+.auth-closed .ac-t { margin: 0; font-weight: 600; color: var(--label); }
+.auth-closed .ac-in > p { margin: 0; }
+.auth-closed .ac-go { margin-top: 8px; }
+.auth-closed .ac-go .i { width: 14px; height: 14px; }
+#auth-form.closed :is(.auth-fields, .auth-opts, #auth-pw-help, .auth-ts, .auth-ts-err) { display: none !important; }
+/* Cloudflare Turnstile: no room at all while it stays invisible (the usual case); a challenge gets its own space */
+.auth-ts { margin: 0; }
+.auth-ts[hidden] { display: none; }
+.auth-ts.shown { margin-top: 14px; }
+.auth-ts iframe { display: block; max-width: 100%; }
+.auth-ts-err { margin: 14px 0 0; }
+.auth-ts-err.calm { background: var(--fill-2); color: var(--label); }
+.auth-ts-err.calm .i { color: var(--accent); }
 .pw-eye { flex: none; width: 30px; height: 30px; margin-left: -8px; display: grid; place-items: center; border-radius: 8px; color: var(--label-3); transition: background-color var(--d-1), color var(--d-1); }
 .pw-eye:hover { background: var(--fill-2); color: var(--label); }
 .pw-eye[aria-pressed="true"] { color: var(--accent); }
@@ -1347,18 +1362,34 @@ dialog.auth { max-width: 440px; }
 #profile-body > .actions { margin-top: 10px; }
 #profile-body > .actions + .group-h { margin-top: 24px; }
 .cell.danger .cell-title { color: var(--danger-text); }
-/* hosted (hosting brief §2): the owner's invite codes in the Profile dialog, and a guest's note card */
-.inv-new { margin: 12px 0 0; padding: 12px 14px 12px 16px; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); }
-.inv-new[hidden] { display: none; }
-.inv-code-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.inv-code { font: 600 17px/1.3 var(--mono); letter-spacing: .06em; color: var(--label); user-select: all; -webkit-user-select: all; overflow-wrap: anywhere; }
-.inv-new small { display: block; margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--label-2); }
-.inv-list { margin-top: 12px; }
-.inv-list:focus { outline: none; }
-.inv-row .cell-title { overflow-wrap: anywhere; }
-.inv-last { font-family: var(--mono); font-weight: 500; letter-spacing: .04em; }
-.inv-row.off .cell-title { color: var(--label-2); }
-.inv-row .btn { flex: none; }
+/* hosted: the owner's Site activity in the Profile dialog (open-signup brief §2), and a guest's note card (hosting brief §2) */
+.trf-wait { margin: 0 16px; }
+.trf-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; line-height: 1.3; }
+.trf-tbl th, .trf-tbl td { padding: 9px 10px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trf-tbl tbody th { padding-left: 16px; text-align: left; font-weight: 500; color: var(--label); white-space: normal; }
+.trf-tbl tbody th small { font-size: 12px; font-weight: 400; color: var(--label-2); }
+.trf-tbl thead th { padding-top: 11px; padding-bottom: 7px; font: 600 12px/1.2 var(--sans); color: var(--label-2); }
+.trf-tbl tr > :last-child { padding-right: 16px; }
+.trf-tbl tbody td { color: var(--label); }
+.trf-tbl tbody td:nth-child(2) { font-weight: 600; }
+.trf-tbl tbody tr > * { border-top: .5px solid var(--sep); }
+.trf-chart { margin-top: 12px; padding: 12px 16px 12px; border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); }
+.trf-line { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: end; gap: 10px; }
+.trf-line + .trf-line { margin-top: 10px; }
+.trf-lab { font-size: 12px; line-height: 1.2; color: var(--label-2); }
+.trf-bars { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); align-items: end; gap: 2px; height: 40px; }
+.trf-line.su .trf-bars { height: 24px; }
+.trf-bars i { display: block; height: max(2px, calc(var(--h) * 100%)); border-radius: 2px 2px 1px 1px; background: var(--accent); opacity: .88; }
+.trf-line.su .trf-bars i { background: var(--sw-green); opacity: 1; }
+.trf-bars i.z { height: 2px; background: var(--fill); opacity: 1; }
+.trf-bars i:last-child { opacity: 1; }
+.trf-axis { margin-left: 74px; }
+.trf-facts { margin: 12px 0 0; }
+.trf-facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-height: 44px; padding: 11px 16px; }
+.trf-facts > div + div { border-top: .5px solid var(--sep); }
+.trf-facts dt { font-size: 14px; color: var(--label); }
+.trf-facts dd { margin: 0; font-size: 14px; color: var(--label-2); text-align: right; font-variant-numeric: tabular-nums; }
+#profile-body > .trf + .group-h { margin-top: 24px; }
 .note-card.guest-save { padding: 0; }
 .note-card.guest-save .empty { padding: 24px 20px 22px; }
 .note-card.guest-save .btn { margin-top: 6px; }
@@ -1504,13 +1535,15 @@ body.mode-side.drawer-open dialog > .resume, body.mode-side.drawer-open dialog >
   .lib-bars { height: 56px; gap: 1px; }
   .lib-books { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   .auth-fields .frow > label, .prof-fields .frow > label, .confirm .frow > label { width: 72px; }
-  .auth-invite .frow > label { width: auto; } /* the invite box: its label keeps one line, and the hint takes its own line under the code */
-  .auth-invite .frow .frow-sub { flex-basis: 100%; order: 2; text-align: left; }
+  .trf-tbl th, .trf-tbl td { padding-left: 8px; padding-right: 8px; }
   body.has-resume .toast { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px); }
   .resume { bottom: max(16px, env(safe-area-inset-bottom)); }
 }
 @media (forced-colors: active) {
   .lib-book, .bm-rib, .bm-sw, .switch, .acct-av { border: 1px solid ButtonText; }
+  .trf-bars i { forced-color-adjust: none; background: CanvasText; opacity: 1; }
+  .trf-bars i.z { background: GrayText; }
+  .auth-closed, .trf-chart, .auth-ts-err.calm { border: 1px solid CanvasText; }
   .lib-chgrid .pch.read, .pch.read { outline: 2px solid Highlight; }
   .switch:checked { background: Highlight; }
   .lc-t { background: none; color: CanvasText; -webkit-text-fill-color: CanvasText; }

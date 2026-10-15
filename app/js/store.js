@@ -37,8 +37,10 @@ export const state = {
   theme: lsGet('bs-theme', 'auto'),
   // profiles (profiles-spec §5.2). server: /api/auth/me answered; legacy: a pre-profiles serve.py (whole-object notes PUT)
   auth: { known: false, server: false, legacy: false, signedIn: false, scope: 'guest', user: null, session: null, lost: false, guest: null, limits: null, features: null,
-    // hosting brief §2 (from /api/auth/me): a hosted site, its sign-up ('open' | 'invite') and whether this is its owner
-    hosted: false, signupMode: 'open', owner: false },
+    // hosting brief §2 (from /api/auth/me): a hosted site, its sign-up ('open' | 'closed') and whether this is its owner;
+    // turnstile: {siteKey} while Cloudflare Turnstile guards sign-up (open-signup brief §2), else null;
+    // signupPause: why sign-up is closed (donate brief §2): null | 'paused' | 'storage' | 'capacity'
+    hosted: false, signupMode: 'open', signupPause: null, owner: false, turnstile: null },
   notesRev: 0,
   noteBase: new Map(),          // key -> the note's `updated` as last received from the server (null = the server had none)
 };
@@ -280,6 +282,8 @@ export async function api(method, url, body, { keepalive = false, scoped = true,
   if (scoped && data && ((r.status === 409 && data.error === 'scope_mismatch') || (r.status === 401 && (data.error === 'not_signed_in' || (data.error === 'sign_in_required' && headers['X-BS-Scope'] !== 'guest'))))) {
     document.dispatchEvent(new CustomEvent('bs:auth-lost', { detail: data }));
   }
+  // hosted, a profile at its storage quota (open-signup brief §1.3): main.js says so once, whichever saver was refused
+  if (r.status === 413 && data && data.error === 'quota_exceeded') document.dispatchEvent(new CustomEvent('bs:quota', { detail: { url, message: data.message || '' } }));
   return { ok: r.ok, status: r.status, data };
 }
 
@@ -295,6 +299,18 @@ export function onBroadcast(fn) { if (chan) chan.addEventListener('message', e =
  *  Locally never: there the guest saves as always. */
 export const readOnlyGuest = () => !!(state.auth.hosted && !state.auth.signedIn);
 export const SIGN_IN_MSG = 'Sign in to save your notes, links and highlights.';
+export const QUOTA_MSG = 'Your profile has reached its storage limit. Delete some notes or highlights to make room.';
+// ------------------------------------------------------------ donations and a sign-up pause (donate brief §1–2)
+/** The permanent donation link: vercel.json and serve.py redirect it (302) to the page that takes gifts. */
+export const DONATE_URL = '/donate';
+/** What Home and the Create profile tab say while the site's sign-up is paused (any reason). */
+export const PAUSE_MSG = {
+  title: 'New sign-ups are paused for now',
+  body: 'More people are joining Bible Lantern than our servers can hold today. We’re raising funds to expand, so everyone who wants to study here can. Reading stays open to everyone, and if you already have a profile, sign in as usual.',
+  cta: 'Help us expand',
+};
+/** The site's sign-up is paused: Home announces it and the Create profile tab shows why. Locally never. */
+export const signupPaused = () => !!(state.auth.hosted && state.auth.signupMode === 'closed');
 /** A local serve.py is always on loopback: anywhere else is the site, even before /api/auth/me has answered. */
 const LOOPBACK_RX = /^(localhost|127\.0\.0\.1|\[::1\])$/;
 export const likelyHosted = () => lsGet('bs-hosted') === '1' || (typeof location !== 'undefined' && !LOOPBACK_RX.test(location.hostname));

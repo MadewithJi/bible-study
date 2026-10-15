@@ -38,6 +38,8 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
 </head>
 <body>
 <a class="skip" href="#reader">Skip to the text</a>
+<!-- donate brief §1: the heart of "Support Bible Lantern" (icon('heart'); the rest of the set is in icons.js) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19.5c-.3 0-7.5-4.4-7.5-9.9A4.1 4.1 0 0112 7.3a4.1 4.1 0 017.5 2.3c0 5.5-7.2 9.9-7.5 9.9z"/></symbol></svg>
 
 <header id="topbar" class="gnav flat">
   <div class="gnav-left">
@@ -149,6 +151,8 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
       </ul>
       <p class="group-foot" id="keys-owner" hidden>ESV and NLT are available to the site owner. NIV, NKJV and LSB have no free API, so choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
       <p class="group-foot" id="keys-foot">Free for personal use at <a href="https://api.esv.org/" target="_blank" rel="noopener">api.esv.org</a> and <a href="https://api.nlt.to/" target="_blank" rel="noopener">api.nlt.to</a>. Text is fetched a chapter at a time and cached on this computer. NIV, NKJV and LSB have no free API, so choosing them opens the chapter on BibleGateway or read.lsbible.org.</p>
+      <h3 class="group-h">Bible Lantern</h3>
+      <ul class="group av"><li><a class="cell give" href="/donate" target="_blank" rel="noopener"><span class="tile-i red"><svg class="i" aria-hidden="true"><use href="#i-heart"/></svg></span><span class="cell-body"><span class="cell-title">Support Bible Lantern</span><span class="cell-sub">Free to read and study. Gifts keep it running and help it reach more people.</span></span><span class="cell-trail"><svg class="i" aria-hidden="true"><use href="#i-external"/></svg></span></a></li></ul>
     </div>
     <div class="modal-foot"><button type="submit" class="btn btn-primary" id="settings-done">Done</button></div>
   </form>
@@ -180,7 +184,7 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
     </dl>
     <p class="credits">KJV &amp; BSB (public domain) · OpenBible.info cross-references &amp; topics (CC BY) · STEPBible TAHOT/TAGNT (CC BY 4.0) · Strong’s via OpenScriptures (CC BY-SA) · Theographic Bible Metadata (CC BY-SA 4.0) · Easton’s Bible Dictionary (1897) · Maps: MapLibre GL JS (BSD) · OpenFreeMap © OpenMapTiles © OpenStreetMap contributors (ODbL) · Terrain: Mapzen / AWS Terrain Tiles · Digital Atlas of the Roman Empire © Johan Åhlfeldt (CC BY 4.0) · Place records: Pleiades (CC BY), GeoNames (CC BY) · Engravings: Gustave Doré, 1866 (public domain), via Wikimedia Commons.</p>
   </div>
-  <div class="modal-foot"><button type="button" class="btn btn-primary" data-close>Done</button></div>
+  <div class="modal-foot help-foot"><a class="btn btn-plain" href="/donate" target="_blank" rel="noopener">Support Bible Lantern</a><button type="button" class="btn btn-primary" data-close>Done</button></div>
 </dialog>
 
 <dialog id="auth" class="modal auth" aria-labelledby="auth-title">
@@ -191,10 +195,7 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
       <div id="auth-mode" class="segmented" role="radiogroup" aria-label="Sign in or create a profile"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-mode="signin" aria-checked="true">Sign in</button><button type="button" role="radio" data-mode="signup" aria-checked="false" tabindex="-1">Create profile</button></div>
       <p id="auth-off" class="auth-off" role="note" hidden></p>
       <p id="auth-err" class="form-err" role="alert" hidden></p>
-      <ul class="group frows auth-fields auth-invite" id="auth-invite-row" hidden>
-        <li class="frow"><label for="auth-invite">Invite code</label><input id="auth-invite" name="invite" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="ABCDE-FGHJK" aria-describedby="auth-invite-help" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"><small class="frow-sub" id="auth-invite-help">From the person who invited you</small></li>
-      </ul>
-      <p id="auth-invite-err" class="form-err" role="alert" hidden></p>
+      <div id="auth-closed" class="auth-closed" role="note" tabindex="-1" hidden></div>
       <ul class="group frows auth-fields">
         <li class="frow" data-only="signup" hidden><label for="auth-name">Name</label><input id="auth-name" name="name" autocomplete="name" maxlength="60" spellcheck="false"></li>
         <li class="frow"><label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254"></li>
@@ -205,6 +206,8 @@ try { var d = document.documentElement, t = localStorage.getItem('bs-theme'), f 
         <li class="frow"><label for="auth-remember">Keep me signed in<small class="frow-sub">For 30 days on this browser</small></label><input id="auth-remember" name="remember" type="checkbox" class="switch" role="switch" checked></li>
         <li class="frow" id="auth-import-row" data-only="signup" hidden><label for="auth-import">Bring over guest data<small class="frow-sub" id="auth-import-meta"></small></label><input id="auth-import" name="importGuest" type="checkbox" class="switch" role="switch" checked></li>
       </ul>
+      <div id="auth-turnstile" class="auth-ts" hidden></div>
+      <p id="auth-ts-err" class="form-err auth-ts-err" role="alert" hidden></p>
       <p class="group-foot auth-foot" data-only="signin">Forgot your password? In Terminal run <code>python3 <span class="nw">~/bible-study/serve.py</span> <span class="nw">--reset-password</span> you@example.com</code></p>
     </div>
     <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-primary" id="auth-submit">Sign in</button></div>

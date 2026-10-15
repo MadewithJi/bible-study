@@ -65,7 +65,7 @@ Keys: ESV at <https://api.esv.org/> · NLT at <https://api.nlt.to/>.
 
 ## Deploying
 
-Optional: the same code can also run as a small invite-only website, with the reader on Vercel and the server and your data on Railway. Local use doesn’t change. With none of the variables below set, `python3 serve.py` behaves exactly as described above.
+Optional: the same code can also run as a website anyone can sign up to, with the reader on Vercel and the server and your data on Railway. Local use doesn’t change. With none of the variables below set, `python3 serve.py` behaves exactly as described above.
 
 ```
 browser ──► Vercel (team koum-studio, project bible-study): app/ as static files on Vercel’s CDN
@@ -82,7 +82,7 @@ The live site is https://www.biblelantern.com (the apex `biblelantern.com` redir
 
 | File | What |
 |---|---|
-| `vercel.json` | serves `app/` with no build step, proxies `/api/*` to the Railway domain, sets cache and security headers |
+| `vercel.json` | serves `app/` with no build step, proxies `/api/*` to the Railway domain, sets cache and security headers, and redirects `/donate` and `/support` to the donation page |
 | `.vercelignore` | sends only `app/` (without `app/mock/` and dotfiles) and `vercel.json` to Vercel |
 | `railway.json` | Railpack build, `python3 serve.py`, healthcheck `/api/health`, restart policy Always |
 | `.python-version` | Python 3.12 on Railway (the code still runs on the Mac’s Python 3.9) |
@@ -101,7 +101,9 @@ Caching: `index.html`, `js/` and `css/` revalidate on every load (cheap 304s, an
 3. **Vercel.** `vercel.json` rewrites `/api/*` to that Railway domain: change it there if yours differs, then commit and push. Create a project named bible-study from the repo, with the repo root as its root directory. The framework preset (Other), the output directory and the empty build all come from `vercel.json`, and Vercel needs no variables. Add the custom domain (www, with the apex redirecting to it) under the project’s Domains.
 4. **Hosts and origins.** Through the rewrite, serve.py always sees `Host` = the Railway domain, so `BS_ALLOWED_HOSTS` needs only that domain. `BS_ALLOWED_ORIGINS` must list every origin a browser uses for the site, or its writes (sign-in included) get 403 “Cross-site request blocked”: `https://www.biblelantern.com`, `https://biblelantern.com` and `https://bible-study-seven-blond.vercel.app`.
 5. Check both ends: `https://www.biblelantern.com/api/health` and `https://api-production-7fa2.up.railway.app/api/health` both answer `{"ok":true}`.
-6. Open the site and sign up with an owner email (no invite needed).
+6. Open the site and sign up with an owner email. Sign-up is open to everyone; the first profile with an owner email claims it and gets the owner rights.
+7. **Cloudflare Turnstile** (the bot check on sign-up). In the Cloudflare dashboard, open Turnstile → Add widget, add the hostnames `www.biblelantern.com` and `biblelantern.com`, and choose the widget mode Managed. Paste its site key and secret key into the Railway variables `BS_TURNSTILE_SITEKEY` and `BS_TURNSTILE_SECRET`; Railway redeploys, and from then on the sign-up form runs the check (most people see nothing, a few are asked to click). Until both are set, sign-up is open behind the rate limits only, and the server says so when it starts.
+8. **Vercel Web Analytics.** In Vercel, open the bible-study project → Analytics → Enable. The app adds Vercel’s script on `www.biblelantern.com` and `biblelantern.com` only, never locally or on previews, and it sets no cookies.
 
 **Railway variables.** All are optional locally (with none set, the server behaves exactly as it does on your Mac); with `BS_HOSTED` set, `BS_DATA_DIR` is required.
 
@@ -114,27 +116,43 @@ Caching: `index.html`, `js/` and `css/` revalidate on every load (cheap 304s, an
 | `BS_ALLOWED_HOSTS` | `api-production-7fa2.up.railway.app` | Host names answered besides localhost (comma list; `*.up.railway.app` patterns work). Behind the Vercel rewrite this is the only Host serve.py sees. Railway’s health check (Host `healthcheck.railway.app`) is answered without being listed. |
 | `BS_ALLOWED_ORIGINS` | `https://www.biblelantern.com,https://biblelantern.com,https://bible-study-seven-blond.vercel.app` | origins whose writes pass the same-origin check, besides the request’s own host (comma list): every origin a browser uses for the site |
 | `BS_TRUST_PROXY` | `1` | take the visitor’s IP from the first `X-Forwarded-For` hop (for the sign-in and sign-up rate limits and the auth log) and the scheme from `X-Forwarded-Proto`; never set it locally |
-| `BS_OWNER_EMAILS` | your email | comma list: these emails sign up without an invite, manage invites and use ESV/NLT |
-| `BS_PROXY_SECRET` | a long random string | when a request carries this value in an `X-BS-Proxy-Secret` header it came through Vercel, and the visitor’s address is read from `X-Vercel-Forwarded-For` (else `X-Real-IP`, else `X-Forwarded-For`); add the same header to the `/api` rewrite in Vercel (Routing Middleware). Without it, the auth log and the sign-in windows see Vercel’s egress address, keyed per email |
-| `BS_OWNER_SETUP_TOKEN` | a long random string | an owner email signs up without an invite only until a profile has claimed it (`DATA/owner-claims.json`); afterwards sign-up with that email needs an invite, or this token sent as `setupToken` in the sign-up body (for example after the owner profile was deleted or the data restored) |
+| `BS_OWNER_EMAILS` | your email | comma list of owner addresses. A profile with one of them has the owner rights (ESV/NLT and their keys, Site activity) only while it holds that address’s claim in `DATA/owner-claims.json`, which the first profile to sign up with it takes |
+| `BS_PROXY_SECRET` | a long random string | when a request carries this value in an `X-BS-Proxy-Secret` header it came through Vercel, and the visitor’s address is read from `X-Vercel-Forwarded-For` (else `X-Real-IP`, else `X-Forwarded-For`), and Turnstile is given the visitor’s address; add the same header to the `/api` rewrite in Vercel (Routing Middleware). Without it, the auth log and the sign-in windows see Vercel’s egress address, keyed per email, and Turnstile is given no address |
+| `BS_OWNER_SETUP_TOKEN` | a long random string | once a profile has claimed an owner address, anyone else who signs up with it gets an ordinary profile; this token, sent as `setupToken` in the sign-up body, lets the owner claim it again (for example after the owner profile was deleted or the data restored) |
+| `BS_TURNSTILE_SITEKEY` | from Cloudflare | Turnstile’s site key, which the app is given to show the check |
+| `BS_TURNSTILE_SECRET` | from Cloudflare | Turnstile’s secret key, sent only to Cloudflare to check a sign-up’s token and never logged. With both keys set, sign-up needs a passed check; if Cloudflare can’t be reached, sign-up waits (“The sign-up check is unavailable right now”) and the log gets an `[error]` line |
+| `BS_SIGNUP` | unset | `closed` pauses new sign-ups (the emergency switch): Home and the Create profile tab announce the pause (“New sign-ups are paused for now”, with Help us expand), and a refused sign-up gets “New sign-ups are paused for now while we expand. Reading stays open to everyone.”, signing in carries on, and an owner address can still sign up by the claim rules, through `POST /api/auth/signup` directly (the app’s form is hidden while paused), or by reopening sign-up for a moment. Remove it, or set `open`, to reopen |
+| `BS_MAX_USERS` | unset (5000) | the most profiles the site holds; at it, new sign-ups pause with the same message (locally `--max-users`, default 50, where the form says the computer has the maximum number of profiles) |
+| `BS_PROFILE_QUOTA_MB` | unset (25) | how much a profile’s notes, links, highlights and reading data may take on the volume (their daily backups come on top). A write that would go past it is refused with “Your profile has reached its storage limit. Delete some notes or highlights to make room.”; deleting always works. `0` turns it off; locally there is none |
+| `BS_MIN_FREE_MB` | unset (200) | when the volume has less free than this, or under 5%, new sign-ups pause with the same message while everything else carries on, and the log gets an `[alert]` line once an hour |
+| `BS_DONATE_URL` | unset (`https://buymeacoffee.com/biblelantern`) | where the server’s `/donate` and `/support` send people (a 302). Locally too; an `http(s)://` address without spaces |
 
 **Hosted mode** (`BS_HOSTED=1`):
 
 - Anyone can read: the Bible text, cross-references, context, the original languages, maps and videos. Saving notes, links, highlights, bookmarks and reading progress needs an account, so a visitor who isn’t signed in is asked to sign in instead.
-- Sign-up needs an invite code, except for the owner emails.
+- Anyone can create a profile from the sign-up dialog or Home, behind the Turnstile check when its keys are set. Invite codes are gone: an old `DATA/invites.json` is no longer read and may be deleted.
+- Open sign-up is bounded by the profile cap (`BS_MAX_USERS`), the per-profile quota (`BS_PROFILE_QUOTA_MB`), the free-space guard (`BS_MIN_FREE_MB`) and the rate limits (10 sign-up attempts an hour per visitor and email, 100 an hour across the site; a failed bot check counts). Until `BS_PROXY_SECRET` is set, every visitor reaches the server from one of Vercel’s addresses, so the per-visitor limits are coarse: Turnstile is the real bot gate.
 - ESV and NLT are served only to owners, because the keys are personal-use licences. Everyone else reads KJV and BSB, and NIV, NKJV and LSB open on their own sites as usual.
 - The session cookie is also `Secure`.
-- The owner’s profile cannot change its email to a non-owner address (409: add the address to `BS_OWNER_EMAILS` first) and the last owner profile cannot be deleted.
+- The owner’s profile cannot change its email to a non-owner address (409: add the address to `BS_OWNER_EMAILS` first) and the last owner profile cannot be deleted. An ordinary profile cannot move to an owner address.
 
 **Preview deployments.** Every branch pushed to GitHub gets a Vercel preview (`bible-study-git-<branch>-koum-studio.vercel.app`). Its `/api` goes to the production server too, where its origin is not allowed, so a preview reads production as a guest and can’t sign in or save (a sign-in there fails with “Cross-site request blocked”). That is the safe default: never add preview origins to `BS_ALLOWED_ORIGINS` on production. A staging Railway environment for previews is optional.
 
 **Backups.** Railway volume backups are turned on for the `/data` volume (since 2026-10-08). To restore one: open the volume in Railway, choose Backups → Restore on the snapshot you want; Railway stages it as a new volume at `/data`, and the next deploy applies it. Now and then also keep a copy off Railway: Profile → Export profile downloads your whole profile as one JSON file, which Import profile file brings back.
 
-**Monitoring.** `/api/health` answers 200 `{"ok":true}` (GET or HEAD) only after a successful write to the data directory and a readable `users.json`; otherwise 503 `{"ok":false}` with an `[error]` line in the Railway log (a healthy answer is reused for 5 seconds, so a burst of probes costs the volume one write). Railway’s own health check uses it, and an external uptime check (HEAD is fine) belongs at `https://www.biblelantern.com/api/health`, which covers Vercel, the rewrite and Railway. Railway’s service logs show every refused request with its reason.
+**Monitoring.** `/api/health` answers 200 `{"ok":true}` (GET or HEAD) only after a successful write to the data directory and a readable `users.json`; otherwise 503 `{"ok":false}` with an `[error]` line in the Railway log (a healthy answer is reused for 5 seconds, so a burst of probes costs the volume one write). While the volume is low on space it still answers 200, with an `[alert]` line once an hour. Railway’s own health check uses it, and an external uptime check (HEAD is fine) belongs at `https://www.biblelantern.com/api/health`, which covers Vercel, the rewrite and Railway. Railway’s service logs show every refused request with its reason.
+
+**Traffic.** Two views, and alerts:
+
+- **Vercel Web Analytics** (Vercel → bible-study → Analytics): page views, visitors, referrers and countries.
+- **Site activity** (Profile → Site activity, owners only): the API’s own daily counts for the last 30 days, with 7- and 30-day totals: app loads, visitors (approximate), sign-ups, sign-ins, failed sign-ins, failed bot checks, rate limits, blocked cross-site requests and server errors, plus the number of profiles, the space left on the volume and whether Turnstile is on. A visitor is a salted hash of the address and browser, with a new salt every day (UTC) that is never written down, so the counts can be kept (`DATA/metrics.json`, 90 days) but never traced back to anyone. It is served by `GET /api/admin/traffic`, which answers 404 to anyone but an owner.
+- **`[alert]` lines.** The server writes one to the Railway log (stderr), at most once an hour of each kind, when within the last hour there were more than 30 sign-ups, 100 failed sign-ins, 50 failed bot checks or 20 server errors, or when the volume is low on space. Railway’s own monitors watch CPU, memory, disk and network rather than log text, so: keep a log widget filtered on `"[alert]"` in the project’s Observability dashboard, add a disk-usage monitor for the `/data` volume (Pro plan; it emails you), and to be told about the lines themselves, run a log monitor on that filter, such as Railway’s Monirail template, which posts to Slack, Discord or a webhook.
+
+**Pausing sign-up.** Set `BS_SIGNUP=closed` on the api service: Railway restarts it, and the sign-up form shows the paused message while everyone can still read and sign in. Delete the variable to reopen. Sign-ups also pause on their own when the volume runs low on space (`BS_MIN_FREE_MB`) or the site holds `BS_MAX_USERS` profiles. Whatever the reason, `GET /api/auth/me` says `"signup": "closed"` with `"signupPause"` set to `"paused"`, `"storage"` or `"capacity"` (`null` while sign-up is open), Home announces the pause with a Help us expand link, and every refused sign-up gets the same message: “New sign-ups are paused for now while we expand. Reading stays open to everyone.” Site activity shows the same two fields.
+
+**The donation link.** `https://www.biblelantern.com/donate` (and `/support`, the same) is the link to share; the app links to `/donate` from Home’s footer, the profile dialog, Settings and the Keyboard shortcuts dialog. It is a temporary redirect (307 on Vercel, 302 from serve.py), so browsers never remember the target and it can be re-pointed without changing any link already shared. To point it somewhere else, change the `destination` of both `/donate` and `/support` in `vercel.json`’s `redirects` (then commit and push), and set `BS_DONATE_URL` on the api service, which covers the Railway domain and local use.
 
 **Deleting a profile.** Profile → Delete profile on the site removes the person’s notes, bookmarks, links, highlights and reading progress and erases the files at once (the dialog says so); copies linger only in the volume’s own backups until those age out. Locally the files move to `deleted/<id>-<date>/` until you remove them.
-
-**Invites.** In Profile → Invites (owners only), create a code, with a note to remember who it’s for if you like, and copy it straight away: it is shown once, and only a hash of it is stored. The person enters it as their invite code when they sign up. The list shows each code’s last four characters, how often it has been used and its note, and Revoke stops a code from working.
 
 **Passwords.** To set a new password for someone on the site, open a shell on the api service (`railway ssh`, or the service’s shell in the dashboard) and run `python3 serve.py --reset-password their@email`. `BS_DATA_DIR` points it at the volume, and it works while the server is running.
 
