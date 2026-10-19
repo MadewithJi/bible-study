@@ -31,7 +31,7 @@ export const state = {
   notice: null,                 // {title, body, tr} key card shown above the verses
   xfilter: 'all',               // Links tab testament filter: 'all' | 'ot' | 'nt'
   history: [], future: [],
-  notes: { refs: {}, studies: [] },
+  notes: { refs: {}, studies: [], themes: { accepted: [], renamed: {}, merged: {}, removed: [] } },   // studies and theme choices: study-build-brief §1.5
   apiKeys: { esv: false, nlt: false },
   serverOk: false,
   theme: lsGet('bs-theme', 'auto'),
@@ -344,10 +344,26 @@ let seq = 0;
 let notesScope = 'guest'; // whose notes state.notes, dirty and noteBase hold
 let baseKnown = false;    // a GET /api/notes succeeded for notesScope, so a key missing from noteBase means "the server has none"
 let flushP = null, followP = null, notesStale = false, lifecycleBound = false;
+// studies and theme choices (study-build-brief §1.5): whole documents beside the per-key notes, sent with baseRev.
+// A stale baseRev is answered 409 rev_conflict with the server's copy, which is merged here and sent again.
+let docDirty = { studies: 0, themes: 0 };                 // the time of this tab's last unsent edit (0 = saved)
+let docConflicts = 0;                                     // rev_conflict answers in a row (a few are merged and resent, then it waits)
+let docBase = { studies: [], themes: emptyThemes() };     // the server's copy as last received or sent, for merges
+const docPending = () => (docDirty.studies ? 1 : 0) + (docDirty.themes ? 1 : 0);
+const pendingCount = () => dirty.size + docPending();
+const snapshot = x => JSON.parse(JSON.stringify(x));
 
 const readJSON = (key, fb) => { try { const v = lsGet(key); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } };
 const noteUpdated = n => (n && Number.isFinite(+n.updated) ? Math.round(+n.updated) : 0);
-function normalizeNotes(n) { return { refs: (n && n.refs && typeof n.refs === 'object' && !Array.isArray(n.refs)) ? n.refs : {}, studies: (n && Array.isArray(n.studies)) ? n.studies : [] }; }
+function emptyThemes() { return { accepted: [], renamed: {}, merged: {}, removed: [] }; }
+const strList = a => (Array.isArray(a) ? a.filter(x => typeof x === 'string' && x) : []);
+const strMap = o => (o && typeof o === 'object' && !Array.isArray(o) ? Object.fromEntries(Object.entries(o).filter(([k, v]) => k && typeof v === 'string' && v)) : {});
+/** The theme choices as the server keeps them: {accepted: [name], renamed: {name: label}, merged: {name: into}, removed: [name]}. */
+export function normThemes(t) { return t && typeof t === 'object' && !Array.isArray(t) ? { accepted: strList(t.accepted), renamed: strMap(t.renamed), merged: strMap(t.merged), removed: strList(t.removed) } : emptyThemes(); }
+function normalizeNotes(n) {
+  return { refs: (n && n.refs && typeof n.refs === 'object' && !Array.isArray(n.refs)) ? n.refs : {},
+    studies: (n && Array.isArray(n.studies)) ? n.studies.filter(x => x && typeof x === 'object' && typeof x.id === 'string') : [], themes: normThemes(n && n.themes) };
+}
 const isEmptyNote = n => !n || (!n.text && !n.highlight && !(n.tags || []).length && !(n.videos || []).length);
 
 /** Canonical note key ("43.03.16" -> "43.3.16"), range-checked against meta when it is loaded; null when invalid. */
@@ -386,7 +402,7 @@ function mirror() {
   }
   lsSet(key, JSON.stringify(out));
 }
-function persistDirty(scope = notesScope, map = dirty) {
+function persistDirty(scope = notesScope, map = dirty, doc = scope === notesScope ? docDirty : null) {
   if (DRY) return;
   const key = lsKey(DIRTY_KEY, scope), stored = readJSON(key, null), d = {};
   if (state.auth.hosted && scope === 'guest') { lsDel(key); return; }
@@ -398,11 +414,19 @@ function persistDirty(scope = notesScope, map = dirty) {
     }
   }
   for (const [k, e] of map) d[k] = { ...e, tab: TAB };
-  if (!Object.keys(d).length) { lsDel(key); return; }
-  lsSet(key, JSON.stringify({ v: 1, seq, d }));
+  // unsent studies / theme choices: {ts, tab}; another tab's newer flag stays, this tab's own is written as it is
+  const sd = stored && stored.doc && typeof stored.doc === 'object' ? stored.doc : {}, out = {};
+  for (const f of ['studies', 'themes']) {
+    const o = sd[f] && typeof sd[f] === 'object' ? sd[f] : null, mine = doc ? +doc[f] || 0 : 0;
+    if (o && o.tab && o.tab !== TAB && (+o.ts || 0) > mine) out[f] = o;
+    else if (mine) out[f] = { ts: mine, tab: TAB };
+  }
+  if (!Object.keys(d).length && !Object.keys(out).length) { lsDel(key); return; }
+  lsSet(key, JSON.stringify({ v: 1, seq, d, ...(Object.keys(out).length ? { doc: out } : {}) }));
 }
-function readDirty(scope) {
+function readDirty(scope, doc = null) {
   const m = new Map(), p = readJSON(lsKey(DIRTY_KEY, scope), null);
+  if (doc && p && p.doc && typeof p.doc === 'object') for (const f of ['studies', 'themes']) { const o = p.doc[f]; if (o && Number.isFinite(+o.ts) && +o.ts > 0) doc[f] = Math.round(+o.ts); }
   if (p && p.d && typeof p.d === 'object') {
     for (const [k, e] of Object.entries(p.d)) {
       if (!REF_RX.test(k) || !e || (e.op !== 'set' && e.op !== 'del')) continue;
@@ -464,7 +488,8 @@ function switchNotesScope(scope) {
   baseKnown = false;
   state.noteBase = new Map();
   state.notesRev = 0;
-  dirty = readDirty(scope);
+  docDirty = { studies: 0, themes: 0 }; docBase = { studies: [], themes: emptyThemes() };
+  dirty = readDirty(scope, docDirty);
   state.notes = normalizeNotes(readJSON(lsKey(NOTES_KEY, scope), null));
   // unsent edits carry their own base; nothing else is known until GET /api/notes answers
   for (const [k, e] of dirty) if (e.b !== undefined) state.noteBase.set(k, e.b);
@@ -477,8 +502,8 @@ function switchNotesScope(scope) {
 export async function loadNotes() {
   const scope = state.auth.scope;
   switchNotesScope(scope);
-  if (readOnlyGuest() && dirty.size) { dirty.clear(); persistDirty(); } // nothing a hosted guest typed is ever sent
-  if (dirty.size && !DRY && !state.auth.lost) { try { await flushNotes(); } catch (e) { console.error(e); } }
+  if (readOnlyGuest() && pendingCount()) { dirty.clear(); docDirty = { studies: 0, themes: 0 }; persistDirty(); } // nothing a hosted guest typed is ever sent
+  if (pendingCount() && !DRY && !state.auth.lost) { try { await flushNotes(); } catch (e) { console.error(e); } }
   if (scope !== state.auth.scope || scope !== notesScope) return;
   const r = await api('GET', '/api/notes', null, { scoped: false });
   if (scope !== state.auth.scope || scope !== notesScope) return;
@@ -494,12 +519,17 @@ export async function loadNotes() {
     if (authRefresher) Promise.resolve().then(() => authRefresher({ reason: 'drift' })).catch(e => console.error(e));
     return;
   }
-  const srv = normalizeNotes(r.data);
+  const srv = normalizeNotes(r.data), local = state.notes;
+  const srvDoc = { studies: snapshot(srv.studies), themes: snapshot(srv.themes) };  // the server's copy, before the merge below writes over it
   for (const [k, e] of dirty) {
     if (e.op === 'set' && state.notes.refs[k]) srv.refs[k] = state.notes.refs[k];
     else if (e.op === 'del') delete srv.refs[k];
   }
   state.notes = srv;
+  // unsent studies or theme choices (an earlier visit, offline) go on top of the server's copy, nothing of either lost
+  if (docDirty.studies) state.notes.studies = mergeStudies(docBase.studies, local.studies, srv.studies);
+  if (docDirty.themes) state.notes.themes = mergeThemes(docBase.themes, local.themes, srv.themes);
+  docBase = srvDoc;
   state.notesRev = Number.isFinite(+r.data.rev) ? +r.data.rev : 0;
   for (const [k, n] of Object.entries(r.data.refs)) if (!dirty.has(k)) state.noteBase.set(k, noteUpdated(n));
   baseKnown = true;
@@ -527,12 +557,58 @@ export async function refreshNotes() {
     delete state.notes.refs[k]; state.noteBase.set(k, null);
     if (had) changed.push(k);
   }
-  if (Array.isArray(r.data.studies)) state.notes.studies = r.data.studies;
+  const doc = takeDoc(normalizeNotes(r.data));
   if (Number.isFinite(+r.data.rev)) state.notesRev = +r.data.rev;
   baseKnown = true;
   mirror();
   notifyReplaced(changed, 'refresh');
+  if (doc) notifyDoc(doc, 'refresh');
   return true;
+}
+
+// ------------------------------------------------------------ studies and theme choices: merging (§1.5)
+/** bs:studies-changed {studies: bool, themes: bool, reason: 'local' | 'refresh' | 'conflict' | 'restore'}: the views redraw. */
+const notifyDoc = (what, reason) => document.dispatchEvent(new CustomEvent('bs:studies-changed', { detail: { ...what, reason } }));
+/** Three-way merge of the studies this tab edited (mine, from base) with the server's (theirs): by id, the newer
+ *  `updated` wins; one added elsewhere comes in; one this tab deleted stays deleted unless the server's is newer. */
+function mergeStudies(base, mine, theirs) {
+  const bm = new Map(base.map(x => [x.id, x])), mm = new Map(mine.map(x => [x.id, x])), tm = new Map(theirs.map(x => [x.id, x])), out = [];
+  const t = x => (x && Number.isFinite(+x.updated) ? +x.updated : 0);
+  for (const x of theirs) {
+    const m = mm.get(x.id), b = bm.get(x.id);
+    if (m) out.push(t(m) >= t(x) ? m : x);
+    else if (!(b && t(x) <= t(b))) out.push(x);
+  }
+  for (const x of mine) if (!tm.has(x.id)) { const b = bm.get(x.id); if (!b || t(x) > t(b)) out.push(x); }
+  return out;
+}
+/** The same for the theme choices: the server's copy, with this tab's own additions and removals (against base) on top. */
+function mergeThemes(base, mine, theirs) {
+  const out = normThemes(theirs);
+  for (const f of ['accepted', 'removed']) {
+    const b = new Set(base[f] || []), m = new Set(mine[f] || []);
+    out[f] = out[f].filter(x => !(b.has(x) && !m.has(x)));
+    for (const x of m) if (!b.has(x) && !out[f].includes(x)) out[f].push(x);
+  }
+  for (const f of ['renamed', 'merged']) {
+    const b = base[f] || {}, m = mine[f] || {};
+    for (const k of Object.keys(b)) if (!(k in m)) delete out[f][k];
+    for (const [k, v] of Object.entries(m)) if (b[k] !== v) out[f][k] = v;
+  }
+  return out;
+}
+/** Take the server's studies and theme choices (fields present in srv): straight when this tab has nothing unsent,
+ *  else merged under this tab's edits. Returns {studies, themes} (what changed here) or null. */
+function takeDoc(srv) {
+  const out = { studies: false, themes: false };
+  for (const f of ['studies', 'themes']) {
+    const theirs = srv[f]; if (theirs === undefined) continue;
+    if (JSON.stringify(docBase[f]) === JSON.stringify(theirs)) continue;
+    const next = !docDirty[f] ? snapshot(theirs) : f === 'studies' ? mergeStudies(docBase.studies, state.notes.studies, theirs) : mergeThemes(docBase.themes, state.notes.themes, theirs);
+    docBase[f] = snapshot(theirs);
+    if (JSON.stringify(state.notes[f]) !== JSON.stringify(next)) { state.notes[f] = next; out[f] = true; }
+  }
+  return out.studies || out.themes ? out : null;
 }
 
 /**
@@ -540,8 +616,8 @@ export async function refreshNotes() {
  * (0 = everything is on the server). A second call while one is in flight runs once more afterwards.
  */
 export function flushNotes(opts = {}) {
-  if (!flushP) { flushP = doFlush(opts).catch(e => { console.error(e); return { pending: dirty.size }; }).finally(() => { flushP = null; }); return flushP; }
-  if (!followP) followP = flushP.then(() => { followP = null; return dirty.size ? flushNotes(opts) : { pending: 0 }; });
+  if (!flushP) { flushP = doFlush(opts).catch(e => { console.error(e); return { pending: pendingCount() }; }).finally(() => { flushP = null; }); return flushP; }
+  if (!followP) followP = flushP.then(() => { followP = null; return pendingCount() ? flushNotes(opts) : { pending: 0 }; });
   return followP;
 }
 
@@ -549,20 +625,23 @@ async function doFlush({ keepalive = false } = {}) {
   clearTimeout(saveTimer); saveTimer = 0;
   clearTimeout(retryTimer); retryTimer = 0;
   const scope = notesScope;
-  if (DRY) { setSaveStatus('dry'); return { pending: dirty.size }; }
-  if (scope !== state.auth.scope) return { pending: dirty.size };
-  if (!dirty.size) { if (isSaving()) setSaveStatus('saved'); return { pending: 0 }; }
-  if (state.auth.lost) { setSaveStatus('signedout'); return { pending: dirty.size }; } // paused until the profile signs in again
+  if (DRY) { setSaveStatus('dry'); return { pending: pendingCount() }; }
+  if (scope !== state.auth.scope) return { pending: pendingCount() };
+  if (!pendingCount()) { if (isSaving()) setSaveStatus('saved'); return { pending: 0 }; }
+  if (state.auth.lost) { setSaveStatus('signedout'); return { pending: pendingCount() }; } // paused until the profile signs in again
   if (readOnlyGuest()) { dropGuestEdits(); return { pending: 0 }; }
   if (state.auth.legacy) return legacyFlush(keepalive);
 
   // a 'set' whose note is no longer here (its text was lost with a mirror) is never sent as a delete: drop it
   for (const [k, e] of [...dirty]) if (e.op === 'set' && !state.notes.refs[k]) dirty.delete(k);
   const snap = new Map([...dirty].map(([k, e]) => [k, { ...e }]));
-  const keys = [...snap.keys()];
+  const keys = [...snap.keys()], revBefore = state.notesRev;
+  // the studies and theme choices go whole, with the first chunk (or alone), guarded by baseRev
+  const docSend = { studies: docDirty.studies, themes: docDirty.themes };
+  let docLeft = docPending() > 0, docSent = false;
   let lost = [], changed = false, stale = false, retried = false;
   const mine = {}; // this window's version of each conflicted key, before the server's replaces it
-  for (let i = 0; i < keys.length;) {
+  for (let i = 0; i < keys.length || docLeft;) {
     // chunk by key count and body size
     const set = {}, del = {}, base = {};
     let size = 60, n = 0;
@@ -576,13 +655,35 @@ async function doFlush({ keepalive = false } = {}) {
       if (size > MAX_BODY && n > 0) { delete set[k]; delete del[k]; delete base[k]; break; }
     }
     const body = { baseRev: state.notesRev, set, del, base };
+    if (docLeft) {
+      if (docSend.studies) body.studies = state.notes.studies.map(wireStudy);
+      if (docSend.themes) body.themes = normThemes(state.notes.themes);
+      docLeft = false;
+    }
     const ka = !!keepalive && JSON.stringify(body).length <= KEEPALIVE_MAX;
     const r = await api('POST', '/api/notes/changes', body, { keepalive: ka });
-    if (scope !== notesScope) { if (r.ok) settleOtherScope(scope, snap, r.data); return { pending: 0 }; }
+    if (scope !== notesScope) { if (r.ok) settleOtherScope(scope, snap, r.data, 'studies' in body || 'themes' in body ? docSend : null); return { pending: 0 }; }
     if (!r.ok) {
       persistDirty(); mirror(); // earlier chunks may have landed
-      if (r.dry) { setSaveStatus('dry'); return { pending: dirty.size }; }
+      if (r.dry) { setSaveStatus('dry'); return { pending: pendingCount() }; }
       const err = r.data && r.data.error;
+      if (r.status === 409 && err === 'rev_conflict' && r.data && !retried && ++docConflicts <= 3) {
+        // the notes document moved on (another window saved studies or theme choices): the server's copy comes in
+        // under this tab's own changes, and they go again from its rev
+        const d = r.data;
+        if (Number.isFinite(+d.rev)) state.notesRev = +d.rev;
+        const doc = takeDoc({ studies: Array.isArray(d.studies) ? d.studies : undefined, themes: d.themes && typeof d.themes === 'object' ? normThemes(d.themes) : undefined });
+        mirror(); if (doc) notifyDoc(doc, 'conflict');
+        retried = true;
+        return doFlush({ keepalive });
+      }
+      if (r.status === 409 && err === 'rev_conflict') { docConflicts = 0; setSaveStatus('failed'); scheduleRetry(); return { pending: pendingCount() }; }
+      if (r.status === 400 && (err === 'invalid_study' || err === 'invalid_themes') && !retried) {
+        // a document the server refuses must not block every other save: it stays in this browser only
+        console.error('serve.py refused the', err === 'invalid_study' ? 'studies' : 'theme choices', r.data.field || '', r.data.message || '');
+        docDirty[err === 'invalid_study' ? 'studies' : 'themes'] = 0; persistDirty(); retried = true;
+        return doFlush({ keepalive });
+      }
       if (r.status === 400 && err === 'invalid_note' && r.data.field && dirty.has(r.data.field) && !retried) {
         // one note the server refuses must not block every other save: keep it in this browser only
         console.error('serve.py refused the note', r.data.field, r.data.message || '');
@@ -604,12 +705,18 @@ async function doFlush({ keepalive = false } = {}) {
       const signedOut = r.status === 401 || (r.status === 409 && err === 'scope_mismatch');
       setSaveStatus(signedOut ? 'signedout' : r.offline && !state.serverOk ? 'local' : 'failed');
       if (!(r.status === 409 || r.status === 401)) scheduleRetry(); // auth problems wait for account.js
-      return { pending: dirty.size };
+      return { pending: pendingCount() };
     }
     const d = r.data || {};
     if (Number.isFinite(+d.rev)) state.notesRev = +d.rev;
     changed = changed || !!d.changed;
     stale = stale || !!d.stale;
+    if ('studies' in body || 'themes' in body) {
+      docConflicts = 0;
+      // what went is the server's now, unless it was edited again while the request was in flight
+      for (const f of ['studies', 'themes']) if (docSend[f] && docDirty[f] === docSend[f]) { docDirty[f] = 0; docBase[f] = snapshot(body[f]); }
+      docSent = true;
+    }
     for (const [k, v] of Object.entries(d.versions || {})) {
       const ver = v === null ? null : noteUpdated({ updated: v });
       state.noteBase.set(k, ver);
@@ -634,49 +741,51 @@ async function doFlush({ keepalive = false } = {}) {
   retryDelay = 0;
   persistDirty(); mirror();
   if (lost.length) notifyReplaced(lost, 'conflict', { mine, scope });
-  if (changed) broadcast({ t: 'notes', scope, rev: state.notesRev });
+  if (changed || (docSent && state.notesRev !== revBefore)) broadcast({ t: 'notes', scope, rev: state.notesRev });
   if (stale && baseKnown) refreshNotes();
   // entries left over were edited while the request was in flight: their own save timer (or the queued
   // follow-up flush) sends them; one the server did not answer for is retried later
   const unanswered = [...dirty].some(([k, e]) => snap.get(k)?.seq === e.seq);
   if (unanswered) scheduleRetry();
-  setSaveStatus(dirty.size ? (unanswered ? 'failed' : 'saving') : 'saved');
-  if (dirty.size && !unanswered && !saveTimer && !followP) saveTimer = setTimeout(() => { saveTimer = 0; flushNotes(); }, 700);
-  return { pending: dirty.size };
+  setSaveStatus(pendingCount() ? (unanswered ? 'failed' : 'saving') : 'saved');
+  if (pendingCount() && !unanswered && !saveTimer && !followP) saveTimer = setTimeout(() => { saveTimer = 0; flushNotes(); }, 700);
+  return { pending: pendingCount() };
 }
 
 /** A pre-profiles serve.py: replace the whole notes object (today's behaviour). */
 async function legacyFlush(keepalive) {
-  const snap = new Map([...dirty].map(([k, e]) => [k, e.seq]));
-  const body = { refs: state.notes.refs, studies: state.notes.studies };
+  const snap = new Map([...dirty].map(([k, e]) => [k, e.seq])), docSend = { ...docDirty };
+  const body = { refs: state.notes.refs, studies: state.notes.studies.map(wireStudy), themes: normThemes(state.notes.themes) };
   const ka = !!keepalive && JSON.stringify(body).length <= KEEPALIVE_MAX;
   const r = await api('PUT', '/api/notes', body, { scoped: false, keepalive: ka });
-  if (!r.ok) { if (r.dry) { setSaveStatus('dry'); return { pending: dirty.size }; } setSaveStatus(r.offline && !state.serverOk ? 'local' : 'failed'); scheduleRetry(); return { pending: dirty.size }; }
+  if (!r.ok) { if (r.dry) { setSaveStatus('dry'); return { pending: pendingCount() }; } setSaveStatus(r.offline && !state.serverOk ? 'local' : 'failed'); scheduleRetry(); return { pending: pendingCount() }; }
   for (const [k, s] of snap) if (dirty.get(k)?.seq === s) dirty.delete(k);
+  for (const f of ['studies', 'themes']) if (docDirty[f] === docSend[f]) docDirty[f] = 0;
   persistDirty();
   setSaveStatus('saved');
-  return { pending: dirty.size };
+  return { pending: pendingCount() };
 }
 
 /** A hosted guest's edits (only if one got past guestBlocked): dropped, and the server's notes shown again. */
 function dropGuestEdits() {
-  dirty.clear(); persistDirty(); mirror();
+  dirty.clear(); docDirty = { studies: 0, themes: 0 }; persistDirty(); mirror();
   setSaveStatus('');
   refreshNotes();
 }
 
 /** A flush that finished after this tab switched profiles: clear the sent keys from that profile's stored queue. */
-function settleOtherScope(scope, snap, d) {
-  const m = readDirty(scope);
+function settleOtherScope(scope, snap, d, docSend = null) {
+  const doc = { studies: 0, themes: 0 }, m = readDirty(scope, doc);
   const done = new Set([...Object.keys((d && d.versions) || {}), ...Object.keys((d && d.conflicts) || {})]);
   for (const k of done) if (m.get(k)?.seq === snap.get(k)?.seq) m.delete(k);
-  persistDirty(scope, m);
+  if (docSend) for (const f of ['studies', 'themes']) if (docSend[f] && doc[f] && doc[f] <= docSend[f]) doc[f] = 0;
+  persistDirty(scope, m, doc);
 }
 
 function scheduleRetry() {
   clearTimeout(retryTimer);
   retryDelay = Math.min(300000, retryDelay ? retryDelay * 2 : 30000);
-  retryTimer = setTimeout(() => { retryTimer = 0; if (dirty.size) flushNotes(); }, retryDelay);
+  retryTimer = setTimeout(() => { retryTimer = 0; if (pendingCount()) flushNotes(); }, retryDelay);
 }
 const isSaving = () => /Saving/.test(document.getElementById('save-status')?.textContent || '');
 
@@ -707,6 +816,78 @@ export function scheduleSave() {
   if (DRY) { saveTimer = setTimeout(() => setSaveStatus('dry'), 500); return; }
   saveTimer = setTimeout(() => { saveTimer = 0; flushNotes(); }, 700);
 }
+
+// ------------------------------------------------------------ studies and theme choices: the API (study-build-brief §1.5)
+// state.notes.studies: [{id: 'st_' + 12 hex, title, intro (markdown), order: 'studied' | 'bible' | 'custom',
+//   entries: [{key}] (a note key 'b.c.v' / 'b.c' or a mark id), created, updated}]; state.notes.themes: see normThemes.
+// Both load with the notes, save through the same debounced flush with baseRev, mirror to this browser, stay in
+// memory on ?dry, wait while offline and are never queued for a hosted guest (guestBlocked shows the sign-in prompt).
+const STUDY_ID_RX = /^st_[0-9a-f]{12}$/, STUDY_ORDERS = ['studied', 'bible', 'custom'];
+export const MAX_STUDIES = 200, STUDY_TITLE_MAX = 200, STUDY_INTRO_MAX = 20000, STUDY_ENTRIES_MAX = 500;
+/** 'st_' + 12 hex from crypto, unused so far. */
+export function newStudyId() {
+  const a = new Uint8Array(6);
+  try { crypto.getRandomValues(a); } catch (e) { for (let i = 0; i < 6; i++) a[i] = Math.floor(Math.random() * 256); }
+  const id = 'st_' + [...a].map(x => x.toString(16).padStart(2, '0')).join('');
+  return state.notes.studies.some(s => s.id === id) ? newStudyId() : id;
+}
+/** A study within the server's limits (§1.4), the shape it validates: nothing else is kept. */
+function wireStudy(s) {
+  const entries = (Array.isArray(s.entries) ? s.entries : []).map(e => (typeof e === 'string' ? { key: e } : e))
+    .filter(e => e && typeof e === 'object' && typeof e.key === 'string' && e.key).slice(0, STUDY_ENTRIES_MAX).map(e => ({ key: wellFormed(cut(e.key, 64)) }));
+  const updated = noteUpdated(s) || Date.now();
+  return { id: STUDY_ID_RX.test(s.id) ? s.id : newStudyId(), title: wellFormed(cut(typeof s.title === 'string' ? s.title : '', STUDY_TITLE_MAX)),
+    intro: wellFormed(cut(typeof s.intro === 'string' ? s.intro : '', STUDY_INTRO_MAX)), order: STUDY_ORDERS.includes(s.order) ? s.order : 'studied',
+    entries, created: Number.isFinite(+s.created) && +s.created > 0 ? Math.round(+s.created) : updated, updated };
+}
+/** The saved studies (the live array: read it, change it through saveStudy / removeStudy). */
+export const studies = () => state.notes.studies;
+/** The reader's theme choices (the live object: change it through saveThemes). */
+export const themeChoices = () => state.notes.themes;
+/** Record an edit to a document: queue it for the server, tell listeners (bs:studies-changed), save soon. */
+function touchDoc(f) {
+  docDirty[f] = Date.now();
+  notifyDoc({ studies: f === 'studies', themes: f === 'themes' }, 'local');
+  scheduleSave();
+}
+/**
+ * Add or replace a study (by id; one without an id gets one) and queue it. `updated` is now. Returns the copy that is
+ * kept (within the limits above), or null: a hosted guest (the sign-in prompt is shown), or MAX_STUDIES reached.
+ */
+export function saveStudy(study) {
+  if (guestBlocked()) { refreshNotes(); return null; }
+  const s = wireStudy({ ...(study || {}), updated: Date.now() });
+  const i = state.notes.studies.findIndex(x => x.id === s.id);
+  if (i >= 0) state.notes.studies[i] = s;
+  else { if (state.notes.studies.length >= MAX_STUDIES) return null; state.notes.studies.push(s); }
+  touchDoc('studies');
+  return s;
+}
+/** Remove a study and queue the change. Returns the removed study (saveStudy puts it back: Undo), or null. */
+export function removeStudy(id) {
+  if (guestBlocked()) { refreshNotes(); return null; }
+  const i = state.notes.studies.findIndex(x => x.id === id); if (i < 0) return null;
+  const [gone] = state.notes.studies.splice(i, 1);
+  touchDoc('studies');
+  return gone;
+}
+/** Replace the theme choices ({accepted, renamed, merged, removed}) and queue them. Returns the kept copy, or null for a hosted guest. */
+export function saveThemes(themes) {
+  if (guestBlocked()) { refreshNotes(); return null; }
+  state.notes.themes = normThemes(themes);
+  touchDoc('themes');
+  return state.notes.themes;
+}
+/** Put back studies and theme choices from a snapshot (Undo). Both are queued whole. */
+export function restoreDoc({ studies: st, themes } = {}) {
+  if (guestBlocked()) return false;
+  if (Array.isArray(st)) { state.notes.studies = st.map(wireStudy); docDirty.studies = Date.now(); }
+  if (themes && typeof themes === 'object') { state.notes.themes = normThemes(themes); docDirty.themes = Date.now(); }
+  notifyDoc({ studies: Array.isArray(st), themes: !!themes }, 'restore');
+  scheduleSave();
+  return true;
+}
+
 /** Import notes (drawer "Import JSON"): each becomes a fresh edit, queued like any other. Returns how many. */
 export function importNotes(refs) {
   if (!refs || typeof refs !== 'object') return 0;
@@ -754,11 +935,11 @@ export function bindNotesLifecycle() {
   if (lifecycleBound || typeof document === 'undefined') return;
   lifecycleBound = true;
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') { if (dirty.size && !DRY) flushNotes({ keepalive: true }); }
+    if (document.visibilityState === 'hidden') { if (pendingCount() && !DRY) flushNotes({ keepalive: true }); }
     else if (notesStale) { notesStale = false; refreshNotes(); }
   });
-  window.addEventListener('pagehide', () => { if (dirty.size && !DRY) flushNotes({ keepalive: true }); });
-  window.addEventListener('online', () => { if (dirty.size && !DRY) flushNotes(); });
+  window.addEventListener('pagehide', () => { if (pendingCount() && !DRY) flushNotes({ keepalive: true }); });
+  window.addEventListener('online', () => { if (pendingCount() && !DRY) flushNotes(); });
   onBroadcast(m => {
     if (m.t !== 'notes' || m.scope !== state.auth.scope || state.auth.legacy) return;
     if (Number.isFinite(m.rev) && m.rev <= state.notesRev) return;
@@ -766,7 +947,7 @@ export function bindNotesLifecycle() {
   });
 }
 /** Unsent note changes for the current scope (0 = all saved). */
-export const pendingNotes = () => dirty.size;
+export const pendingNotes = () => pendingCount();
 
 /** Other per-scope stores with their own queue (links.js, marks.js): sent with the notes before an export or a sign-out. */
 const savers = new Map(); // name -> { flush: () => Promise<{pending}>, pending: () => number }
@@ -788,7 +969,7 @@ export async function exportObsidian() {
   if (DRY) return { ok: false, dry: true };
   // the route answers for whoever is signed in now (the guest, after a lost sign-in)
   if (state.auth.signedIn && state.auth.lost) return { ok: false, lost: true };
-  let { pending = dirty.size } = await flushNotes();
+  let { pending = pendingCount() } = await flushNotes();
   pending += (await flushSavers()).pending; // the zip's Connections.md comes from the saved links
   if (state.auth.signedIn && state.auth.lost) return { ok: false, lost: true };
   let r;

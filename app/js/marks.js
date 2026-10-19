@@ -10,6 +10,9 @@ import * as ui from './ui.js';
 let library = null;
 import('./library.js').then(m => { library = m; }, e => { console.error('library.js failed to load', e); });
 const libFn = name => (library && typeof library[name] === 'function' ? library[name] : null);
+// study.js (the [[ picker in the comment card: study-build-brief §1.1) likewise
+let study = null;
+import('./study.js').then(m => { study = m; }, e => { console.error('study.js failed to load', e); });
 const safe = (fn, ...a) => { try { return typeof fn === 'function' ? fn(...a) : undefined; } catch (e) { console.error(e); return undefined; } };
 
 export const marks = { loaded: false, scope: null, rev: 0, byId: new Map(), byVerse: new Map(), offline: false };
@@ -1005,6 +1008,7 @@ function openCard({ text, color } = {}) {
   el.hidden = false; cardShown = true;
   const ta = el.querySelector('textarea');
   if (text !== undefined) ta.value = text;
+  safe(study && study.attachPicker, ta, { self: m ? m.id : null, b: p.b, c: p.c }); // typing [[ links a note, a mark or a verse
   syncCard(); repaintPending();
   // no room either side of the words: bring them up under the bar first
   const rects = pendingRects(), B = bounds(), h = el.offsetHeight;
@@ -1188,6 +1192,21 @@ export function toggleFold(btn) {
  * verses. select: the start verse becomes the selected verse. In another chapter: go there, then flash.
  */
 let revealNext = null; // { id, b, c } until that chapter is drawn
+let popNext = null;    // { id, b, c, v }: a reference chip's popover, opened once that chapter is drawn
+/**
+ * A reference chip to a highlight or comment (study.js): its words are shown (another chapter: once it is drawn) and
+ * the margin popover opens on them; with the mark gone, the verse the text names. False when nothing could be done.
+ */
+export function goMarkRef(id, refText) {
+  const m = marks.byId.get(id), s = m && parseRef(m.start);
+  if (!s) return !!(A && typeof A.goReference === 'function' && A.goReference(refText));
+  closeMarkPop({ back: false });
+  const root = readerEl(), here = !!root && root.dataset.ch === `${s.b}.${s.c}`;
+  if (!revealMark(id, { select: true })) return false;
+  if (!here) popNext = { id, b: s.b, c: s.c, v: s.v };
+  else if (!openMarkPop({ v: s.v, ids: [id], from: 'words' }) && A && typeof A.select === 'function') A.select(s.v, { tab: 'notes' });
+  return true;
+}
 export function revealMark(id, { select = false } = {}) {
   const m = marks.byId.get(id), s = m && parseRef(m.start); if (!s) return false;
   const root = readerEl(), flashVerses = () => { if (A && typeof A.flash === 'function') A.flash(verseList(m), { scroll: false }); };
@@ -1383,7 +1402,12 @@ function bindPop() {
     const show = t.closest('[data-mk-show]'); if (show) { revealMark(show.dataset.mkShow); return; }
     const more = t.closest('[data-mk-more]'); if (more) { toggleFold(more); return; }
     const mb = t.closest('[data-mk-menu]'); if (mb) { openMarkMenu(mb, mb.dataset.mkMenu); return; }
-    const vl = t.closest('.vlink'); if (vl && A && typeof A.goReference === 'function') { e.preventDefault(); closeMarkPop({ back: false }); A.goReference(vl.dataset.ref); }
+    const vl = t.closest('.vlink');
+    if (vl && A && typeof A.goReference === 'function') {
+      e.preventDefault();
+      if (vl.dataset.mark && goMarkRef(vl.dataset.mark, vl.dataset.ref)) return;
+      closeMarkPop({ back: false }); A.goReference(vl.dataset.ref);
+    }
   });
   el.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); closeMarkPop({ restore: true }); return; }
@@ -1499,6 +1523,12 @@ export function initMarks(actions) {
     }
   });
   document.addEventListener('bs:auth-changed', () => { if (cardShown) closeCard({ restore: false, why: 'scope' }); else closeBubble(); closeMarkPop({ back: false }); });
+  // a reference chip to a mark in another chapter: its popover once the chapter is drawn (after revealMark's flash)
+  document.addEventListener('bs:marks-drawn', e => {
+    const pn = popNext, d = e.detail || {}; if (!pn || d.b !== pn.b || d.c !== pn.c) return;
+    popNext = null;
+    setTimeout(() => { if (marks.byId.has(pn.id) && !openMarkPop({ v: pn.v, ids: [pn.id], from: 'words' }) && A && typeof A.select === 'function') A.select(pn.v, { tab: 'notes' }); }, 140);
+  });
   // revealMark in another chapter: flash once it is drawn
   document.addEventListener('bs:marks-drawn', e => {
     const r = revealNext, d = e.detail || {}; if (!r || d.b !== r.b || d.c !== r.c) return;
