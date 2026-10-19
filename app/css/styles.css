@@ -2695,3 +2695,9 @@ body.tb-dragging, body.tb-dragging * { cursor: grabbing !important; }
   .ls-chip[aria-pressed="true"], .rc-sec .ls-chip[aria-expanded="true"] { outline: 2px solid Highlight; }
 }
 @media print { .rc-range, .rc-close, .rc-acts, .rc-foot, .rc-hero .btn, .ls-info, .lib-ncard, .lib-ncard-scrim, .tb-arrow { display: none !important; } }
+
+/* ------------------------------------------------------------ app shell (ios-brief §2)
+   Inside the iOS app (html.app-shell, set by index.html from the user agent or ?app=ios) the native tab bar and Read
+   toolbar replace the top bar: it is hidden and the page starts at the top. Nothing else changes. */
+html.app-shell { --bar-h: 0px; }
+html.app-shell #topbar { display: none; }

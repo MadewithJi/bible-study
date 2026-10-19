@@ -1,0 +1,8 @@
+{
+  "_comment": "Stage 4 (ios-brief §1, universal links): serve this at https://www.biblelantern.com/.well-known/apple-app-site-association with Content-Type application/json and TEAMID replaced by the Apple Developer team id (vercel.json gets the header rule then).",
+  "applinks": {
+    "details": [
+      { "appIDs": ["TEAMID.com.biblelantern.app"], "components": [{ "/": "/", "comment": "the reader: biblelantern.com/#book/chapter/verse" }] }
+    ]
+  }
+}
