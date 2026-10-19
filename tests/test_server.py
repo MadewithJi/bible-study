@@ -636,7 +636,7 @@ class T03_Signup(Base):
         self.assertEqual(r.json["user"]["email"], email)
         self.assertEqual(r.json["user"]["name"], "Alice Test", "whitespace is collapsed")
         self.assertEqual(r.json["user"]["initials"], "AT")
-        self.assertEqual(r.json["imported"], {"notes": 3, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0})
+        self.assertEqual(r.json["imported"], {"notes": 3, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "studies": 0, "themes": 0})
         cookies = r.set_cookies()
         self.assertEqual(len(cookies), 1)
         ck = cookies[0]
@@ -1369,7 +1369,7 @@ class T09_ExportImportDelete(Base):
         self.assertIn("43.3.16", b.req("GET", "/api/notes").json["refs"])
         self.assertIn("50.4.13", b.req("GET", "/api/notes").json["refs"], "the profile's own notes are kept")
         r2 = b.req("POST", "/api/profile/import-guest", {}, scoped=True)
-        self.assertEqual(r2.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0})
+        self.assertEqual(r2.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "studies": 0, "themes": 0})
         self.assertEqual(r2.json["rev"], r.json["rev"], "nothing changed the second time")
         ch2 = b.library().json["chapters"]["66.21"]
         self.assertEqual(ch1, ch2)
@@ -2170,7 +2170,7 @@ class T15_LibraryIntegrity(Base):
         self.assertLess(t_old, before["activity"][-1]["t"], "precondition: the guest's entries are older than all the profile keeps")
         for _ in range(3):
             r = p.req("POST", "/api/profile/import-guest", {}, scoped=True)
-            self.assertEqual(r.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0})
+            self.assertEqual(r.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "studies": 0, "themes": 0})
             self.assertEqual(r.json["rev"]["library"], before["rev"], "nothing changed")
         self.assertEqual(p.library(activity=1000).json["activity"], before["activity"], "no real history was pushed out")
         self.assertEqual([i["mode"] for i in H.read("profiles", p.scope, "library.json")["imports"]], ["copy"])
@@ -4933,6 +4933,344 @@ class T27_TrafficUnits(Base):
         self.assertEqual(sv.HOSTED_MESSAGES["user_limit"], PAUSED_MSG)
         self.assertEqual(sv.MESSAGES["user_limit"], "This computer already has the maximum number of profiles.", "locally as before")
 
+
+# ======================================================================= AB. studies and theme choices (study brief §1.4)
+def new_study_id():
+    return "st_" + secrets.token_hex(6)
+
+
+JOHN_1_4 = "In him was life; and the life was the light of men."
+
+
+class T28_Studies(Base):
+    """Studies and the reader's theme choices live in the notes document beside refs, each replaced whole under the
+    request's baseRev, and go everywhere notes go: export, import, guest import, sign-up, stats, the Obsidian zip."""
+
+    @classmethod
+    def setUpClass(cls):
+        H.restart("--max-users", "200")  # the suite is near the local profile cap (50) by now; this class signs up four
+        for who in ("sam", "sue"):
+            email, pw = H.account(who, "Studies")
+            c = Client()
+            assert c.signup(email, pw, name=who.title()).status == 201
+            S[who] = c
+
+    def study(self, sid, title="The light of men", t=None, **kw):
+        t = now_ms() if t is None else t
+        return dict({"id": sid, "title": title, "intro": "Following *light* from [[Genesis 1:3]] to John.", "order": "studied",
+                     "entries": [{"key": "43.1.4"}], "created": t, "updated": t}, **kw)
+
+    def themes(self, **kw):
+        return dict({"accepted": ["Spiritual Blindness", "Word of God"], "renamed": {"Spiritual Blindness": "Light and darkness"},
+                     "merged": {}, "removed": ["Complaining"]}, **kw)
+
+    def notes(self, c):
+        return c.req("GET", "/api/notes").json
+
+    def changes(self, c, body, base="current"):
+        if base == "current":
+            base = self.notes(c)["rev"]
+        if base is not None:
+            body = dict(body, baseRev=base)
+        return c.req("POST", "/api/notes/changes", body, scoped=True)
+
+    def test_ab01_notes_document_has_both(self):
+        for c in (S["sam"], Client()):
+            n = self.notes(c)
+            self.assertEqual((n["studies"], n["themes"]), ([], {"accepted": [], "renamed": {}, "merged": {}, "removed": []}))
+        self.assertEqual(accounts.empty_notes()["themes"], accounts.empty_themes())
+
+    def test_ab02_whole_replace_under_base_rev(self):
+        c, sid, t = S["sam"], new_study_id(), now_ms()
+        before = self.notes(c)
+        study = self.study(sid, t=t, extra="kept")
+        r = self.changes(c, {"set": {"43.1.4": {"text": "Life and light", "updated": t}}, "studies": [study], "themes": self.themes()}, before["rev"])
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual((r.json["rev"], r.json["changed"], r.json["stale"], r.json["conflicts"]), (before["rev"] + 1, True, False, {}))
+        n = self.notes(c)
+        self.assertEqual(n["studies"], [dict(study, intro=study["intro"])], "stored as sent, unknown fields kept")
+        self.assertEqual(n["themes"], self.themes())
+        self.assertEqual(n["refs"]["43.1.4"]["text"], "Life and light", "the per-key part of the same request applied")
+        disk = H.read("profiles", c.scope, "notes.json")
+        self.assertEqual((disk["studies"][0]["id"], disk["themes"]["removed"], disk["rev"]), (sid, ["Complaining"], before["rev"] + 1))
+        acts = [a for a in c.library().json["activity"] if a["type"] == "study.save"]
+        self.assertEqual(len(acts), 1)
+        self.assertEqual((acts[0]["ref"], acts[0]["x"]), (None, {"id": sid, "title": "The light of men", "new": True}))
+        # the same document again: nothing changes, no new rev
+        r = self.changes(c, {"studies": [study], "themes": self.themes()})
+        self.assertEqual((r.status, r.json["changed"], r.json["rev"]), (200, False, n["rev"]), r)
+        # a rename within 10 minutes: the row is updated, not doubled; the study's `updated` moves
+        study2 = dict(study, title="The light of men, revisited", updated=t + 1000)
+        r = self.changes(c, {"studies": [study2]})
+        self.assertEqual((r.status, r.json["changed"], r.json["rev"]), (200, True, n["rev"] + 1), r)
+        acts = [a for a in c.library().json["activity"] if a["type"] == "study.save"]
+        self.assertEqual([a["x"] for a in acts], [{"id": sid, "title": "The light of men, revisited", "new": True}])
+        self.assertEqual(self.notes(c)["themes"], self.themes(), "themes left alone when the request has none")
+        # themes alone: no study.save row
+        r = self.changes(c, {"themes": self.themes(removed=[])})
+        self.assertEqual((r.status, r.json["changed"]), (200, True), r)
+        self.assertEqual(self.notes(c)["themes"]["removed"], [])
+        self.assertEqual(sum(1 for a in c.library().json["activity"] if a["type"] == "study.save"), 1)
+        # an empty list deletes every study
+        r = self.changes(c, {"studies": []})
+        self.assertEqual((r.status, r.json["changed"], self.notes(c)["studies"]), (200, True, []), r)
+        S["sam_study"] = study2
+
+    def test_ab03_stale_base_rev_is_a_conflict_with_the_document(self):
+        c, sid = S["sam"], new_study_id()
+        self.assertEqual(self.changes(c, {"studies": [self.study(sid)], "themes": self.themes()}).status, 200)
+        n = self.notes(c)
+        other = self.study(new_study_id(), title="From another tab")
+        r = self.changes(c, {"set": {"43.1.5": {"text": "x", "updated": now_ms()}}, "studies": [other]}, n["rev"] - 1)
+        self.assertErr(r, 409, "rev_conflict")
+        self.assertEqual((r.json["rev"], r.json["studies"], r.json["themes"]), (n["rev"], n["studies"], n["themes"]))
+        after = self.notes(c)
+        self.assertEqual((after["rev"], [s["id"] for s in after["studies"]]), (n["rev"], [sid]), "nothing of the request was applied")
+        self.assertNotIn("43.1.5", after["refs"], "not even its per-key part")
+        r = self.changes(c, {"themes": self.themes(accepted=[])}, n["rev"] + 1)
+        self.assertErr(r, 409, "rev_conflict")
+        # retried with the rev the conflict gave: applied
+        r = self.changes(c, {"studies": [other]}, r.json["rev"])
+        self.assertEqual((r.status, [s["id"] for s in self.notes(c)["studies"]]), (200, [other["id"]]), r)
+        # a per-key write with a stale baseRev is still only `stale`, as before
+        r = self.changes(c, {"set": {"43.1.5": {"text": "x", "updated": now_ms()}}}, n["rev"] - 1)
+        self.assertEqual((r.status, r.json["stale"], r.json["changed"]), (200, True, True), r)
+        self.assertErr(self.changes(c, {"studies": [other]}, None), 400, "bad_request", field="baseRev")
+        self.assertErr(self.changes(c, {"themes": {}}, None), 400, "bad_request", field="baseRev")
+
+    def test_ab04_validation(self):
+        c, sid = S["sam"], new_study_id()
+        bad_study = [
+            ("not a list", {"studies": {}}, "studies"),
+            ("not an object", {"studies": [5]}, "studies[0]"),
+            ("bad id", {"studies": [self.study("st_nothex")]}, "studies[0]"),
+            ("title too long", {"studies": [self.study(sid, title="x" * 201)]}, sid),
+            ("title not text", {"studies": [self.study(sid, title=5)]}, sid),
+            ("intro too long", {"studies": [self.study(sid, intro="x" * 20_001)]}, sid),
+            ("bad order", {"studies": [self.study(sid, order="random")]}, sid),
+            ("entries not a list", {"studies": [self.study(sid, entries="43.1.4")]}, sid),
+            ("too many entries", {"studies": [self.study(sid, entries=[{"key": "43.1.4"}] * 501)]}, sid),
+            ("bad entry key", {"studies": [self.study(sid, entries=[{"key": "99.1.1"}])]}, sid),
+            ("bare entry", {"studies": [self.study(sid, entries=["43.1.4"])]}, sid),
+            ("bad time", {"studies": [self.study(sid, updated="now")]}, sid),
+            ("duplicate id", {"studies": [self.study(sid), self.study(sid)]}, sid),
+            ("too many studies", {"studies": [self.study(new_study_id()) for _ in range(201)]}, "studies"),
+        ]
+        for what, body, field in bad_study:
+            r = self.changes(c, body)
+            self.assertErr(r, 400, "invalid_study", field=field)
+            self.assertTrue(r.json["message"].endswith("."), (what, r.json["message"]))  # says what is wrong, as a highlight's does
+        for what, body, field in (("not an object", {"themes": []}, "themes"),
+                                  ("accepted not a list", {"themes": {"accepted": "x"}}, "themes.accepted"),
+                                  ("empty name", {"themes": {"removed": [""]}}, "themes.removed"),
+                                  ("name too long", {"themes": {"accepted": ["x" * 101]}}, "themes.accepted"),
+                                  ("renamed not a map", {"themes": {"renamed": ["a"]}}, "themes.renamed"),
+                                  ("label too long", {"themes": {"merged": {"a": "x" * 101}}}, "themes.merged"),
+                                  ("too many", {"themes": {"accepted": [f"t{i}" for i in range(501)]}}, "themes")):
+            r = self.changes(c, body)
+            self.assertErr(r, 400, "invalid_themes", field=field)
+            self.assertTrue(r.json["message"].endswith("."), (what, r.json["message"]))
+        # the edges that pass: 200 studies, 500 entries, a chapter key and a highlight id, an empty title, a time ahead clamped
+        mid = "mk_" + secrets.token_hex(6)
+        ok = self.study(sid, title="", entries=[{"key": "43.1"}, {"key": mid}, {"key": "1.1.1", "why": "kept"}] + [{"key": "43.1.4"}] * 497,
+                        updated=now_ms() + 60 * 60 * 1000)
+        r = self.changes(c, {"studies": [ok] + [self.study(new_study_id()) for _ in range(199)], "themes": self.themes()})
+        self.assertEqual(r.status, 200, r)
+        n = self.notes(c)
+        got = next(s for s in n["studies"] if s["id"] == sid)
+        self.assertEqual((len(n["studies"]), got["title"], len(got["entries"]), got["entries"][2]), (200, "", 500, {"key": "1.1.1", "why": "kept"}))
+        self.assertLessEqual(got["updated"], now_ms() + accounts.MAX_FUTURE_MS, "a time from the future is clamped")
+        r = self.changes(c, {"studies": [self.study(new_study_id(), title=" Two   words ", intro=None, order=None, entries=None)]})
+        self.assertEqual(r.status, 200, r)
+        got = self.notes(c)["studies"][0]
+        self.assertEqual((got["title"], got["intro"], got["order"], got["entries"]), ("Two words", "", "studied", []))
+        self.assertEqual(self.changes(c, {"studies": []}).status, 200)
+
+    def test_ab05_legacy_put_keeps_them(self):
+        c = S["sam"]
+        self.assertEqual(self.changes(c, {"studies": [S["sam_study"]], "themes": self.themes()}).status, 200)
+        n = self.notes(c)
+        r = c.req("PUT", "/api/notes", {"refs": {"43.1.1": {"text": "In the beginning", "updated": now_ms()}}}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        after = self.notes(c)
+        self.assertEqual((after["studies"], after["themes"]), (n["studies"], n["themes"]), "a whole-object PUT without them keeps them")
+        r = c.req("PUT", "/api/notes", {"refs": {}, "studies": [self.study("st_bad")]}, scoped=True)
+        self.assertErr(r, 400, "invalid_study", field="studies[0]")
+        r = c.req("PUT", "/api/notes", {"refs": {}, "themes": 5}, scoped=True)
+        self.assertErr(r, 400, "invalid_themes", field="themes")
+        r = c.req("PUT", "/api/notes", {"refs": {}, "studies": [], "themes": {"accepted": ["Grace"]}}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        after = self.notes(c)
+        self.assertEqual((after["studies"], after["themes"]["accepted"]), ([], ["Grace"]))
+
+    def test_ab06_exports(self):
+        c, mid = S["sam"], "mk_" + secrets.token_hex(6)
+        so = JOHN_1_4.index("the light of men")
+        r = c.req("POST", "/api/marks/changes", {"set": {mid: {"id": mid, "tr": "kjv", "start": "43.1.4", "so": so, "end": "43.1.4",
+                                                                "eo": so + len("the light of men"), "quote": "the light of men",
+                                                                "pre": "the life was ", "suf": ".", "color": "yellow",
+                                                                "note": "Life *is* light. See [[Genesis 1:3]].", "updated": now_ms()}}}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        t = now_ms()
+        r = self.changes(c, {"set": {"43.1.4": {"text": "Compare [[John 1:4 · “the light of men”]] with [[John 8:12]].", "updated": t},
+                                     "1.1.3": {"text": "Light before the sun.", "updated": t - 5000}},
+                             "studies": [self.study(new_study_id(), title='Light: "the" / first #1', order="studied",
+                                                    entries=[{"key": mid}, {"key": "43.1.4"}, {"key": "1.1.3"}, {"key": "43.1"}, {"key": "mk_000000000000"}],
+                                                    intro="What I found following *light*, from [[Genesis 1:3]] on."),
+                                         self.study(new_study_id(), title="Light: the first", order="bible", entries=[{"key": "43.1.4"}, {"key": "1.1.3"}]),
+                                         self.study(new_study_id(), title="", order="custom", entries=[{"key": "43.1.4"}, {"key": "1.1.3"}])],
+                             "themes": self.themes()})
+        self.assertEqual(r.status, 200, r)
+        e = c.req("GET", "/api/export/profile").json
+        self.assertEqual(e["notes"]["themes"], self.themes())
+        self.assertEqual([s["title"] for s in e["notes"]["studies"]], ['Light: "the" / first #1', "Light: the first", ""])
+        z = zipfile.ZipFile(io.BytesIO(c.req("GET", "/api/export/obsidian").raw))
+        names = z.namelist()
+        self.assertIn("study-notes/Studies/Light the first 1.md", names, "characters a vault path cannot hold are dropped")
+        self.assertIn("study-notes/Studies/Light the first.md", names)
+        self.assertIn("study-notes/Studies/Untitled study.md", names)
+        md = z.read("study-notes/Studies/Light the first 1.md").decode()
+        self.assertTrue(md.startswith('---\ntitle: "Light: \\"the\\" / first #1"\ntags: [bible, study]\n---\n# Light: "the" / first #1\n\n'
+                                      "What I found following *light*, from [[Genesis 1.3|Genesis 1:3]] on.\n\n"), md)
+        # 'studied' order: the older Genesis note first, then the John note, then the highlight (made last), the chapter note last
+        heads = [line for line in md.splitlines() if line.startswith("## ")]
+        self.assertEqual(heads, ["## [[Genesis 1.3|Genesis 1:3]]", "## [[John 1.4|John 1:4]]", "## [[John 1.4|John 1:4]]", "## [[John 1]]"])
+        self.assertIn(f"## [[John 1.4|John 1:4]]\n> {JOHN_1_4}\n\nHighlighted: “the light of men”\n\nLife *is* light. See [[Genesis 1.3|Genesis 1:3]].\n", md)
+        self.assertIn(f"## [[John 1.4|John 1:4]]\n> {JOHN_1_4}\n\nCompare [[John 1.4|John 1:4 · “the light of men”]] with [[John 8.12|John 8:12]].\n", md)
+        self.assertIn("## [[Genesis 1.3|Genesis 1:3]]\n> And God said, Let there be light: and there was light.\n\nLight before the sun.\n", md)
+        self.assertNotIn("mk_000000000000", md, "a highlight that no longer exists is left out")
+        self.assertEqual(md.count("## "), 4)
+        bible = z.read("study-notes/Studies/Light the first.md").decode()
+        self.assertLess(bible.index("## [[Genesis 1.3|"), bible.index("## [[John 1.4|"), "bible order")
+        custom = z.read("study-notes/Studies/Untitled study.md").decode()
+        self.assertLess(custom.index("## [[John 1.4|"), custom.index("## [[Genesis 1.3|"), "custom order is the stored order")
+        self.assertTrue(custom.startswith('---\ntitle: "Untitled study"\n'), custom)
+        self.assertIn("Compare [[John 1.4|John 1:4 · “the light of men”]] with [[John 8.12|John 8:12]].",
+                      z.read("study-notes/John 1.4.md").decode(), "a highlight reference links the verse page and keeps its label")
+        index = z.read("study-notes/Study Notes Index.md").decode()
+        self.assertIn('## Studies\n- [[study-notes/Studies/Light the first 1|Light: "the" / first #1]]\n- [[study-notes/Studies/Light the first|Light: the first]]\n'
+                      "- [[study-notes/Studies/Untitled study|Untitled study]]", index)
+        self.assertNotIn("Studies/", "".join(n for n in zipfile.ZipFile(io.BytesIO(Client().req("GET", "/api/export/obsidian").raw)).namelist()),
+                         "a guest with no studies has no Studies folder")
+        S["sam_export"] = e
+
+    def test_ab07_profile_import_merges(self):
+        src, dst, export = S["sam"], S["sue"], S["sam_export"]
+        a, b, c3 = (s["id"] for s in export["notes"]["studies"])
+        old = export["notes"]["studies"][0]["updated"]
+        # Sue already has study a (newer) and b (older), and her own choices about two of the names
+        mine = dict(export["notes"]["studies"][0], title="Sue's own, newer", updated=old + 10_000)
+        older = dict(export["notes"]["studies"][1], title="Sue's, older", updated=old - 10_000)
+        r = self.changes(dst, {"studies": [mine, older], "themes": {"accepted": ["Complaining"], "renamed": {"Word of God": "The word"},
+                                                                     "merged": {}, "removed": ["Spiritual Blindness"]}})
+        self.assertEqual(r.status, 200, r)
+        r = dst.req("POST", "/api/profile/import", export, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        imp = r.json["imported"]
+        self.assertEqual((imp["studies"], imp["themes"], r.json["changed"], r.json["skipped"]), (2, 0, True, 0), imp)
+        n = self.notes(dst)
+        by_id = {s["id"]: s for s in n["studies"]}
+        self.assertEqual(by_id[a]["title"], "Sue's own, newer", "the newer study wins")
+        self.assertEqual(by_id[b]["title"], "Light: the first", "the file's newer study replaces the older")
+        self.assertEqual(by_id[c3]["title"], "", "a study the profile lacks is added")
+        self.assertEqual(n["themes"], {"accepted": ["Complaining"], "renamed": {"Word of God": "The word"}, "merged": {},
+                                       "removed": ["Spiritual Blindness"]}, "names the profile decided about keep its choices")
+        acts = [x for x in dst.library().json["activity"] if x["type"] == "profile.import"]
+        self.assertEqual(acts[0]["x"], imp)
+        before = dst.req("GET", "/api/notes").json
+        r = dst.req("POST", "/api/profile/import", export, scoped=True)
+        self.assertEqual((r.json["changed"], r.json["imported"]["studies"], r.json["imported"]["themes"], r.json["rev"]["notes"]),
+                         (False, 0, 0, before["rev"]), "a second import changes nothing")
+        # choices about new names come in; a bad study is skipped and counted
+        file = {"format": "bible-study-profile", "version": 1,
+                "notes": {"refs": {}, "studies": [{"id": "st_bad"}, {"id": new_study_id(), "title": "ok"}],
+                          "themes": {"accepted": ["Grace", "Complaining"], "renamed": {"Grace": "Grace and mercy"}, "merged": {"Mercy": "Grace"},
+                                     "removed": [""]}}}
+        r = dst.req("POST", "/api/profile/import", file, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual((r.json["imported"]["studies"], r.json["imported"]["themes"], r.json["skipped"]), (1, 2, 1))
+        th = self.notes(dst)["themes"]
+        self.assertEqual((th["accepted"], th["renamed"], th["merged"]), (["Complaining", "Grace"], {"Word of God": "The word", "Grace": "Grace and mercy"}, {"Mercy": "Grace"}))
+        for bad in ({"notes": {"refs": {}, "studies": {}}}, {"notes": {"refs": {}, "themes": []}}):
+            self.assertErr(dst.req("POST", "/api/profile/import", dict(file, **bad), scoped=True), 400, "invalid_import")
+
+    def test_ab08_guest_import_and_signup_copy(self):
+        g, dst = Client(), S["sue"]
+        gid = new_study_id()
+        # one name, two choices: every import route counts names
+        r = self.changes(g, {"studies": [self.study(gid, title="Guest study")], "themes": {"accepted": ["Faith"], "renamed": {"Faith": "Faith and trust"}, "merged": {}, "removed": []}})
+        self.assertEqual(r.status, 200, r)
+        me = g.me().json["guest"]
+        self.assertEqual((me["studies"], me["hasData"]), (1, True), "a study alone is guest data")
+        r = dst.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual((r.json["imported"]["studies"], r.json["imported"]["themes"], r.json["changed"]), (1, 1, True))
+        n = self.notes(dst)
+        self.assertIn(gid, [s["id"] for s in n["studies"]])
+        self.assertIn("Faith", n["themes"]["accepted"])
+        r = dst.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual((r.json["imported"]["studies"], r.json["imported"]["themes"], r.json["changed"]), (0, 0, False), "idempotent")
+        email, pw = H.account("seth", "Sign-up copies guest studies")
+        c = Client()
+        r = c.signup(email, pw, name="Seth", import_guest=True)
+        self.assertEqual(r.status, 201, r)
+        self.assertEqual((r.json["imported"]["studies"], r.json["imported"]["themes"]), (1, 1), "names, as import-guest counts them")
+        n = self.notes(c)
+        self.assertEqual(([s["title"] for s in n["studies"]], n["themes"]["accepted"], n["themes"]["renamed"]), (["Guest study"], ["Faith"], {"Faith": "Faith and trust"}))
+        self.assertEqual(self.changes(g, {"studies": [], "themes": {}}).status, 200)
+
+    def test_ab09_stats_total(self):
+        c = S["sue"]
+        n = len(self.notes(c)["studies"])
+        self.assertGreater(n, 0)
+        self.assertEqual(c.library().json["stats"]["totals"]["studies"], n)
+        self.assertEqual(Client().library().json["stats"]["totals"]["studies"], 0)
+
+    def test_ab10_load_repairs_what_it_can(self):
+        """A damaged notes.json keeps its notes and what can be kept of its studies and choices."""
+        email, pw = H.account("sol", "Studies repair")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Sol").status, 201)
+        good, dup = new_study_id(), new_study_id()
+        doc = {"refs": {"43.1.4": {"text": "kept", "updated": 1}}, "rev": 3, "deleted": {},
+               "studies": [{"id": good, "title": 5, "intro": None, "order": "zz", "entries": [{"key": "bad"}, "43.1.4", {"key": "1.1"}], "updated": "x"},
+                           {"id": "nope", "title": "dropped"}, 7,
+                           {"id": dup, "title": "older", "updated": 1}, {"id": dup, "title": "newer", "updated": 2}],
+               "themes": {"accepted": ["A", 5, "", "A"], "renamed": "x", "merged": {"B": ""}, "removed": None}}
+        put_raw(os.path.join(H.data, "profiles", c.scope, "notes.json"), json.dumps(doc).encode())
+        n = self.notes(c)
+        self.assertEqual(n["refs"]["43.1.4"]["text"], "kept")
+        self.assertEqual([(s["id"], s["title"], s["order"], s["entries"]) for s in n["studies"]], [(good, "", "studied", [{"key": "1.1"}]), (dup, "newer", "studied", [])])
+        self.assertEqual(n["themes"], {"accepted": ["A"], "renamed": {}, "merged": {}, "removed": []})
+        put_raw(os.path.join(H.data, "profiles", c.scope, "notes.json"), json.dumps(dict(doc, studies="no", themes=[])).encode())
+        n = self.notes(c)
+        self.assertEqual((n["refs"]["43.1.4"]["text"], n["studies"], n["themes"]), ("kept", [], accounts.empty_themes()))
+        self.assertEqual(self.changes(c, {"studies": [self.study(good)]}).status, 200, "and it can be written again")
+
+    def test_ab11_pure_functions(self):
+        A, t = accounts, 1759071600000
+        lib = A.new_library(t)
+        st = {"id": "st_000000000001", "title": "One"}
+        self.assertTrue(A.add_study_activity(lib, [(st, True)], t))
+        self.assertEqual(lib["activity"][-1], {"t": t, "type": "study.save", "ref": None, "x": {"id": "st_000000000001", "title": "One", "new": True}})
+        self.assertFalse(A.add_study_activity(lib, [(st, False)], t + 1000), "the same study again within 10 minutes: no change")
+        self.assertTrue(A.add_study_activity(lib, [(dict(st, title="One, renamed"), False)], t + 2000))
+        self.assertEqual([a["x"] for a in lib["activity"] if a["type"] == "study.save"], [{"id": "st_000000000001", "title": "One, renamed", "new": True}])
+        self.assertTrue(A.add_study_activity(lib, [(st, False)], t + 11 * 60 * 1000), "after 10 minutes it is a new row")
+        self.assertEqual([a["x"]["new"] for a in lib["activity"] if a["type"] == "study.save"], [True, False])
+        self.assertIn("study.save", A.ACTIVITY_TYPES)
+        self.assertEqual(A.study_entry_key("mk_0123456789ab"), "mk_0123456789ab")
+        self.assertEqual([A.study_entry_key(k) for k in ("43.1", "43.1.4", "43.1.99", "st_0123456789ab", 5)], ["43.1", "43.1.4", None, None, None])
+        d = {"studies": [], "themes": A.empty_themes()}
+        self.assertEqual(A.merge_studies(d, {"studies": [st]}, room=0), 0, "no room: nothing added")
+        self.assertEqual(A.merge_studies(d, {"studies": [st]}, room=1), 1)
+        self.assertEqual(A.merge_themes(d, {"themes": {"accepted": ["x" * 101, "ok"], "removed": ["ok"]}}), 1, "a bad name is skipped; one name is one")
+        self.assertEqual(d["themes"], {"accepted": ["ok"], "renamed": {}, "merged": {}, "removed": ["ok"]})
+        self.assertEqual(A.compute_stats(A.new_library(t), 0, "2026-10-19", studies_count=4)["totals"]["studies"], 4)
+        vl = A._vault_links
+        self.assertEqual(vl("[[John 1:4 · “the light of men”]]"), "[[John 1.4|John 1:4 · “the light of men”]]")
+        self.assertEqual(vl("[[Psalm 23:1 · “he leadeth”|mine]]"), "[[Psalms 23.1|mine]]")
+        self.assertEqual(vl("[[Grace · “words”]]"), "[[Grace · “words”]]", "not a verse: unchanged")
 
 class T99_Hygiene(Base):
     restart = False

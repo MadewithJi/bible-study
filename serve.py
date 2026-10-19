@@ -689,6 +689,8 @@ MESSAGES = {
     "invalid_email": A.MSG_EMAIL,
     "invalid_name": A.MSG_NAME,
     "invalid_note": "That note could not be saved.",
+    "invalid_study": "That study could not be saved.",
+    "invalid_themes": "Those theme choices could not be saved.",
     "invalid_link": "That link could not be saved.",
     "invalid_mark": "That highlight could not be saved.",
     "invalid_ref": "That is not a valid Bible reference.",
@@ -1363,12 +1365,15 @@ class Handler(SimpleHTTPRequestHandler):
                     g_notes, g_lib, g_links = A.load_notes("guest"), A.load_library("guest"), A.load_links("guest")
                     g_marks = A.load_marks("guest")
                 if A.guest_summary(g_notes, g_lib, g_links, g_marks)["hasData"]:
-                    notes = {"refs": g_notes["refs"], "studies": g_notes["studies"], "rev": 1, "deleted": {}}
+                    notes = {"refs": g_notes["refs"], "studies": g_notes["studies"], "themes": g_notes["themes"],
+                             "rev": 1, "deleted": {}}
                     links["links"] = g_links["links"]  # copied (rev 1, no tombstones); the guest file is left as it is
                     marks["marks"] = g_marks["marks"]  # likewise
                     counts = A.merge_library(lib, g_lib, "copy", now)
                     imported = {"notes": len(notes["refs"]), "bookmarks": counts["bookmarks"], "chapters": counts["chapters"],
-                                "links": len(links["links"]), "marks": len(marks["marks"])}
+                                "links": len(links["links"]), "marks": len(marks["marks"]), "studies": len(notes["studies"]),
+                                "themes": len(set(notes["themes"]["accepted"]) | set(notes["themes"]["removed"])  # names, as merge_themes counts them
+                                              | set(notes["themes"]["renamed"]) | set(notes["themes"]["merged"]))}
             A.add_activity(lib, {"t": now, "type": "profile.create", "ref": None})
             if imported: A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
             with A.lock_for(uid):  # links, then marks, then library (the lock order at A.lock_for)
@@ -1567,7 +1572,7 @@ class Handler(SimpleHTTPRequestHandler):
     # ------------------------------------------------------------ 8-10 notes
     def h_notes_get(self, body, q, arg):
         n = A.load_notes(self._scope)
-        self.send_json({"refs": n["refs"], "studies": n["studies"], "rev": n["rev"], "scope": self._scope},
+        self.send_json({"refs": n["refs"], "studies": n["studies"], "themes": n["themes"], "rev": n["rev"], "scope": self._scope},
                        headers=[("ETag", f'"{n["rev"]}"')])
 
     def h_notes_put(self, body, q, arg):
@@ -1577,23 +1582,45 @@ class Handler(SimpleHTTPRequestHandler):
         self.check_scope(required=False)
         if not isinstance(body.get("refs"), dict) or ("studies" in body and not isinstance(body["studies"], list)):
             raise ApiError(400, "bad_request", "Notes must look like {\"refs\": {...}, \"studies\": [...]}.")
+        studies, themes = self._studies_and_themes(body)
         with A.lock_for(self._scope):
             cur = A.load_notes(self._scope)
             im = self.headers.get("If-Match")
             if im is not None and im.strip().lstrip("W/").strip('"') != str(cur["rev"]):
                 raise ApiError(409, "rev_conflict", extra={"rev": cur["rev"]})
             new = {k: v for k, v in body.items() if k not in ("rev", "deleted", "scope")}
-            new.setdefault("studies", cur["studies"])
+            new["studies"] = cur["studies"] if studies is None else studies  # the pre-studies client never sends them
+            new["themes"] = cur["themes"] if themes is None else themes
             new["rev"], new["deleted"] = cur["rev"] + 1, {}
             A.save_notes(self._scope, new, quota=True)
         self.send_json({"ok": True, "saved": time.strftime("%H:%M:%S"), "rev": new["rev"]})
 
+    def _studies_and_themes(self, body):
+        """The optional `studies` and `themes` of a notes write, validated (400 invalid_study / invalid_themes with
+        the field). -> (studies | None, themes | None); None when the request leaves that part alone."""
+        studies, themes = body.get("studies"), body.get("themes")
+        try:
+            studies = None if studies is None else A.clean_studies(studies, A.now_ms())
+        except A.InvalidDoc as e: raise ApiError(400, "invalid_study", str(e), field=e.field)
+        try:
+            themes = None if themes is None else A.clean_themes(themes)
+        except A.InvalidDoc as e: raise ApiError(400, "invalid_themes", str(e), field=e.field)
+        return studies, themes
+
     def h_notes_changes(self, body, q, arg):
+        """Per-key notes changes (set / del / base, PS §2.4) and, beside them, the whole-replace of `studies` and
+        `themes` (study brief §1.4): each replaces the stored one under the request's baseRev, which must then be the
+        document's current rev; a stale one is 409 rev_conflict carrying the current rev, studies and themes, and
+        nothing of the request is applied. Studies made or changed add `study.save` activity."""
         wait = NOTES_WINDOW.check(self._scope)
         if wait: raise rate_limited(wait, self._uid or "guest")
         base = body.get("baseRev")
         if base is not None and not (A._is_int(base) and base >= 0):
             raise ApiError(400, "bad_request", "baseRev must be a whole number.", field="baseRev")
+        studies, themes = self._studies_and_themes(body)
+        whole = studies is not None or themes is not None
+        if whole and base is None:
+            raise ApiError(400, "bad_request", "Saving studies or theme choices needs baseRev.", field="baseRev")
         sets = {} if body.get("set") is None else body["set"]
         dels = {} if body.get("del") is None else body["del"]
         cas = {} if body.get("base") is None else body["base"]
@@ -1618,12 +1645,26 @@ class Handler(SimpleHTTPRequestHandler):
         with A.lock_for(self._scope):
             notes = A.load_notes(self._scope)
             before = notes["rev"]
+            if whole and base != before:
+                raise ApiError(409, "rev_conflict", extra={"rev": before, "studies": notes["studies"], "themes": notes["themes"]})
             if len(notes["refs"]) + sum(1 for k in clean_set if k not in notes["refs"]) > A.MAX_REFS:
                 raise ApiError(400, "invalid_note", "You’ve reached the limit of 50,000 notes.")
             changed, conflicts = A.apply_note_changes(notes, clean_set, clean_del, clean_base)
+            rows = []
+            if studies is not None and studies != notes["studies"]:
+                had = {st["id"]: st for st in notes["studies"]}
+                rows = [(st, st["id"] not in had) for st in studies if had.get(st["id"]) != st]
+                notes["studies"], changed = studies, True
+            if themes is not None and themes != notes["themes"]:
+                notes["themes"], changed = themes, True
             if changed:
                 notes["rev"] = before + 1
                 A.save_notes(self._scope, notes, quota=True)
+            if rows:  # the notes file, then the library file (the lock order at A.lock_for)
+                lib = A.load_library(self._scope)
+                if A.add_study_activity(lib, rows, now):
+                    lib["rev"] += 1; lib["updated"] = now
+                    A.save_library(self._scope, lib)
             versions = A.note_versions(notes, list(clean_set) + list(clean_del), conflicts)
         self.send_json({"ok": True, "rev": notes["rev"], "changed": changed, "stale": base is not None and base < before,
                         "conflicts": conflicts, "versions": versions, "saved": time.strftime("%H:%M:%S")})
@@ -1714,14 +1755,15 @@ class Handler(SimpleHTTPRequestHandler):
         try: before = int(q.get("before", [""])[0])
         except ValueError: before = None
         lib = A.load_library(self._scope)
-        n_notes = len(A.load_notes(self._scope)["refs"])
+        notes = A.load_notes(self._scope)
+        n_notes, n_studies = len(notes["refs"]), len(notes["studies"])
         n_links = len(A.load_links(self._scope)["links"])
         n_marks = len(A.load_marks(self._scope)["marks"])
         acts = lib["activity"]
         if before is not None: acts = [a for a in acts if a.get("t", 0) < before]
         page = list(reversed(acts[-n_act:])) if n_act else []
         self.send_json({"scope": self._scope, "rev": lib["rev"], "bookmarks": lib["bookmarks"], "lastPosition": lib["lastPosition"],
-                        "chapters": lib["chapters"], "stats": A.compute_stats(lib, n_notes, today, n_links, n_marks), "activity": page,
+                        "chapters": lib["chapters"], "stats": A.compute_stats(lib, n_notes, today, n_links, n_marks, n_studies), "activity": page,
                         "activityTotal": len(lib["activity"]), "server": {"now": A.now_ms()}},
                        headers=[("ETag", f'"{lib["rev"]}"')])
 
@@ -1865,19 +1907,20 @@ class Handler(SimpleHTTPRequestHandler):
             with A.lock_for(uid):
                 rev = {"notes": A.load_notes(uid)["rev"], "library": A.load_library(uid)["rev"],
                        "links": A.load_links(uid)["rev"], "marks": A.load_marks(uid)["rev"]}
-            return self.send_json({"ok": True, "imported": {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0},
-                                   "changed": False, "rev": rev})
+            return self.send_json({"ok": True, "imported": {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0,
+                                                            "studies": 0, "themes": 0}, "changed": False, "rev": rev})
         with A.lock_for("guest"):
             g_notes, g_lib, g_links = A.load_notes("guest"), A.load_library("guest"), A.load_links("guest")
             g_marks = A.load_marks("guest")
             with A.lock_for(uid):
                 notes, lib, links, marks = A.load_notes(uid), A.load_library(uid), A.load_links(uid), A.load_marks(uid)
                 n_notes = A.merge_notes(notes, g_notes)
-                if n_notes:
+                n_studies, n_themes = A.merge_studies(notes, g_notes, room=A.MAX_STUDIES - len(notes["studies"])), A.merge_themes(notes, g_notes)
+                if n_notes or n_studies or n_themes:  # notes, then links, then marks, then library (the lock order at A.lock_for)
                     notes["rev"] += 1
                     A.save_notes(uid, notes)
                 n_links = A.merge_links(links, g_links)
-                if n_links:  # links, then marks, then library (the lock order at A.lock_for)
+                if n_links:
                     links["rev"] += 1
                     A.save_links(uid, links)
                 n_marks = A.merge_marks(marks, g_marks)
@@ -1886,9 +1929,9 @@ class Handler(SimpleHTTPRequestHandler):
                     A.save_marks(uid, marks)
                 counts = A.merge_library(lib, g_lib, "merge", now)
                 imported = {"notes": n_notes, "bookmarks": counts["bookmarks"], "chapters": counts["chapters"], "links": n_links,
-                            "marks": n_marks}
+                            "marks": n_marks, "studies": n_studies, "themes": n_themes}
                 # also guest study days, activity or last position alone
-                changed = bool(counts["changed"] or n_notes or n_links or n_marks)
+                changed = bool(counts["changed"] or n_notes or n_links or n_marks or n_studies or n_themes)
                 if changed:  # only when something was imported: a repeat changes nothing (§1.8)
                     lib["imports"] = (lib["imports"] + [{"source": "guest", "t": now, "mode": "merge"}])[-A.MAX_IMPORTS:]
                     A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
@@ -1899,8 +1942,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def h_profile_import(self, body, q, arg):
         """A GET /api/export/profile file merged into the signed-in profile (hosting brief §1): notes, links and marks by
-        the per-key rule (the newer record wins, a tombstone at or after it keeps it deleted), the library as the guest
-        import merges it. Idempotent: a second import of the same file changes nothing."""
+        the per-key rule (the newer record wins, a tombstone at or after it keeps it deleted), studies by id (the newer
+        wins), theme choices by name (the profile's own kept, A.merge_themes), the library as the guest import merges
+        it. Idempotent: a second import of the same file changes nothing."""
         wait = IMPORT_WINDOW.check(self._scope)
         if wait: raise rate_limited(wait, self._uid)
         uid, now = self._uid, A.now_ms()
@@ -1909,23 +1953,26 @@ class Handler(SimpleHTTPRequestHandler):
         with A.lock_for(uid):
             notes, lib, links, marks = A.load_notes(uid), A.load_library(uid), A.load_links(uid), A.load_marks(uid)
             n_notes = A.merge_notes(notes, {"refs": src["notes"]}, room=A.MAX_REFS - len(notes["refs"]))
+            n_studies = A.merge_studies(notes, {"studies": src["studies"]}, room=A.MAX_STUDIES - len(notes["studies"]))
+            n_themes = A.merge_themes(notes, {"themes": src["themes"]})
             n_links = A.merge_links(links, {"links": src["links"]})
             n_marks = A.merge_marks(marks, {"marks": src["marks"]})
             counts = A.merge_library(lib, src["library"], "merge", now)
             imported = {"notes": n_notes, "bookmarks": counts["bookmarks"], "chapters": counts["chapters"], "links": n_links,
-                        "marks": n_marks}
-            changed = bool(counts["changed"] or n_notes or n_links or n_marks)
+                        "marks": n_marks, "studies": n_studies, "themes": n_themes}
+            changed = bool(counts["changed"] or n_notes or n_links or n_marks or n_studies or n_themes)
             if changed:
                 lib["imports"] = (lib["imports"] + [{"source": "file", "t": now, "mode": "merge"}])[-A.MAX_IMPORTS:]
                 A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
                 lib["rev"] += 1; lib["updated"] = now
                 if lib.get("created") is None: lib["created"] = now
-            for n, doc in ((n_notes, notes), (n_links, links), (n_marks, marks)):
+            n_notes_doc = n_notes or n_studies or n_themes  # the notes file holds all three
+            for n, doc in ((n_notes_doc, notes), (n_links, links), (n_marks, marks)):
                 if n: doc["rev"] += 1
             # the whole import against the quota first: all of it is written, or none
-            A.check_quota(uid, [(path(uid), doc) for n, path, doc in ((n_notes, A.notes_path, notes), (n_links, A.links_path, links),
+            A.check_quota(uid, [(path(uid), doc) for n, path, doc in ((n_notes_doc, A.notes_path, notes), (n_links, A.links_path, links),
                                                                        (n_marks, A.marks_path, marks), (changed, A.library_path, lib)) if n])
-            if n_notes: A.save_notes(uid, notes)
+            if n_notes_doc: A.save_notes(uid, notes)
             if n_links: A.save_links(uid, links)  # links, then marks, then library (the lock order at A.lock_for)
             if n_marks: A.save_marks(uid, marks)
             if changed: A.save_library(uid, lib)

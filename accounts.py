@@ -548,9 +548,10 @@ def auth_lock():
 def lock_for(scope):
     """The scope lock. One lock covers all of a scope's files: notes.json, links.json, marks.json and library.json.
 
-    Lock order (links-spec §2, annotations brief §1): links file -> marks file -> library file. POST
-    /api/links/changes and POST /api/marks/changes each write their own file and then library.json (a new link or
-    mark adds `link.add` / `mark.add` activity and studied verses), under this one lock; sign-up with import and
+    Lock order (links-spec §2, annotations brief §1): notes file -> links file -> marks file -> library file. POST
+    /api/notes/changes, /api/links/changes and /api/marks/changes each write their own file and then library.json (a
+    saved study adds `study.save` activity; a new link or mark `link.add` / `mark.add` and studied verses), under
+    this one lock; sign-up with import and
     guest import save links.json, then marks.json, then library.json. No code path takes them in another order, so
     if these files ever get locks of their own, take the links lock, then the marks lock, then the library lock.
     (Guest -> profile import takes the guest scope lock before the profile's, §2.6.)"""
@@ -959,7 +960,7 @@ NOTE_MAX_BYTES = 256 * 1024
 
 
 def empty_notes():
-    return {"refs": {}, "studies": [], "rev": 0, "deleted": {}}
+    return {"refs": {}, "studies": [], "themes": empty_themes(), "rev": 0, "deleted": {}}
 
 
 def load_notes(scope):
@@ -969,8 +970,6 @@ def load_notes(scope):
         _move_aside(path)  # nothing to salvage in place; the file is kept as <file>.corrupt-<ts>
         n = empty_notes()
     n.setdefault("refs", {})
-    if not isinstance(n.get("studies"), list):
-        n["studies"] = []  # a wrongly typed `studies` must not hide every note (the client never fills it)
     if not (_is_int(n.get("rev")) and n["rev"] >= 0):
         n["rev"] = 0
     if not isinstance(n.get("deleted"), dict):
@@ -980,6 +979,9 @@ def load_notes(scope):
     except OSError:
         cap = now_ms()
     _repair_notes(n, cap)
+    # wrongly typed or damaged studies and theme choices must not hide every note: what can be kept is kept
+    n["studies"] = _norm_studies(n.get("studies"), cap)
+    n["themes"] = _norm_themes(n.get("themes"))
     return n
 
 
@@ -1220,6 +1222,241 @@ def merge_notes(dst, src, room=None):
     """Guest -> profile merge (§1.8). Mutates dst. `room` caps the new refs (a profile import stops at MAX_REFS).
     -> number of refs taken from src."""
     return len(_merge_keyed(dst.setdefault("refs", {}), dst.setdefault("deleted", {}), src.get("refs") or {}, room))
+
+
+# ------------------------------------------------------------------ studies and theme choices (study brief §1.4)
+# Both live in the notes document beside `refs` and are replaced whole, guarded by the request's baseRev (serve.py
+# h_notes_changes); the per-key rules above are for refs only.
+STUDY_ID_RE = re.compile(r"st_[0-9a-f]{12}", re.ASCII)
+STUDY_ORDERS = ("studied", "bible", "custom")
+MAX_STUDIES, STUDY_TITLE_MAX, STUDY_INTRO_MAX, STUDY_ENTRIES_MAX = 200, 200, 20_000, 500
+STUDY_MAX_BYTES = 256 * 1024
+THEME_KEYS = ("accepted", "renamed", "merged", "removed")
+THEME_NAME_MAX, THEME_CHOICES_MAX = 100, 500
+
+
+class InvalidDoc(ValueError):
+    """A study or the theme choices failed validation: str(e) says what, `field` where (the study's id, 'studies[i]'
+    before its id is known, 'studies', 'themes' or 'themes.<key>')."""
+
+    def __init__(self, msg, field):
+        super().__init__(msg)
+        self.field = field
+
+
+def empty_themes():
+    return {"accepted": [], "renamed": {}, "merged": {}, "removed": []}
+
+
+def study_entry_key(key):
+    """A study entry's key: a note key ('43.1.4' or '43.1') or a mark id ('mk_…'). -> the key, else None."""
+    if isinstance(key, str) and (MARK_ID_RE.fullmatch(key) or valid_ref(key)):
+        return key
+    return None
+
+
+def clean_study(raw, now=None, field="studies"):
+    """Validate one study: id 'st_' + 12 hex, title of at most 200 characters on one line, intro of at most 20,000
+    characters of markdown, order studied | bible | custom, at most 500 entries [{key}] of note keys or mark ids,
+    created and updated clamped as a note's are. Other fields of the study and of an entry are kept. Raises
+    InvalidDoc."""
+    now = now or now_ms()
+    if not isinstance(raw, dict):
+        raise InvalidDoc("A study must be an object.", field)
+    sid = raw.get("id")
+    if not isinstance(sid, str) or not STUDY_ID_RE.fullmatch(sid):
+        raise InvalidDoc("A study needs an id like st_ followed by 12 hex digits.", field)
+    field = sid
+    out = dict(raw)
+    title = "" if raw.get("title") is None else raw.get("title")
+    if not isinstance(title, str) or len(title) > STUDY_TITLE_MAX:
+        raise InvalidDoc(f"The title must be text of at most {STUDY_TITLE_MAX} characters.", field)
+    intro = "" if raw.get("intro") is None else raw.get("intro")
+    if not isinstance(intro, str) or len(intro) > STUDY_INTRO_MAX:
+        raise InvalidDoc(f"The introduction must be text of at most {STUDY_INTRO_MAX:,} characters.", field)
+    order = "studied" if raw.get("order") is None else raw.get("order")
+    if order not in STUDY_ORDERS:
+        raise InvalidDoc("The order must be studied, bible or custom.", field)
+    entries = [] if raw.get("entries") is None else raw.get("entries")
+    if not isinstance(entries, list) or len(entries) > STUDY_ENTRIES_MAX:
+        raise InvalidDoc(f"A study holds at most {STUDY_ENTRIES_MAX} passages.", field)
+    clean_entries = []
+    for e in entries:
+        if not isinstance(e, dict) or study_entry_key(e.get("key")) is None:
+            raise InvalidDoc("Each passage must be an object whose key is a note key or a highlight id.", field)
+        clean_entries.append(dict(e))
+    upd = now if raw.get("updated") is None else clamp_ts(raw.get("updated"), now)
+    if upd is None:
+        raise InvalidDoc("updated must be a time in ms.", field)
+    created = upd if raw.get("created") is None else clamp_ts(raw.get("created"), now)
+    if created is None:
+        raise InvalidDoc("created must be a time in ms.", field)
+    out.update(id=sid, title=clean_text(title), intro=intro, order=order, entries=clean_entries, created=created,
+               updated=upd)
+    if len(json.dumps(out, ensure_ascii=False).encode("utf-8")) > STUDY_MAX_BYTES:
+        raise InvalidDoc("That study is too large to save.", field)
+    return out
+
+
+def clean_studies(raw, now=None):
+    """The whole `studies` list of a request -> validated list, at most MAX_STUDIES with no id twice. Raises
+    InvalidDoc."""
+    if not isinstance(raw, list):
+        raise InvalidDoc("studies must be a list.", "studies")
+    if len(raw) > MAX_STUDIES:
+        raise InvalidDoc(f"You can keep at most {MAX_STUDIES} studies.", "studies")
+    out, seen = [], set()
+    for i, s in enumerate(raw):
+        c = clean_study(s, now, f"studies[{i}]")
+        if c["id"] in seen:
+            raise InvalidDoc("Two studies have the same id.", c["id"])
+        seen.add(c["id"])
+        out.append(c)
+    return out
+
+
+def _theme_name_ok(s):
+    return isinstance(s, str) and 1 <= len(s) <= THEME_NAME_MAX
+
+
+def clean_themes(raw):
+    """The reader's theme choices -> {accepted: [name], renamed: {name: label}, merged: {name: into}, removed: [name]}
+    (study brief §1.2): names and labels are text of 1 to 100 characters, a list holds each name once, and there are
+    at most 500 choices in all. None means no choices. Raises InvalidDoc."""
+    if raw is None:
+        return empty_themes()
+    if not isinstance(raw, dict):
+        raise InvalidDoc("themes must be an object.", "themes")
+    out, total = empty_themes(), 0
+    for k in ("accepted", "removed"):
+        names = [] if raw.get(k) is None else raw.get(k)
+        if not isinstance(names, list) or not all(_theme_name_ok(n) for n in names):
+            raise InvalidDoc(f"{k} must be a list of theme names of at most {THEME_NAME_MAX} characters.", f"themes.{k}")
+        out[k] = list(dict.fromkeys(names))
+        total += len(out[k])
+    for k in ("renamed", "merged"):
+        m = {} if raw.get(k) is None else raw.get(k)
+        if not isinstance(m, dict) or not all(_theme_name_ok(n) and _theme_name_ok(v) for n, v in m.items()):
+            raise InvalidDoc(f"{k} must map theme names to names of at most {THEME_NAME_MAX} characters.", f"themes.{k}")
+        out[k] = dict(m)
+        total += len(m)
+    if total > THEME_CHOICES_MAX:
+        raise InvalidDoc(f"At most {THEME_CHOICES_MAX} theme choices can be kept.", "themes")
+    return out
+
+
+def _salvage_study(raw, cap):
+    """Load-time repair of a stored study that failed clean_study, field by field, so a study is not lost to one bad
+    field: a title, intro or order that is wrong is reset or cut, passages whose key is not a note key or mark id
+    are dropped (the rest kept), a bad time becomes the load time. A bad id is left as it is: clean_study still
+    rejects it, and only then is the study dropped."""
+    if not isinstance(raw, dict):
+        return raw
+    out = dict(raw)
+    out["title"] = clean_text(raw["title"])[:STUDY_TITLE_MAX] if isinstance(raw.get("title"), str) else ""
+    out["intro"] = raw["intro"][:STUDY_INTRO_MAX] if isinstance(raw.get("intro"), str) else ""
+    if raw.get("order") not in STUDY_ORDERS:
+        out["order"] = "studied"
+    out["entries"] = [e for e in _list(raw.get("entries"))
+                      if isinstance(e, dict) and study_entry_key(e.get("key"))][:STUDY_ENTRIES_MAX]
+    for f in ("created", "updated"):
+        if clamp_ts(raw.get(f), cap) is None:
+            out[f] = None
+    return out
+
+
+def _norm_studies(raw, cap):
+    """Load-time: the stored studies, each checked (clean_study, then _salvage_study for one that fails) and one
+    per id (the newer `updated` wins). More than MAX_STUDIES are kept as they are: only a write refuses them."""
+    out = {}
+    for s in _list(raw):
+        try:
+            c = clean_study(s, cap)
+        except InvalidDoc:
+            try:
+                c = clean_study(_salvage_study(s, cap), cap)
+            except InvalidDoc:
+                continue
+        prev = out.get(c["id"])
+        if prev is None or _note_updated(c) > _note_updated(prev):
+            out[c["id"]] = c
+    return list(out.values())
+
+
+def _norm_themes(raw):
+    """Load-time: the stored theme choices, or what can be kept of them (a bad name or label is dropped, a wrongly
+    typed key emptied, choices past the cap left out)."""
+    try:
+        return clean_themes(raw)
+    except InvalidDoc:
+        pass
+    raw = raw if isinstance(raw, dict) else {}
+    out, total = empty_themes(), 0
+    for k in THEME_KEYS:
+        if k in ("accepted", "removed"):
+            items = [n for n in dict.fromkeys(_list(raw.get(k))) if _theme_name_ok(n)]
+            out[k] = items[:max(0, THEME_CHOICES_MAX - total)]
+        else:
+            m = raw.get(k) if isinstance(raw.get(k), dict) else {}
+            items = [(n, v) for n, v in m.items() if _theme_name_ok(n) and _theme_name_ok(v)]
+            out[k] = dict(items[:max(0, THEME_CHOICES_MAX - total)])
+        total += len(out[k])
+    return out
+
+
+def merge_studies(dst, src, room=None):
+    """Guest or file -> profile merge of studies by id: a study the profile lacks is added (`room` caps how many),
+    one it has is replaced when the incoming `updated` is newer. Both documents are already clean (load_notes,
+    clean_import). Mutates dst. -> studies taken."""
+    studies = dst.setdefault("studies", [])
+    have = {s["id"]: i for i, s in enumerate(studies) if isinstance(s, dict) and isinstance(s.get("id"), str)}
+    taken = 0
+    for s in _list(src.get("studies") if isinstance(src, dict) else src):
+        if not isinstance(s, dict) or not isinstance(s.get("id"), str):
+            continue
+        i = have.get(s["id"])
+        if i is None:
+            if room is not None:
+                if room <= 0:
+                    continue
+                room -= 1
+            have[s["id"]] = len(studies)
+            studies.append(copy.deepcopy(s))
+        elif _note_updated(s) > _note_updated(studies[i]):
+            studies[i] = copy.deepcopy(s)
+        else:
+            continue
+        taken += 1
+    return taken
+
+
+def merge_themes(dst, src):
+    """Guest or file -> profile merge of theme choices: a name the profile has already decided about (accepted,
+    renamed, merged or removed) keeps the profile's choices, and the incoming choices about every other name are
+    added, up to the cap. The choices carry no times, so the profile's own state counts as the newer, which also
+    makes a second import of the same file change nothing. Mutates dst. -> names taken."""
+    cur = dst.setdefault("themes", empty_themes())
+    inc = src.get("themes") if isinstance(src, dict) else None
+    inc = inc if isinstance(inc, dict) else {}
+    lists = {k: _list(inc.get(k)) for k in ("accepted", "removed")}
+    maps = {k: inc.get(k) if isinstance(inc.get(k), dict) else {} for k in ("renamed", "merged")}
+    decided = set(cur["accepted"]) | set(cur["removed"]) | set(cur["renamed"]) | set(cur["merged"])
+    total = sum(len(cur[k]) for k in THEME_KEYS)
+    taken = 0
+    for n in dict.fromkeys(lists["accepted"] + lists["removed"] + list(maps["renamed"]) + list(maps["merged"])):
+        if n in decided or not _theme_name_ok(n):
+            continue
+        adds = [k for k in lists if n in lists[k]] + [k for k in maps if n in maps[k] and _theme_name_ok(maps[k][n])]
+        if not adds or total + len(adds) > THEME_CHOICES_MAX:
+            continue
+        for k in adds:
+            if k in lists:
+                cur[k].append(n)
+            else:
+                cur[k][n] = maps[k][n]
+        total += len(adds)
+        taken += 1
+    return taken
 
 
 # ------------------------------------------------------------------ links (links-spec §1, §2)
@@ -1649,7 +1886,7 @@ EVENT_TYPES = {"chapter.open", "chapter.time", "chapter.read", "verse.study", "x
 STUDY_TYPES = ("verse.study", "xref.open", "word.study", "note.save", "video.add")
 ACTIVITY_TYPES = {"chapter.open", "chapter.read", "chapter.mark", "verse.study", "xref.open", "word.study",
                   "note.save", "video.add", "bookmark.add", "bookmark.remove", "profile.create", "profile.import",
-                  "link.add", "mark.add"}
+                  "link.add", "mark.add", "study.save"}
 
 
 def new_chapter():
@@ -2014,6 +2251,28 @@ def _add_studied_activity(lib, rows, day, now):
     return True
 
 
+def add_study_activity(lib, rows, now):
+    """`study.save` rows for the studies one save made or changed: rows are (study, new). Saving the same study again
+    within 10 minutes of its last row changes that row's title instead of adding another (as note.save coalesces),
+    so a debounced editor is one row. x = {id, title, new}. -> True when the library changed."""
+    changed = False
+    act = lib.setdefault("activity", [])
+    for s, new in rows:
+        x = {"id": s["id"], "title": s.get("title") or "", "new": bool(new)}
+        hit = next((e for e in act[-20:] if e.get("type") == "study.save" and isinstance(e.get("x"), dict)
+                    and e["x"].get("id") == x["id"] and abs(_nonneg_int(e.get("t")) - now) <= 10 * 60 * 1000), None)
+        if hit is not None:
+            if hit["x"].get("title") != x["title"]:
+                hit["x"]["title"] = x["title"]
+                changed = True
+            continue
+        act.append({"t": now, "type": "study.save", "ref": None, "x": x})
+        changed = True
+    if changed:
+        _trim_activity(lib)
+    return changed
+
+
 def add_link_activity(lib, new_links, day, now):
     """New links (links-spec §2): one `link.add` entry each ({t, type, ref: from, x: {id, to, kind}}), and the first
     verse of both ends marked as studied. Deletes write nothing. -> True when anything was added."""
@@ -2034,7 +2293,7 @@ def is_study_day(x):
     return isinstance(x, dict) and (x.get("s", 0) >= 60 or x.get("v", 0) >= 1 or x.get("r", 0) >= 1 or x.get("n", 0) >= 1)
 
 
-def compute_stats(lib, notes_count, today, links_count=0, marks_count=0):
+def compute_stats(lib, notes_count, today, links_count=0, marks_count=0, studies_count=0):
     """Derived stats for GET /api/library (§1.6). `today` is 'YYYY-MM-DD' (client local) or a date."""
     M = meta()
     td = today if isinstance(today, datetime.date) else parse_day(today)
@@ -2094,7 +2353,8 @@ def compute_stats(lib, notes_count, today, links_count=0, marks_count=0):
         "week": {"seconds": week},
         "totals": {"seconds": tot_seconds, "chaptersRead": read, "chaptersTotal": M["total"], "versesStudied": verses,
                    "chaptersStudied": studied_ch, "booksCompleted": completed, "bookmarks": len(lib.get("bookmarks") or []),
-                   "notes": notes_count, "links": links_count, "marks": marks_count, "daysStudied": len(study)},
+                   "notes": notes_count, "links": links_count, "marks": marks_count, "studies": studies_count,
+                   "daysStudied": len(study)},
         "books": books,
     }
 
@@ -2184,10 +2444,11 @@ def guest_summary(notes, lib, links=None, marks=None):
     chs = lib.get("chapters") or {}
     lns = (links or {}).get("links") or {}
     mks = (marks or {}).get("marks") or {}
+    sts = _list(notes.get("studies"))
     # chapters: every chapter with any progress, as the import counts them ("reading progress for N chapters")
     return {"notes": len(refs), "bookmarks": len(bms), "chapters": len(chs),
             "chaptersRead": sum(1 for c in chs.values() if c.get("read")), "links": len(lns), "marks": len(mks),
-            "hasData": bool(refs or bms or chs or lns or mks)}
+            "studies": len(sts), "hasData": bool(refs or bms or chs or lns or mks or sts)}
 
 
 # ------------------------------------------------------------------ export (§1.9)
@@ -2207,7 +2468,7 @@ def export_profile(scope, user=None):
         "exported": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "scope": "guest" if scope == "guest" else "profile",
         "profile": None if user is None else {"name": user.get("name", ""), "email": user.get("email", ""), "created": user.get("created")},
-        "notes": {"refs": notes["refs"], "studies": notes["studies"]},
+        "notes": {"refs": notes["refs"], "studies": notes["studies"], "themes": notes["themes"]},
         "library": {k: lib.get(k) for k in ("version", "rev", "bookmarks", "lastPosition", "chapters", "days", "activity", "imports")},
         "links": {"links": links["links"]},
         "marks": {"marks": marks["marks"]},
@@ -2216,9 +2477,10 @@ def export_profile(scope, user=None):
 
 def clean_import(data, now=None):
     """A GET /api/export/profile file (a profile's or a guest's) -> ({"notes", "links", "marks": {key: record},
-    "library": dict}, skipped). Each record is checked as if it were saved one by one (clean_note / clean_link /
-    clean_mark); one that fails is skipped and counted, never stored. The library is normalised by merge_library.
-    Raises ValueError when the file is not an export at all (hosting brief §1)."""
+    "studies": [study], "themes": choices, "library": dict}, skipped). Each record is checked as if it were saved
+    one by one (clean_note / clean_link / clean_mark / clean_study); one that fails is skipped and counted, never
+    stored. The theme choices keep what clean_themes would (_norm_themes); the library is normalised by
+    merge_library. Raises ValueError when the file is not an export at all (hosting brief §1)."""
     now = now or now_ms()
     if not isinstance(data, dict) or data.get("format") != "bible-study-profile" or not (_is_int(data.get("version")) and data["version"] == 1):
         raise ValueError("not a profile export")
@@ -2234,7 +2496,12 @@ def clean_import(data, now=None):
     lib = data.get("library")
     if lib is not None and not isinstance(lib, dict):
         raise ValueError("library is not an object")
-    out, skipped = {"notes": {}, "links": {}, "marks": {}, "library": lib or {}}, 0
+    sec = data.get("notes") if isinstance(data.get("notes"), dict) else {}
+    studies, themes = sec.get("studies"), sec.get("themes")
+    if (studies is not None and not isinstance(studies, list)) or (themes is not None and not isinstance(themes, dict)):
+        raise ValueError("notes.studies is not a list or notes.themes is not an object")
+    out = {"notes": {}, "links": {}, "marks": {}, "studies": [], "themes": _norm_themes(themes), "library": lib or {}}
+    skipped = 0
 
     def stable(raw):  # never stamp a record with `now`: a second import would see it as newer and take it again
         if isinstance(raw, dict) and raw.get("updated") is None:
@@ -2258,6 +2525,17 @@ def clean_import(data, now=None):
                 skipped += 1
             else:
                 out[field][k] = c
+    seen = set()
+    for s in studies or []:
+        try:
+            c = clean_study(stable(s), now)
+        except InvalidDoc:
+            c = None
+        if c is None or c["id"] in seen:
+            skipped += 1
+        else:
+            seen.add(c["id"])
+            out["studies"].append(c)
     return out, skipped
 
 
@@ -2319,12 +2597,14 @@ def parse_reference(text):
 def _vault_links(text):
     """Verse links as the app writes and resolves them — '[[John 3:16]]', '[[Psalm 23:1]]', '[[Rom 8:28]]',
     '[[Hebrews 6:20–7:3]]', '[[John 3:16|this verse]]', '[[Psalm 23]]' — → the vault's '[[John 3.16|John 3:16]]' /
-    '[[Psalms 23|Psalm 23]]' form (the label stays as written). Links the app would not open as a verse or chapter
-    (topics, books, vault paths, anything else) are left alone."""
+    '[[Psalms 23|Psalm 23]]' form (the label stays as written). A reference to a highlight or comment, '[[John 1:4 ·
+    “the light of men”]]' (study brief §1.1), links the verse's page with the whole reference as its label:
+    '[[John 1.4|John 1:4 · “the light of men”]]'. Links the app would not open as a verse or chapter (topics, books,
+    vault paths, anything else) are left alone."""
     books = meta()["books"]
     def one(m):
         target, alias = m.group(1).strip(), m.group(2)
-        p = parse_reference(target)
+        p = parse_reference(target.split(" · ", 1)[0] if " · " in target else target)
         if not p:
             return m.group(0)
         b, c, v = p
@@ -2407,10 +2687,91 @@ def _highlights(marks):
     return {k: [line for _, rows in sorted(v) for line in rows] for k, v in per_verse.items()}
 
 
+def _verse_text(b, c, v, cache):
+    """The KJV text of one verse from the bundled Bible (app/data/bibles/kjv/NN.json), '' when it is not there.
+    `cache` holds the books read so far for one export."""
+    book = cache.get(b)
+    if book is None:
+        try:
+            with open(os.path.join(APP, "data", "bibles", "kjv", f"{b:02d}.json"), encoding="utf-8") as f:
+                book = json.load(f)
+        except (OSError, ValueError):
+            book = {}
+        cache[b] = book if isinstance(book, dict) else {}
+        book = cache[b]
+    vs = book.get(str(c))
+    if isinstance(vs, list) and 1 <= v <= len(vs) and isinstance(vs[v - 1], str):
+        return re.sub(r"\s+", " ", vs[v - 1]).strip()
+    return ""
+
+
+def _study_file_name(title, used):
+    """A study's file name from its title: characters a vault path or an Obsidian link cannot hold are dropped, an
+    empty title is 'Untitled study', and a repeated title gets ' (2)', ' (3)'. `used` holds the names given so far."""
+    name = re.sub(r"\s+", " ", re.sub(r'[\\/:*?"<>|#^\[\]]+', " ", str(title or ""))).strip() or "Untitled study"
+    base, n = name, 1
+    while name.lower() in used:
+        n += 1
+        name = f"{base} ({n})"
+    used.add(name.lower())
+    return name
+
+
+def _studies_md(notes, marks):
+    """Studies -> [(file name, markdown)] (study brief §1.4): the intro, then each passage as the verse link
+    ('[[John 1.4|John 1:4]]'), the KJV text as a quote, the highlighted words of a highlight entry and the note or
+    comment. Passages in the study's order: as stored for 'custom', by verse for 'bible', by the time each note or
+    highlight was made for 'studied' (a passage with neither last). A highlight that no longer exists is left out."""
+    refs, mks = notes.get("refs") or {}, (marks or {}).get("marks") or {}
+    cache, used, out = {}, set(), []
+    for st in _list(notes.get("studies")):
+        if not isinstance(st, dict):
+            continue
+        rows = []
+        for e in _list(st.get("entries")):
+            key = e.get("key") if isinstance(e, dict) else None
+            if isinstance(key, str) and MARK_ID_RE.fullmatch(key):
+                mk = mks.get(key)
+                p = parse_mark_end(mk.get("start")) if isinstance(mk, dict) else None
+                if not p:
+                    continue
+                quote = re.sub(r"\s+", " ", str(mk.get("quote") or "")).strip()
+                rows.append((p, _nonneg_int(mk.get("created")), quote, str(mk.get("note") or "")))
+            elif isinstance(key, str) and parse_ref(key):
+                b, c, v = parse_ref(key)
+                n = refs.get(key)
+                n = n if isinstance(n, dict) else {}
+                rows.append(((b, c, v), _nonneg_int(n.get("created")), "", str(n.get("text") or "")))
+        order = st.get("order")
+        if order == "bible":
+            rows.sort(key=lambda r: r[0])
+        elif order != "custom":
+            rows.sort(key=lambda r: (r[1] == 0, r[1]))  # a passage with no note or highlight of its own comes last
+        title = clean_text(str(st.get("title") or "")) or "Untitled study"
+        lines = ["---", f"title: {json.dumps(title, ensure_ascii=False)}", "tags: [bible, study]", "---",
+                 f"# {title}", ""]
+        if isinstance(st.get("intro"), str) and st["intro"].strip():
+            lines += [_vault_links(st["intro"].strip()), ""]
+        for (b, c, v), _t, quote, text in rows:
+            lines.append("## " + _vault_link(b, c, v))
+            if v:
+                verse = _verse_text(b, c, v, cache)
+                if verse:
+                    lines.append(f"> {verse}")
+            if quote:
+                lines += ["", f"Highlighted: “{quote}”"]
+            if text.strip():
+                lines += ["", _vault_links(text.strip())]
+            lines.append("")
+        out.append((_study_file_name(title, used), "\n".join(lines).rstrip("\n") + "\n", title))
+    return out
+
+
 def obsidian_zip(notes, library=None, links=None, marks=None):
     """Obsidian-style markdown zip: one file per note, plus Bookmarks.md, Reading Progress.md and Connections.md
-    when non-empty. A verse with marks gets a '## Highlights' section in its file, and a verse at either end of a
-    link a '## Connections' section (the file is created, and listed in the index, when the verse has no note)."""
+    when non-empty, and Studies/<title>.md per study. A verse with marks gets a '## Highlights' section in its file,
+    and a verse at either end of a link a '## Connections' section (the file is created, and listed in the index,
+    when the verse has no note)."""
     books = meta()["books"]
     conn_md, conn = _connections(links)
     hl = _highlights(marks)
@@ -2467,6 +2828,12 @@ def obsidian_zip(notes, library=None, links=None, marks=None):
         if conn_md:
             z.writestr("study-notes/Connections.md", "\n".join(conn_md) + "\n")
             index += ([""] if index[-1] != "" else []) + ["- [[study-notes/Connections|Connections]]"]
+        studies = _studies_md(notes, marks)
+        if studies:
+            index += ([""] if index[-1] != "" else []) + ["## Studies"]
+            for name, md, title in studies:
+                z.writestr(f"study-notes/Studies/{name}.md", md)
+                index.append(f"- [[study-notes/Studies/{name}|{title}]]")
         z.writestr("study-notes/Study Notes Index.md", "\n".join(index))
         lib = library or {}
         bms = lib.get("bookmarks") or []

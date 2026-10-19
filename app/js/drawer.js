@@ -29,6 +29,10 @@ optional(import('./links.js'), 'links.js').then(m => {
 // marks.js (highlights and comments, annotations-brief §3.4) likewise: the Notes tab lists them once it has loaded
 let mrk = null;
 optional(import('./marks.js'), 'marks.js').then(m => { if (!m || typeof m.marksFor !== 'function') return; mrk = m; refreshNoteMarks(); });
+// study.js (note references, the [[ picker and Mentioned in: study-build-brief §1.1) likewise: until it has loaded,
+// a reference to a highlight or comment renders as a plain verse link
+let study = null;
+optional(import('./study.js'), 'study.js').then(m => { if (!m || typeof m.attachPicker !== 'function') return; study = m; refreshNoteMarks(); });
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const bodyEl = () => document.getElementById('drawer-body');
@@ -799,6 +803,7 @@ function notesTab(b, c, v, opts) {
       <div class="tokens" id="tokens">${icon('tag')}${tags.map(t => `<span class="token">#${esc(t)}<button type="button" data-untag="${esc(t)}" aria-label="Remove tag ${esc(t)}">${icon('xmark')}</button></span>`).join('')}<input id="note-tags" placeholder="${tags.length ? 'Add tag' : 'Add tags'}" aria-label="Add a tag, then press Return" autocomplete="off" spellcheck="false"></div>
     </section>`;
   return `${editor}
+    ${study ? safe(study.mentionsHtml, b, c, v) || '' : ''}
     ${v ? markSecHtml(b, c, v) : ''}
     <div class="lh"><h3>Notes in ${esc(refLabel(b, c))}</h3><span id="ch-notes-n">${inCh.length}</span></div>
     <ul class="group" id="ch-notes">${inCh.map(entryRow).join('') || NONE_YET}</ul>
@@ -899,6 +904,9 @@ function refreshNoteMarks() {
       }
     }
   }
+  // Mentioned in (study.js): a comment elsewhere may reference this verse or one of its marks
+  const mn = $('#mentions', root), mh = study ? safe(study.mentionsHtml, b, c, v) || '' : '';
+  if (mn) { if (mh) mn.outerHTML = mh; else mn.remove(); } else if (mh) $('.note-card', root)?.insertAdjacentHTML('afterend', mh);
   const ul = $('#ch-notes', root), row = rowSel(ul), inCh = chapterEntries(b, c);
   ul.innerHTML = inCh.map(entryRow).join('') || NONE_YET;
   setText('ch-notes-n', String(inCh.length));
@@ -931,6 +939,7 @@ function noteRow([k, x]) {
  * Note Markdown → HTML. Tokenised on the raw text: every piece is escaped on its own and output is never
  * re-scanned, so note text cannot inject markup or attributes. Supports # headings, - lists, > quotes,
  * **bold**, *italic*, `code`, [text](https://…) and verse links [[Romans 5:8]] / [[John 3.16|John 3:16]] (Obsidian).
+ * A reference to a highlight or comment, [[John 1:4 · “the light of men”]], is a chip (study.js refChipHtml).
  */
 export function renderMd(text) {
   const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
@@ -952,7 +961,8 @@ export function renderMd(text) {
 }
 const MD_INLINE = [
   { rx: /`([^`]+)`/, html: m => `<code>${esc(m[1])}</code>` },
-  { rx: /\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]/, html: m => `<a class="vlink" data-ref="${esc(m[1].trim())}" role="link" tabindex="0">${esc((m[2] || m[1]).trim())}</a>` },
+  { rx: /\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]/, html: m => (study && m[0].includes(' · ') ? safe(study.refChipHtml, m[0].slice(2, -2)) : '')
+    || `<a class="vlink" data-ref="${esc(m[1].trim())}" role="link" tabindex="0">${esc((m[2] || m[1]).trim())}</a>` },
   { rx: /\[([^\[\]]+)\]\((https?:\/\/[^\s()<>"'`]+)\)/, html: m => `<a href="${esc(m[2])}" target="_blank" rel="noopener">${esc(m[1])}</a>` },
   { rx: /\*\*(.+?)\*\*/, html: m => `<b>${mdInline(m[1])}</b>` },
   { rx: /(^|[^\w*])\*([^*\s](?:[^*]*[^*\s])?)\*(?![\w*])/, lead: 1, html: m => `<i>${mdInline(m[2])}</i>` },
@@ -1012,6 +1022,7 @@ function bindNotes(root, opts) {
     });
     fit();
     if (opts.focus) { ta.focus({ preventScroll: true }); const L = ta.value.length; try { ta.setSelectionRange(L, L); } catch (e) { /* ignore */ } }
+    if (study) safe(study.attachPicker, ta, { self: key, b: state.book, c: state.chapter }); // typing [[ links a note, a mark or a verse
   }
   const tin = $('#note-tags', root);
   tin?.addEventListener('keydown', e => {
@@ -1305,7 +1316,13 @@ function onBodyClick(e) {
   const t = e.target; const root = bodyEl();
   const f = t.closest('#xfilter [data-f]'); if (f) { if (!f.disabled) { state.xfilter = f.dataset.f; applyFilter(); } return; }
   const md = t.closest('#md-mode [data-mode]'); if (md) { if (!md.disabled && md.getAttribute('aria-checked') !== 'true') { mdMode = md.dataset.mode; renderDrawer({ keepScroll: true, focus: mdMode === 'write', focusTo: mdMode === 'preview' ? '#md-mode [aria-checked="true"]' : null }); } return; }
-  const vl = t.closest('.vlink'); if (vl) { e.preventDefault(); if (A.goReference(vl.dataset.ref)) A.yieldToPage(); return; }
+  const vl = t.closest('.vlink');
+  if (vl) { // a chip to a highlight or comment opens its margin popover (marks.js); without the mark, the verse
+    e.preventDefault();
+    if (vl.dataset.mark && mrk && safe(mrk.goMarkRef, vl.dataset.mark, vl.dataset.ref)) { A.yieldToPage(); return; }
+    if (A.goReference(vl.dataset.ref)) A.yieldToPage();
+    return;
+  }
   if (t.closest('[data-md]') && !t.closest('a')) {
     const sl = window.getSelection?.(); if (sl && !sl.isCollapsed && t.closest('[data-md]').contains(sl.anchorNode)) return; // selecting text to copy
     mdMode = 'write'; renderDrawer({ keepScroll: true, focus: true }); return;
