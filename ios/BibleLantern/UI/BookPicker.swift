@@ -52,6 +52,7 @@ struct BookPicker: View {
 
 struct ChapterGrid: View {
     @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) private var dismiss
     let book: Book
     let pick: (Int) -> Void
 
@@ -75,5 +76,6 @@ struct ChapterGrid: View {
         }
         .navigationTitle(book.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
     }
 }

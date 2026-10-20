@@ -16,6 +16,7 @@
     { "source": "/support", "destination": "https://buymeacoffee.com/biblelantern", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*" }
   ],
   "headers": [

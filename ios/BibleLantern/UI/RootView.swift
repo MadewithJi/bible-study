@@ -20,6 +20,7 @@ struct RootView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { TabBar() }
         .background(pageBackground.ignoresSafeArea())
+        .animation(.easeInOut(duration: 0.25), value: model.page.home)
         .preferredColorScheme(model.colorScheme)
         .animation(.easeInOut(duration: 0.18), value: model.tab)
         .sheet(isPresented: $model.showPicker) { BookPicker().environmentObject(model) }
@@ -32,9 +33,11 @@ struct RootView: View {
         .onChange(of: dynamicType) { _, size in model.applyDynamicType(size) }
     }
 
-    /// The site's own page colours, so the status bar and the edges match the page (light #f5f3ee, dark black).
+    /// The site's own page colours, so the status bar and the edges match the page (light #f5f3ee, dark black);
+    /// Home opens on a dark cover (the engraving), so its strip is dark in both themes.
     private var pageBackground: Color {
-        model.page.dark ? Color.black : Color(red: 245 / 255, green: 243 / 255, blue: 238 / 255)
+        if model.tab == .profile { return Color(uiColor: .systemBackground) }
+        return model.page.dark || (model.page.home && model.tab == .home) ? Color.black : Color(red: 245 / 255, green: 243 / 255, blue: 238 / 255)
     }
 }
 

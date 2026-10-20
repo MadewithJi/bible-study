@@ -29,7 +29,9 @@ struct ExploreSheet: View {
                                 Spacer()
                                 if open == it.name { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
                             }
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
                     if !open.isEmpty {
                         Button("Close the \(items.first { $0.name == open }?.title.lowercased() ?? "panel")") { model.web.panel(""); dismiss() }

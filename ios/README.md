@@ -36,13 +36,25 @@ top bar and sets `--bar-h: 0`; `main.js` loads `app/js/shell.js` at the end of b
 
 On the open web nothing changes: without the user agent or the flag the module never loads.
 
-## Building (needs Xcode)
+## Building and running
 
-1. Install Xcode from the Mac App Store (the command-line tools alone cannot build for iOS), open it once to install the
-   iOS platform, then `sudo xcode-select -s /Applications/Xcode.app`.
+1. Xcode from the Mac App Store (the command-line tools alone cannot build for iOS), then
+   `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` and, for a simulator, the iOS platform:
+   `xcodebuild -downloadPlatform iOS` (several GB; let it finish).
 2. Open `ios/BibleLantern.xcodeproj`. In the target's Signing & Capabilities pane choose your team (automatic
-   signing); Xcode writes the team id into the project.
+   signing); Xcode writes the team id into the project. Or from a terminal:
+   `xcodebuild -project ios/BibleLantern.xcodeproj -scheme BibleLantern -destination 'generic/platform=iOS Simulator' build`.
 3. Run on an iPhone simulator (⌘R). The app loads the live site; sign in with your own profile.
+
+**Until the bridge is deployed** (PR #6), the live site has no app-shell mode, so the app shows the page as it is
+after a few seconds (its own top bar, no tab following). To test the real thing, serve this branch locally
+(`python3 serve.py --port 8861 --data-dir .design/linkstest/ios-shell`) and point a Debug build at it:
+
+```bash
+xcrun simctl spawn booted defaults write com.biblelantern.app bl.site http://localhost:8861
+```
+
+Delete the key (`defaults delete com.biblelantern.app bl.site`) to go back to the live site. Release builds ignore it.
 
 Universal links (stage 4) need the team id in `Config/apple-app-site-association.json`, served from the site at
 `/.well-known/apple-app-site-association` as `application/json` (a `vercel.json` header rule).

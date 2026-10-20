@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Privacy · Bible Lantern</title>
+<meta name="description" content="What Bible Lantern keeps, where, and why: your profile, your notes, and nothing else.">
+<link rel="canonical" href="https://www.biblelantern.com/privacy">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<style>
+  :root { color-scheme: light dark; --bg: #f5f3ee; --ink: #1d1d1f; --ink-2: #515154; --sep: rgba(0,0,0,.12); --link: #0071e3; --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #000; --ink: #f5f5f7; --ink-2: #a1a1a6; --sep: rgba(255,255,255,.16); --link: #2997ff; } }
+  html { background: var(--bg); }
+  body { margin: 0; padding: 0 20px 64px; font: 17px/1.55 var(--sans); color: var(--ink); -webkit-text-size-adjust: 100%; }
+  main { max-width: 640px; margin: 0 auto; }
+  header { padding: 40px 0 8px; }
+  .wordmark { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 600; letter-spacing: -.01em; }
+  .wordmark svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  h1 { font: 600 34px/1.15 var(--sans); letter-spacing: -.02em; margin: 28px 0 6px; }
+  .lede { font: 20px/1.45 var(--serif); color: var(--ink-2); margin: 0 0 28px; }
+  h2 { font: 600 20px/1.3 var(--sans); letter-spacing: -.01em; margin: 32px 0 8px; padding-top: 20px; border-top: 1px solid var(--sep); }
+  p, li { margin: 0 0 12px; }
+  ul { padding-left: 22px; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .meta { color: var(--ink-2); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+<header><a class="wordmark" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path d="M12 10.3v6.2M9.8 12.4h4.4"/></svg>Bible Lantern</a></header>
+
+<h1>Privacy</h1>
+<p class="lede">Bible Lantern keeps what you write and where you are reading, so that it is there when you come back. Nothing else, and never for anyone else.</p>
+<p class="meta">Last updated 19 October 2026 · applies to www.biblelantern.com and the Bible Lantern app for iPhone and iPad.</p>
+
+<h2>What is kept, and why</h2>
+<ul>
+  <li><strong>Without a profile</strong>, your notes, highlights, links, bookmarks and reading position stay in your browser (on the website) and are not sent to us. The chapters, maps, cross-references and engravings are fetched from our server as you read, like any web page.</li>
+  <li><strong>With a profile</strong>, we keep your email address, the name you give, a salted hash of your password (never the password itself), and your study: notes, highlights, comments, links, bookmarks, studies, themes, reading progress and the settings you choose. They are stored so that they follow you to every browser and device you sign in on.</li>
+  <li><strong>Sign-in sessions</strong> use one cookie, set only when you sign in, so that you stay signed in. It holds a random token, not your email or password.</li>
+  <li><strong>Server logs</strong> record requests (the address requested, the time, the status, and your network address) for a short period, to keep the service running and to spot abuse. They are not used to profile readers.</li>
+</ul>
+
+<h2>What is not done</h2>
+<ul>
+  <li>No advertising, no advertising identifiers, no sale or sharing of your data with anyone.</li>
+  <li>No tracking across other sites or apps.</li>
+  <li>The iPhone and iPad app contains no analytics and no third-party tracking code.</li>
+  <li>Your notes and highlights are yours. We do not read them except where you ask for help with your account.</li>
+</ul>
+
+<h2>Services we rely on</h2>
+<ul>
+  <li><strong>Hosting.</strong> The website is served by Vercel and the profile server runs on Railway. Your profile data lives on the Railway server.</li>
+  <li><strong>Cloudflare Turnstile</strong> checks that a sign-up comes from a person, not a script. It runs only on the sign-up form.</li>
+  <li><strong>Vercel Web Analytics</strong> counts page views on the website without cookies and without identifying you. It is not loaded inside the app.</li>
+  <li><strong>Optional translations.</strong> If you add your own API key for the ESV or NLT text, the passages you open are requested from that publisher’s service; the key is stored with your profile and used only for your requests.</li>
+  <li><strong>Maps.</strong> The map of places loads tiles from a map provider as you move it; that provider sees the usual request details, as with any map on the web.</li>
+</ul>
+
+<h2>Your choices</h2>
+<ul>
+  <li><strong>Export</strong> everything in your profile at any time from the Profile dialog (a single file you can keep, or a vault for Obsidian).</li>
+  <li><strong>Delete your profile</strong> from the Profile dialog. Your profile and all of its study are removed from the server at once.</li>
+  <li><strong>Sign out everywhere</strong> ends every session on every device.</li>
+</ul>
+
+<h2>Children</h2>
+<p>Bible Lantern is suitable for all ages and collects nothing beyond what is described here. A profile is optional and asks only for an email address and a name.</p>
+
+<h2>Questions</h2>
+<p>Write to us at <a href="mailto:hello@biblelantern.com">hello@biblelantern.com</a>. If this page changes, the date at the top changes with it.</p>
+</main>
+</body>
+</html>
