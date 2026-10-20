@@ -4569,7 +4569,8 @@ class T25_Release1Fixes(Base):
         self.assertEqual(give, [{"source": "/donate", "destination": DONATE, "permanent": False},
                                 {"source": "/support", "destination": DONATE, "permanent": False}])
         self.assertTrue(all(set(r) <= {"source", "destination", "permanent", "has", "missing"} for r in v["redirects"]))
-        self.assertEqual(v["rewrites"], [{"source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*"}])
+        self.assertEqual(v["rewrites"], [{"source": "/privacy", "destination": "/privacy.html"},  # the privacy page (ios-brief §3)
+                                         {"source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*"}])
         noindex = [h for h in v["headers"] if any(c.get("type") == "host" for c in h.get("has", []))]
         self.assertEqual(len(noindex), 1)
         self.assertEqual(noindex[0]["headers"], [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}])
