@@ -1,51 +1,61 @@
 import SwiftUI
 
-/// The native Read toolbar (ios-brief §1): the reference opens the book picker; chapter steps; the translation
-/// menu; search; Explore (arcs, graph, map, art); share. While a dialog in the page has the screen it waits.
-struct ReadToolbar: View {
+/// The Read tab's glass toolbar (ios-brief §6): the reference leading (it opens the book picker); translation,
+/// search, Explore and share trailing. While a dialog in the page has the screen the items wait.
+struct ReadChrome: ViewModifier {
+    @EnvironmentObject var model: AppModel
+
+    func body(content: Content) -> some View {
+        let p = model.page
+        content.toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { model.showPicker = true } label: {
+                    HStack(spacing: 4) {
+                        Text(p.chapterLabel).font(.headline).lineLimit(1)
+                        Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityLabel("Choose book and chapter, now \(p.chapterLabel)")
+            }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                TranslationMenu()
+                Button { model.showSearch = true } label: { Image(systemName: "magnifyingglass") }
+                    .accessibilityLabel("Search")
+                Button { model.showExplore = true } label: { Image(systemName: "sparkles") }
+                    .accessibilityLabel("Explore: arcs, graph, map and art")
+                Button { model.share() } label: { Image(systemName: "square.and.arrow.up") }
+                    .accessibilityLabel("Share")
+            }
+        }
+        .disabled(p.anyOverlay)
+    }
+}
+
+/// ‹ John 3 › above the tab bar: the chapter steps where the thumb is; the reference opens the picker.
+struct ChapterStepper: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
         let p = model.page
-        HStack(spacing: 2) {
+        HStack(spacing: 0) {
+            Button { model.web.step(-1) } label: {
+                Image(systemName: "chevron.left").font(.body.weight(.semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .disabled(p.b == 1 && p.c == 1)
+            .accessibilityLabel("Previous chapter")
             Button { model.showPicker = true } label: {
-                HStack(spacing: 4) {
-                    Text(p.chapterLabel).font(.headline).lineLimit(1).minimumScaleFactor(0.8)
-                    Image(systemName: "chevron.down").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 6)
-                .frame(height: 36)
-                .contentShape(Rectangle())
+                Text(p.chapterLabel).font(.subheadline.weight(.semibold)).lineLimit(1).frame(maxWidth: .infinity).contentShape(Rectangle())
             }
             .accessibilityLabel("Choose book and chapter, now \(p.chapterLabel)")
-            Spacer(minLength: 2)
-            toolButton("chevron.left", "Previous chapter", disabled: p.b == 1 && p.c == 1) { model.web.step(-1) }
-            toolButton("chevron.right", "Next chapter", disabled: p.b == 66 && p.c == 22) { model.web.step(1) }
-            TranslationMenu()
-            toolButton("magnifyingglass", "Search") { model.showSearch = true }
-            toolButton("sparkles", "Explore: arcs, graph, map and art") { model.showExplore = true }
-            toolButton("square.and.arrow.up", "Share") { model.share() }
+            Button { model.web.step(1) } label: {
+                Image(systemName: "chevron.right").font(.body.weight(.semibold)).frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .disabled(p.b == 66 && p.c == 22)
+            .accessibilityLabel("Next chapter")
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primary)
-        .padding(.horizontal, 8)
-        .frame(height: 44)
-        .background(.bar)
-        .overlay(alignment: .bottom) { Divider() }
         .disabled(p.anyOverlay)
-        .opacity(p.anyOverlay ? 0.5 : 1)
-    }
-
-    private func toolButton(_ symbol: String, _ label: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .medium))
-                .frame(width: 34, height: 36)
-                .contentShape(Rectangle())
-        }
-        .disabled(disabled)
-        .opacity(disabled ? 0.35 : 1)
-        .accessibilityLabel(label)
     }
 }
 
@@ -77,13 +87,7 @@ struct TranslationMenu: View {
                 }
             }
         } label: {
-            Text(abbr(cur, in: list))
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 8)
-                .frame(height: 26)
-                .background(Color.secondary.opacity(0.15), in: Capsule())
-                .padding(.horizontal, 2)
-                .contentShape(Rectangle())
+            Text(abbr(cur, in: list)).font(.caption.weight(.semibold))
         }
         .accessibilityLabel("Translation, now \(abbr(cur, in: list))")
     }

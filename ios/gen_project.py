@@ -14,7 +14,7 @@ OUT = ROOT / 'BibleLantern.xcodeproj' / 'project.pbxproj'
 
 APP = 'BibleLantern'
 BUNDLE_ID = 'com.biblelantern.app'
-DEPLOYMENT_TARGET = '17.0'
+DEPLOYMENT_TARGET = '26.0'
 MARKETING_VERSION = '1.0'
 BUILD = '1'
 

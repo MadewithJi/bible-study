@@ -61,10 +61,13 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// A tab tap: the page moves to it; Profile is native and leaves the page where it is.
+    /// The tab bar's selection: a tap moves the page to that tab (Profile is native and leaves the page where it is);
+    /// the page's own navigation sets `tab` directly (follow) and the bar follows.
+    var tabSelection: Binding<Tab> { Binding(get: { self.tab }, set: { self.select($0) }) }
+
     func select(_ t: Tab) {
+        guard t != tab else { return }
         haptic.selectionChanged()
-        if t == tab && t != .profile { web.closeOverlays(); if t == .home || t == .read { web.open(t.rawValue) }; return }
         tab = t
         switch t {
         case .home, .read, .study, .library: web.open(t.rawValue)

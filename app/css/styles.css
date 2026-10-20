@@ -2699,5 +2699,10 @@ body.tb-dragging, body.tb-dragging * { cursor: grabbing !important; }
 /* ------------------------------------------------------------ app shell (ios-brief §2)
    Inside the iOS app (html.app-shell, set by index.html from the user agent or ?app=ios) the native tab bar and Read
    toolbar replace the top bar: it is hidden and the page starts at the top. Nothing else changes. */
-html.app-shell { --bar-h: 0px; }
+html.app-shell { --bar-h: env(safe-area-inset-top, 0px); } /* the glass toolbar's height, from the web view's safe area (ios-brief §6) */
 html.app-shell #topbar { display: none; }
+html.app-shell .page { padding-bottom: env(safe-area-inset-bottom, 0px); } /* the floating tab bar */
+html.app-shell #home { padding-top: 0; padding-bottom: env(safe-area-inset-bottom, 0px); } /* the cover runs under the status bar */
+html.app-shell #home .mast { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+/* iOS zooms the page in when a field smaller than 16px takes focus; the app's fields keep the page where it is */
+html.app-shell :is(input, select, textarea):not([type=range], [type=checkbox], [type=radio]) { font-size: 16px; }

@@ -1,28 +1,30 @@
 import SwiftUI
 
-/// The page with the native chrome around it: the Read toolbar above, the tab bar below, Profile over it (ios-brief §1).
+/// The page inside the system's glass chrome (ios-brief §6): a `TabView` draws the floating tab bar, the Read tab
+/// wears a glass toolbar and a chapter stepper above the tab bar, Profile is native. The page runs edge to edge
+/// beneath the bars; app-shell mode keeps its own layout below them through the safe-area insets.
 struct RootView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     var body: some View {
-        ZStack {
-            WebView(controller: model.web)
-            if model.tab == .profile {
-                ProfileView()
-                    .background(Color(uiColor: .systemBackground))
-                    .transition(.opacity)
-            }
-            if !model.web.ready { LoadingView() }
+        TabView(selection: model.tabSelection) {
+            Tab(value: AppModel.Tab.home) { pane(.home) } label: { Label("Home", systemImage: "house") }
+            Tab(value: AppModel.Tab.read) {
+                NavigationStack {
+                    pane(.read)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(.hidden, for: .navigationBar)
+                        .modifier(ReadChrome())
+                }
+            } label: { Label("Read", systemImage: "book") }
+            Tab(value: AppModel.Tab.study) { pane(.study) } label: { Label("Study", systemImage: "highlighter") }
+            Tab(value: AppModel.Tab.library) { pane(.library) } label: { Label("Library", systemImage: "books.vertical") }
+            Tab(value: AppModel.Tab.profile) { ProfileView() } label: { Label("Profile", systemImage: "person.crop.circle") }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if model.tab == .read { ReadToolbar() }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) { TabBar() }
-        .background(pageBackground.ignoresSafeArea())
-        .animation(.easeInOut(duration: 0.25), value: model.page.home)
+        .modifier(ChapterStepperAccessory())
+        .overlay { if !model.web.ready { LoadingView() } }
         .preferredColorScheme(model.colorScheme)
-        .animation(.easeInOut(duration: 0.18), value: model.tab)
         .sheet(isPresented: $model.showPicker) { BookPicker().environmentObject(model) }
         .sheet(isPresented: $model.showSearch) { SearchSheet().environmentObject(model) }
         .sheet(isPresented: $model.showExplore) { ExploreSheet().environmentObject(model) }
@@ -33,11 +35,28 @@ struct RootView: View {
         .onChange(of: dynamicType) { _, size in model.applyDynamicType(size) }
     }
 
-    /// The site's own page colours, so the status bar and the edges match the page (light #f5f3ee, dark black);
-    /// Home opens on a dark cover (the engraving), so its strip is dark in both themes.
+    /// The web view, edge to edge, in the tab that is selected; the page's own colour fills the edges meanwhile.
+    private func pane(_ tab: AppModel.Tab) -> some View {
+        WebPane(controller: model.web, active: model.tab == tab)
+            .ignoresSafeArea()
+            .background(pageBackground.ignoresSafeArea())
+    }
+
+    /// The site's page colours (light #f5f3ee, dark black), so the edges match the page before it paints.
     private var pageBackground: Color {
-        if model.tab == .profile { return Color(uiColor: .systemBackground) }
-        return model.page.dark || (model.page.home && model.tab == .home) ? Color.black : Color(red: 245 / 255, green: 243 / 255, blue: 238 / 255)
+        model.page.dark || model.page.home ? Color.black : Color(red: 245 / 255, green: 243 / 255, blue: 238 / 255)
+    }
+}
+
+/// The chapter stepper above the tab bar while reading (iOS 26.1): ‹ John 3 ›, the reference opening the picker.
+private struct ChapterStepperAccessory: ViewModifier {
+    @EnvironmentObject var model: AppModel
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content.tabViewBottomAccessory(isEnabled: model.tab == .read) { ChapterStepper() }
+        } else {
+            content
+        }
     }
 }
 
@@ -51,7 +70,7 @@ struct LoadingView: View {
             if let failed = model.web.failed {
                 Text("Can’t reach biblelantern.com right now.").foregroundStyle(.secondary)
                 Text(failed).font(.footnote).foregroundStyle(.tertiary).multilineTextAlignment(.center)
-                Button("Try again") { model.web.load() }.buttonStyle(.borderedProminent)
+                Button("Try again") { model.web.load() }.buttonStyle(.glassProminent)
             } else {
                 ProgressView()
             }

@@ -44,3 +44,21 @@ Built without Xcode (only the command-line tools are installed): the Xcode 16 pr
 Deviations from §1: the Original (interlinear) toggle sits in the Explore sheet as well as in Profile, because it is a
 reading tool; the Read toolbar carries Share; the parallel translation is in the translation menu. Stage 2 starts
 when Xcode is installed and the app runs on a simulator.
+
+## 6. Liquid Glass (Ji, 2026-10-19: “modernize the look of the app with the latest apple frosted glass look”)
+
+The shell adopts Apple's current design language rather than drawing its own bars:
+- **Tab bar**: SwiftUI `TabView` with `Tab` values (Home · Read · Study · Library · Profile), so the system draws the
+  floating glass tab bar, its selection animation, VoiceOver and the iPad form. The one web view moves between the
+  content tabs (a container per tab adopts it when that tab is selected); Profile stays native.
+- **Read chrome**: a `NavigationStack` toolbar on the Read tab (glass, automatically): the reference button leading,
+  translation · search · Explore · share trailing with a `ToolbarSpacer`; the chapter stepper lives in a
+  `tabViewBottomAccessory` above the tab bar, close to the thumb (‹ John 3 ›), only on Read.
+- **Edge to edge**: the page extends under the bars (`ignoresSafeArea`); WebKit insets the scrolling and exposes the
+  insets as `env(safe-area-inset-*)`, and app-shell mode sets `--bar-h: env(safe-area-inset-top)` so the chapter hero,
+  the scroll padding and the study sheet sit below the glass as they sat below the old bar.
+- **Sheets** (Explore, picker, search) and Profile's list are standard, so they are glass already; buttons that float
+  use `.buttonStyle(.glass)`.
+- **Deployment target iOS 26** (from 17): the glass APIs exist only there; the website serves everyone else. The
+  bottom accessory needs 26.1 and is gated.
+
