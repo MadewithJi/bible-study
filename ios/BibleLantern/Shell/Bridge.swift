@@ -1,6 +1,7 @@
 import Foundation
 
-/// What the page reports (shell.js `snapshot()`), as one `state` message per change and once as `ready`.
+/// What the page reports (shell.js `snapshot()`), as one `state` message per change and once as `ready`. (The page's
+/// `failed` message carries only its text; WebController reads that one itself.)
 struct PageState: Codable, Equatable {
     var home = true
     var b = 43
@@ -23,6 +24,8 @@ struct PageState: Codable, Equatable {
     var hosted = true
     var lost = false
     var url = ""
+    /// The page's history has a chapter to go back to (its Back, `BL.back()`).
+    var canBack = false
 
     var libraryOpen: Bool { overlays.contains("library") }
     var anyOverlay: Bool { !overlays.isEmpty }
@@ -38,6 +41,7 @@ struct PageState: Codable, Equatable {
         theme = get(.theme, theme); dark = get(.dark, dark); font = get(.font, font)
         signedIn = get(.signedIn, signedIn); name = get(.name, name); email = get(.email, email)
         hosted = get(.hosted, hosted); lost = get(.lost, lost); url = get(.url, url)
+        canBack = get(.canBack, canBack)
     }
     init() {}
 }

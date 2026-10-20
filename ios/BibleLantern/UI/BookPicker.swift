@@ -52,7 +52,6 @@ struct BookPicker: View {
 
 struct ChapterGrid: View {
     @EnvironmentObject var model: AppModel
-    @Environment(\.dismiss) private var dismiss
     let book: Book
     let pick: (Int) -> Void
 
@@ -76,6 +75,7 @@ struct ChapterGrid: View {
         }
         .navigationTitle(book.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        // the sheet's own flag: `dismiss` in a pushed view only pops back to the books
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { model.showPicker = false } } }
     }
 }

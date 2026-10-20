@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// The Profile tab (ios-brief §1): who is signed in, the reading settings, the page's Settings, support, sign out.
+/// The Profile tab (ios-brief §1): who is signed in, the reading settings, the page's Settings, privacy, sign out.
+/// No giving link: kept out of the app as a precaution under App Review 3.1.1 (ios-brief §6, pending Ji's call).
 struct ProfileView: View {
     @EnvironmentObject var model: AppModel
-    @Environment(\.dynamicTypeSize) private var dynamicType
     @State private var confirmSignOut = false
 
     var body: some View {
@@ -40,13 +40,11 @@ struct ProfileView: View {
                         HStack { Text("Text size"); Spacer(); Text("\(p.font) px").foregroundStyle(.secondary) }
                     }
                     .disabled(model.followDynamicType)
-                    Toggle("Use the system text size", isOn: $model.followDynamicType)
-                        .onChange(of: model.followDynamicType) { _, on in if on { model.applyDynamicType(dynamicType) } }
+                    Toggle("Use the system text size", isOn: $model.followDynamicType) // AppModel applies it
                     Toggle("Original language under each verse", isOn: Binding(get: { p.orig }, set: { model.web.setOrig($0) }))
                 }
                 Section("More") {
                     Button { model.openInPage("settings") } label: { Label("Settings", systemImage: "gearshape") }
-                    Button { model.open(Site.donate) } label: { Label("Support Bible Lantern", systemImage: "heart") }
                     Button { model.open(Site.privacy) } label: { Label("Privacy", systemImage: "hand.raised") }
                 }
                 if p.signedIn {

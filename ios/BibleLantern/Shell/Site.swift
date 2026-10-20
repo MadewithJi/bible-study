@@ -11,7 +11,8 @@ enum Site {
         #endif
         return production
     }
-    /// Navigations inside these hosts stay in the app; anything else (Bible Gateway, Buy Me a Coffee, mail) opens outside.
+    /// http(s) navigations inside these hosts stay in the app; any other site (Bible Gateway, YouTube), and mail, phone
+    /// or message links, open outside (WebController.stays).
     static var hosts: Set<String> {
         var h: Set<String> = ["www.biblelantern.com", "biblelantern.com"]
         if let o = base.host?.lowercased() { h.insert(o) }
@@ -19,7 +20,6 @@ enum Site {
     }
     /// `?app=ios` is the shell flag index.html reads before the first paint; the user agent carries it too (WebController).
     static var start: URL { URL(string: "?app=ios#home", relativeTo: base)!.absoluteURL }
-    static let donate = URL(string: "https://www.biblelantern.com/donate")!
     static let privacy = URL(string: "https://www.biblelantern.com/privacy")!
     static let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     static let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"

@@ -156,12 +156,13 @@ const A = {
     if (!has(library, 'toggleBookmark')) { toast('Bookmarks are unavailable right now. Reload to try again.'); return undefined; }
     return libCall('toggleBookmark', b, c, v);
   },
-  /** The Library: home, a book ({book}), a bookmark ({bookmark: id}) or My map ({view: 'map', tag}: a link card's tag chip). */
+  /** The Library: home, a book ({book}), a bookmark ({bookmark: id}), My map ({view: 'map', tag}: a link card's tag chip)
+   *  or the Study views ({view: 'study'}: the iOS app's Study tab). */
   openLibrary(opts = {}) {
     if (!has(library, 'openLibrary')) { toast('The Library is unavailable right now. Reload to try again.'); return; }
     hideResume();
     const { book = null, bookmark = null, view = null, tag = null } = opts || {};
-    libCall('openLibrary', { book, bookmark, view: view === 'map' ? 'map' : null, tag: view === 'map' && typeof tag === 'string' ? tag : null });
+    libCall('openLibrary', { book, bookmark, view: view === 'map' || view === 'study' ? view : null, tag: view === 'map' && typeof tag === 'string' ? tag : null });
   },
   resume(pos, opts = {}) { resumeTo(pos, opts); },
   markRead(b, c, read) { return markRead(b, c, read); },
@@ -695,7 +696,8 @@ function openSettings() {
 }
 /** The reading size (the Settings slider's range), from the slider or the app shell (shell.js). */
 function setFont(px) {
-  const n = Math.min(32, Math.max(12, Math.round(+px || 0))); if (!n) return;
+  const v = px === '' || px == null ? NaN : Math.round(+px); if (!Number.isFinite(v)) return; // not a size: nothing changes
+  const n = Math.min(32, Math.max(12, v));
   document.documentElement.style.setProperty('--read-size', n + 'px'); lsSet('bs-font', String(n));
   const fs = $('#fontsize'); if (fs) { fs.value = String(n); setRangeFill(fs); }
 }
@@ -1550,16 +1552,23 @@ async function boot() {
     adoptSavedTranslations(savedTr, savedTr2);
     render({ keepScroll: true }); refreshPicker(); homeCall('refresh');
   }
-  // the iOS app's bridge (ios-brief §2), after the reader and the account are known
-  if (document.documentElement.classList.contains('app-shell')) import('./shell.js').then(m => m.initShell(A, { openPicker, applyTheme, setFont, setTr, openProfile, signOut })).catch(e => console.error('shell.js failed to load', e));
+  // the iOS app's bridge (ios-brief §2), after the reader and the account are known; if it cannot start, the app says so
+  if (document.documentElement.classList.contains('app-shell')) import('./shell.js').then(m => m.initShell(A, { openPicker, applyTheme, setFont, setTr, openProfile, signOut })).catch(e => { console.error('shell.js failed to load', e); shellFailed(e); });
   if (DRY) toast('Dry run: nothing will be saved.');
   else if (!state.serverOk) toast(hostedMsg('Running without serve.py, so notes are kept in this browser only.', 'Can’t reach the server right now. Reading works; saving will be back shortly.'));
   const last = validPos(libCall('currentPosition'));
   if (hadHash && last && (last.b !== state.book || last.c !== state.chapter) && Date.now() - last.t < 60 * DAY) showResume(last);
   (window.requestIdleCallback || (f => setTimeout(f, 400)))(() => { [data.people(), data.places(), data.events(), data.orig(state.book), data.topics()].forEach(p => p && p.catch && p.catch(() => {})); });
 }
+/** Inside the iOS app, a page that cannot start tells the shell itself (shell.js may never have loaded), so it offers
+ *  Try again instead of a dead page; in a browser check (?app=ios) there is no handler and nothing is sent. */
+function shellFailed(e) {
+  if (!document.documentElement.classList.contains('app-shell')) return;
+  try { window.webkit?.messageHandlers?.bl?.postMessage({ type: 'failed', message: String((e && e.message) || e) }); } catch (err) { /* no handler */ }
+}
 boot().catch(e => {
   console.error(e);
+  shellFailed(e); // first: nothing below may stop it
   if (state.home) setHomeShown(false); // the message sits in the reader
   const el = document.getElementById('reader');
   const how = likelyHosted() ? 'Reload the page to try again.' : 'Run <code>python3 serve.py</code> and open http://localhost:8765.';

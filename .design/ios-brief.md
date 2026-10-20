@@ -61,4 +61,6 @@ The shell adopts Apple's current design language rather than drawing its own bar
   use `.buttonStyle(.glass)`.
 - **Deployment target iOS 26** (from 17): the glass APIs exist only there; the website serves everyone else. The
   bottom accessory needs 26.1 and is gated.
+- **No giving inside the app** (App Review 3.1.1): Profile has no Support row and app-shell mode hides the page's
+  donate links (the sign-up pause keeps its words); the open web is unchanged. Pending Ji's call.
 
