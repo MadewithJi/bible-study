@@ -2704,5 +2704,7 @@ html.app-shell #topbar { display: none; }
 html.app-shell .page { padding-bottom: env(safe-area-inset-bottom, 0px); } /* the floating tab bar */
 html.app-shell #home { padding-top: 0; padding-bottom: env(safe-area-inset-bottom, 0px); } /* the cover runs under the status bar */
 html.app-shell #home .mast { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+/* a dialog keeps clear of the status bar and the floating tab bar (the page runs under both) */
+html.app-shell dialog.modal { margin-top: calc(env(safe-area-inset-top, 0px) + 12px); margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px); }
 /* iOS zooms the page in when a field smaller than 16px takes focus; the app's fields keep the page where it is */
 html.app-shell :is(input, select, textarea):not([type=range], [type=checkbox], [type=radio]) { font-size: 16px; }
