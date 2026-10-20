@@ -1,6 +1,9 @@
 import WebKit
 import Combine
 import UIKit
+import OSLog
+
+let bridgeLog = Logger(subsystem: "com.biblelantern.app", category: "bridge")
 
 /// Owns the one web view the whole app shows, speaks to the page through `window.BL` (shell.js) and hears the
 /// page's `state` messages. The web view is created once and kept for the life of the app: the site's session cookie
@@ -10,12 +13,15 @@ final class WebController: NSObject, ObservableObject {
     @Published private(set) var page = PageState()
     @Published private(set) var ready = false
     @Published private(set) var failed: String? = nil
+    /// The page loaded but never said `ready` (a site without the bridge): it shows as it is, with its own top bar.
+    @Published private(set) var degraded = false
     @Published private(set) var books: [Book] = []
     @Published private(set) var translations: [Translation] = []
 
     let webView: WKWebView
     private var pending: [String] = []
     private var lastRoute: String? = nil
+    private var readyTimer: Timer? = nil
     /// Links that leave the site (Bible Gateway, Buy Me a Coffee, mail): the shell opens them outside the app.
     var openExternal: ((URL) -> Void)?
 
@@ -46,7 +52,25 @@ final class WebController: NSObject, ObservableObject {
     func load() {
         failed = nil
         ready = false
+        degraded = false
+        readyTimer?.invalidate()
         webView.load(URLRequest(url: Site.start, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30))
+    }
+
+    /// The load finished: the bridge has a few seconds to say `ready`, else the page shows as it is.
+    private func loadFinished() {
+        bridgeLog.info("load finished: \(self.webView.url?.absoluteString ?? "", privacy: .public) ready=\(self.ready)")
+        guard !ready else { return }
+        readyTimer?.invalidate()
+        readyTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, !self.ready else { return }
+                bridgeLog.warning("the page never reported ready; showing it without the shell bridge")
+                self.degraded = true
+                self.ready = true
+                self.pending = []
+            }
+        }
     }
 
     // MARK: - requests to the page (every one is a plain `BL.*` call; before `ready` they wait)
@@ -55,7 +79,7 @@ final class WebController: NSObject, ObservableObject {
     func call(_ js: String) {
         guard ready else { pending.append(js); return }
         webView.evaluateJavaScript("(function(){ try { return window.BL ? (\(js)) : null; } catch (e) { return String(e); } })()") { _, error in
-            if let error { print("BL call failed:", js, error.localizedDescription) }
+            if let error { bridgeLog.error("call failed: \(js, privacy: .public): \(error.localizedDescription, privacy: .public)") }
         }
     }
     /// Ask the page for a JSON value.
@@ -91,11 +115,17 @@ final class WebController: NSObject, ObservableObject {
     // MARK: - messages from the page
 
     fileprivate func receive(_ body: Any) {
-        guard let dict = body as? [String: Any], let type = dict["type"] as? String else { return }
-        guard let data = try? JSONSerialization.data(withJSONObject: dict), let state = try? JSONDecoder().decode(PageState.self, from: data) else { return }
+        guard let dict = body as? [String: Any], let type = dict["type"] as? String else { bridgeLog.error("message without a type: \(String(describing: body), privacy: .public)"); return }
+        guard let data = try? JSONSerialization.data(withJSONObject: dict) else { bridgeLog.error("message is not JSON: \(type, privacy: .public)"); return }
+        let state: PageState
+        do { state = try JSONDecoder().decode(PageState.self, from: data) }
+        catch { bridgeLog.error("message \(type, privacy: .public) did not decode: \(String(describing: error), privacy: .public)"); return }
+        bridgeLog.info("\(type, privacy: .public): \(state.label, privacy: .public) home=\(state.home) overlays=\(state.overlays.joined(separator: ","), privacy: .public)")
         page = state
         if type == "ready" {
+            readyTimer?.invalidate()
             ready = true
+            degraded = false
             failed = nil
             let queued = pending; pending = []
             queued.forEach(call)
@@ -121,8 +151,9 @@ extension WebController: WKNavigationDelegate, WKUIDelegate {
         return Site.hosts.contains(host)
     }
 
+    // WebKit calls its delegates on the main thread: assumeIsolated keeps the decisions synchronous
     nonisolated func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             guard let url = action.request.url else { decisionHandler(.allow); return }
             // frames inside the page (Cloudflare Turnstile, a video) load as they are
             if let frame = action.targetFrame, !frame.isMainFrame { decisionHandler(.allow); return }
@@ -134,13 +165,14 @@ extension WebController: WKNavigationDelegate, WKUIDelegate {
 
     nonisolated func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         // target="_blank" (a translation that opens a website, the support link): outside the app
-        if let url = action.request.url { Task { @MainActor in self.openExternal?(url) } }
+        MainActor.assumeIsolated { if let url = action.request.url { openExternal?(url) } }
         return nil
     }
 
-    nonisolated func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { Task { @MainActor in self.note(error) } }
-    nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { Task { @MainActor in self.note(error) } }
-    nonisolated func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { Task { @MainActor in self.load() } }
+    nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { MainActor.assumeIsolated { loadFinished() } }
+    nonisolated func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { MainActor.assumeIsolated { note(error) } }
+    nonisolated func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { MainActor.assumeIsolated { note(error) } }
+    nonisolated func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { MainActor.assumeIsolated { load() } }
 
     private func note(_ error: Error) {
         let e = error as NSError

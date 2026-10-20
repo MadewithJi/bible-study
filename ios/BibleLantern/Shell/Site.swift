@@ -2,11 +2,23 @@ import Foundation
 
 /// The live site the app wraps (ios-brief §0). Every fix to the site reaches the app at once.
 enum Site {
-    static let base = URL(string: "https://www.biblelantern.com/")!
+    static let production = URL(string: "https://www.biblelantern.com/")!
+    /// Debug builds can point at a local serve.py instead (a test of the bridge before it is deployed):
+    /// `xcrun simctl spawn <udid> defaults write com.biblelantern.app bl.site http://localhost:8861`; delete the key to go back.
+    static var base: URL {
+        #if DEBUG
+        if let s = UserDefaults.standard.string(forKey: "bl.site"), let u = URL(string: s), let scheme = u.scheme, ["http", "https"].contains(scheme), u.host != nil { return u }
+        #endif
+        return production
+    }
     /// Navigations inside these hosts stay in the app; anything else (Bible Gateway, Buy Me a Coffee, mail) opens outside.
-    static let hosts: Set<String> = ["www.biblelantern.com", "biblelantern.com"]
+    static var hosts: Set<String> {
+        var h: Set<String> = ["www.biblelantern.com", "biblelantern.com"]
+        if let o = base.host?.lowercased() { h.insert(o) }
+        return h
+    }
     /// `?app=ios` is the shell flag index.html reads before the first paint; the user agent carries it too (WebController).
-    static let start = URL(string: "https://www.biblelantern.com/?app=ios#home")!
+    static var start: URL { URL(string: "?app=ios#home", relativeTo: base)!.absoluteURL }
     static let donate = URL(string: "https://www.biblelantern.com/donate")!
     static let privacy = URL(string: "https://www.biblelantern.com/privacy")!
     static let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

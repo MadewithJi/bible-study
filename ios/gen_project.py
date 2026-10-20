@@ -306,6 +306,97 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(p)
     print(f'wrote {OUT.relative_to(ROOT.parent)} ({len(p.splitlines())} lines)')
+    write_scheme()
+
+
+SCHEME = """<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "1600"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "%(target)s"
+               BuildableName = "%(app)s.app"
+               BlueprintName = "%(app)s"
+               ReferencedContainer = "container:%(app)s.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <Testables>
+      </Testables>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "%(target)s"
+            BuildableName = "%(app)s.app"
+            BlueprintName = "%(app)s"
+            ReferencedContainer = "container:%(app)s.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "%(target)s"
+            BuildableName = "%(app)s.app"
+            BlueprintName = "%(app)s"
+            ReferencedContainer = "container:%(app)s.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>
+"""
+
+
+def write_scheme():
+    """A shared scheme, so xcodebuild (and the simulator tooling) can build without Xcode having opened the project."""
+    d = OUT.parent / 'xcshareddata' / 'xcschemes'
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / f'{APP}.xcscheme'
+    f.write_text(SCHEME % {'target': I['appTarget'], 'app': APP})
+    print(f'wrote {f.relative_to(ROOT.parent)}')
 
 
 if __name__ == '__main__':
