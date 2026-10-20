@@ -25,6 +25,7 @@ optional(import('./links.js'), 'links.js').then(m => {
   if (!m || typeof m.renderMine !== 'function') return;
   links = m;
   const t = document.getElementById('tab-mine'); if (t) t.hidden = false;
+  paintNoteVerses();
 });
 // marks.js (highlights and comments, annotations-brief §3.4) likewise: the Notes tab lists them once it has loaded
 let mrk = null;
@@ -32,7 +33,7 @@ optional(import('./marks.js'), 'marks.js').then(m => { if (!m || typeof m.marksF
 // study.js (note references, the [[ picker and Mentioned in: study-build-brief §1.1) likewise: until it has loaded,
 // a reference to a highlight or comment renders as a plain verse link
 let study = null;
-optional(import('./study.js'), 'study.js').then(m => { if (!m || typeof m.attachPicker !== 'function') return; study = m; refreshNoteMarks(); });
+optional(import('./study.js'), 'study.js').then(m => { if (!m || typeof m.attachPicker !== 'function') return; study = m; refreshNoteMarks(); paintNoteVerses(); });
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const bodyEl = () => document.getElementById('drawer-body');
@@ -801,7 +802,7 @@ function notesTab(b, c, v, opts) {
       <div class="editor"><div class="editor-top"><span>Markdown</span><div class="segmented sm" id="md-mode" role="radiogroup" aria-label="Editor mode"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-mode="write" aria-checked="${!preview}" tabindex="${preview ? -1 : 0}">Write</button><button type="button" role="radio" data-mode="preview" aria-checked="${preview}" tabindex="${preview ? 0 : -1}"${text ? '' : ' disabled'}>Preview</button></div></div>
         ${preview ? `<div class="md" data-md>${renderMd(text)}</div>` : `<textarea id="note-text" class="note-text" aria-label="Note" maxlength="100000" placeholder="Write your note… Link verses like [[Romans 5:8]].">${esc(text)}</textarea>`}</div>
       <div class="tokens" id="tokens">${icon('tag')}${tags.map(t => `<span class="token">#${esc(t)}<button type="button" data-untag="${esc(t)}" aria-label="Remove tag ${esc(t)}">${icon('xmark')}</button></span>`).join('')}<input id="note-tags" placeholder="${tags.length ? 'Add tag' : 'Add tags'}" aria-label="Add a tag, then press Return" autocomplete="off" spellcheck="false"></div>
-    </section>`;
+    </section>${v ? noteVersesBox(b, c, v, text) : ''}`;
   return `${editor}
     ${study ? safe(study.mentionsHtml, b, c, v) || '' : ''}
     ${v ? markSecHtml(b, c, v) : ''}
@@ -812,6 +813,39 @@ function notesTab(b, c, v, opts) {
       ${allNotesHtml(all, '', ALL_PAGE)}</details>
     ${ro ? '' : `<div class="export-row"><button class="btn btn-tinted sm" type="button" data-export-obsidian>${icon('export')}Export for Obsidian</button><button class="btn btn-tinted sm" type="button" data-export-json>${icon('export')}Export JSON</button><button class="btn btn-tinted sm" type="button" data-import-json>${icon('import')}Import JSON</button><input type="file" id="import-json" accept="application/json" hidden></div>`}`;
 }
+/**
+ * “Link the verses in this note” (note-links brief §3): under a verse note's card, the verses its text names, each a
+ * chip: Link (links.js connectFromNote: the Mine tab, its composer open) or, already linked, Linked (the Mine tab).
+ * It follows the text as it is typed (paintNoteVerses); empty and hidden when the note names no verse.
+ */
+function noteVersesInner(b, c, v, text) {
+  if (!study || !links || typeof study.noteVerses !== 'function' || typeof links.connectFromNote !== 'function' || S.readOnlyGuest()) return '';
+  const list = safe(study.noteVerses, text, b, c, v) || []; if (!list.length) return '';
+  const here = { b, c, v }, hereLab = refLabel(b, c, v);
+  return '<div class="nv-chips" role="group" aria-labelledby="nv-k"><span class="nv-k" id="nv-k">Link the verses in this note</span>' + list.map(o => {
+    const ref = links.linkRefStr(o), lab = links.linkRefLabel(o);
+    return safe(links.linkedBetween, here, o)
+      ? `<button class="chip sm nv-chip on" type="button" data-nv="${ref}" data-nv-open aria-label="${esc(lab)}, linked. Show My links">${esc(lab)}<span class="nv-st">${icon('check')}Linked</span></button>`
+      : `<button class="chip sm nv-chip" type="button" data-nv="${ref}" data-nv-link="${ref}" aria-label="Link ${esc(hereLab)} to ${esc(lab)}">${esc(lab)}<span class="nv-st">Link</span></button>`;
+  }).join('') + '</div>';
+}
+function noteVersesBox(b, c, v, text) {
+  const h = noteVersesInner(b, c, v, text);
+  return `<div class="note-verses" id="note-verses"${h ? '' : ' hidden'}>${h}</div>`;
+}
+let nvT = 0;
+/** The chips again, from the editor's text as typed (else the saved note): in place, with focus kept on the same verse's chip. */
+function paintNoteVerses() {
+  clearTimeout(nvT);
+  const root = bodyEl(), box = root && state.drawerTab === 'notes' ? $('#note-verses', root) : null; if (!box || !state.selected) return;
+  const ta = $('#note-text', root), n = noteFor(refKey(state.book, state.chapter, state.selected));
+  const h = noteVersesInner(state.book, state.chapter, state.selected, ta ? ta.value : (n && n.text) || '');
+  if (box._nv === h) return;
+  const ae = document.activeElement, was = box.contains(ae) ? ae.dataset.nv : null;
+  box._nv = h; box.innerHTML = h; box.hidden = !h;
+  if (was) ($(`[data-nv="${was}"]`, box) || $('[data-nv]', box) || ta || $('#note-tags', root))?.focus({ preventScroll: true });
+}
+const soonNoteVerses = () => { clearTimeout(nvT); nvT = setTimeout(paintNoteVerses, 300); };
 const ALL_PAGE = 200;
 const NONE_YET = '<li class="cell"><span class="cell-sub">None yet.</span></li>';
 let allLimit = ALL_PAGE; // the All notes rows shown (Show more adds a page)
@@ -894,7 +928,7 @@ function refreshNoteMarks() {
   if (v && mrk) {
     const li = sec && sec.contains(ae) ? ae.closest('[data-mk]') : null;
     const was = sec && sec.contains(ae) ? { id: li && li.dataset.mk, at: ['data-mk-show', 'data-mk-edit', 'data-mk-del', 'data-mk-more'].find(a => ae.hasAttribute(a)), i: li ? $$('[data-mk]', sec).indexOf(li) : -1 } : null;
-    if (sec) sec.outerHTML = markSecHtml(b, c, v); else $('.note-card', root)?.insertAdjacentHTML('afterend', markSecHtml(b, c, v));
+    if (sec) sec.outerHTML = markSecHtml(b, c, v); else ($('#note-verses', root) || $('.note-card', root))?.insertAdjacentHTML('afterend', markSecHtml(b, c, v));
     const ns = $('#mk-sec', root);
     if (ns) {
       safe(mrk.foldNotes, ns);
@@ -906,7 +940,7 @@ function refreshNoteMarks() {
   }
   // Mentioned in (study.js): a comment elsewhere may reference this verse or one of its marks
   const mn = $('#mentions', root), mh = study ? safe(study.mentionsHtml, b, c, v) || '' : '';
-  if (mn) { if (mh) mn.outerHTML = mh; else mn.remove(); } else if (mh) $('.note-card', root)?.insertAdjacentHTML('afterend', mh);
+  if (mn) { if (mh) mn.outerHTML = mh; else mn.remove(); } else if (mh) ($('#note-verses', root) || $('.note-card', root))?.insertAdjacentHTML('afterend', mh);
   const ul = $('#ch-notes', root), row = rowSel(ul), inCh = chapterEntries(b, c);
   ul.innerHTML = inCh.map(entryRow).join('') || NONE_YET;
   setText('ch-notes-n', String(inCh.length));
@@ -1019,6 +1053,7 @@ function bindNotes(root, opts) {
       const n = noteFor(key, true); n.text = ta.value; touchNote(key); A.refreshMarker(state.selected);
       const p = $('#md-mode [data-mode="preview"]', root); if (p) p.disabled = !ta.value;
       fit();
+      soonNoteVerses();
     });
     fit();
     if (opts.focus) { ta.focus({ preventScroll: true }); const L = ta.value.length; try { ta.setSelectionRange(L, L); } catch (e) { /* ignore */ } }
@@ -1327,6 +1362,13 @@ function onBodyClick(e) {
     const sl = window.getSelection?.(); if (sl && !sl.isCollapsed && t.closest('[data-md]').contains(sl.anchorNode)) return; // selecting text to copy
     mdMode = 'write'; renderDrawer({ keepScroll: true, focus: true }); return;
   }
+  const nv = t.closest('[data-nv]');
+  if (nv && links) {
+    const here = { b: state.book, c: state.chapter, v: state.selected };
+    if (nv.dataset.nvLink) safe(links.connectFromNote, here, nv.dataset.nvLink, 'out');
+    else A.openTab('mine', { focusTo: el => $(`.mine-list [data-link-go="${nv.dataset.nv}"]`, el) || $('.mine-list [data-link-go]', el) || $('[data-link-new]', el) });
+    return;
+  }
   const go = t.closest('[data-go]'); if (go) { const p = go.dataset.go.split('.').map(Number); A.navigate(p[0], p[1], p[2] || 0); A.yieldToPage(); return; }
   const mk = t.closest('[data-mk-show], [data-mk-edit], [data-mk-del], [data-mk-go], [data-mk-more]'); if (mk) { if (mrk) onMarkAction(mk); return; }
   const sel = t.closest('[data-select]'); if (sel) { A.select(+sel.dataset.select); return; }
@@ -1466,7 +1508,8 @@ export function bindDrawer() {
     if (typeof A.toggleBookmark === 'function') A.toggleBookmark(b, c, v); else safe(libFn('toggleBookmark'), b, c, v);
   });
   document.addEventListener('bs:library-changed', () => { const { b, c, v } = bookmarkTarget(); if (bookOf(b)) renderBookmarkBtn(b, c, v); });
-  document.addEventListener('bs:links-changed', () => renderMineCount()); // links.js redraws an open Mine body itself
+  document.addEventListener('bs:links-changed', () => { renderMineCount(); paintNoteVerses(); }); // links.js redraws an open Mine body itself
+  ['bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soonNoteVerses)); // a save elsewhere, a sync
   // highlights and comments (marks.js): drawn again after each change and chapter render ('Text moved' is known then)
   document.addEventListener('bs:marks-changed', queueNoteMarks);
   document.addEventListener('bs:marks-drawn', queueNoteMarks);

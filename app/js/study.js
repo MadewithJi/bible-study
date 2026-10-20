@@ -125,6 +125,121 @@ export function backlinks(target, list = entries()) {
   return out;
 }
 
+// ------------------------------------------------------------ verses in your notes, ready to link (note-links brief §1)
+// links.js is optional here too (it imports drawer.js, which loads this module): until it has loaded nothing counts
+// as linked yet. links.js and drawer.js pass its test themselves.
+let lk = null;
+import('./links.js').then(m => { if (m && typeof m.linkedBetween === 'function') lk = m; }, e => console.error('links.js failed to load', e));
+
+const SNIP_MAX = 160;
+const ABBR_RX = /(^|[^A-Za-z])(?:cf|vv?|vs|chs?|ff|viz|etc|e\.g|i\.e|[ap]\.m)\./gi; // their full stop ends no sentence
+const endKey = o => `${o.b}.${o.c}.${o.v}${o.ve > o.v ? '-' + o.ve : ''}`;
+const coversV = (o, b, c, v) => o.b === b && o.c === c && v >= o.v && v <= o.ve;
+/** The verse a reference names as a link end {b, c, v, ve} (ve = v for one verse): a range that leaves its chapter gives its first verse, a chapter reference null. */
+export function refVerse(r) {
+  if (!r || !r.v || !bookOf(r.b)) return null;
+  return { b: r.b, c: r.c, v: r.v, ve: r.ve > r.v && r.ve < 1000 ? r.ve : r.v };
+}
+/** A reference as the note names it: 'Isaiah 53:4–6', 'John 1:4 · “the light of men”'. */
+const refText = r => `${refLabel(r.b, r.c, r.v, r.ve)}${r.quote ? ` · “${r.quote}”` : ''}`;
+/**
+ * The verses a note's text names, once each in the order written, as link ends from the verse b.c.v (drawer.js's
+ * "Verses in this note"): [{b, c, v, ve, ref}]. Chapter references and the verse itself are left out.
+ */
+export function noteVerses(text, b, c, v) {
+  const out = [], seen = new Set();
+  for (const r of parseRefs(text)) {
+    const o = refVerse(r); if (!o || coversV(o, +b, +c, +v)) continue;
+    const k = endKey(o); if (seen.has(k)) continue;
+    seen.add(k); out.push({ ...o, ref: r });
+  }
+  return out;
+}
+/**
+ * The sentence of an entry's text that holds the reference `raw`, as plain text with each reference shown as its label,
+ * at most `max` characters cut at word boundaries around the reference; a highlight or comment leads with its words.
+ * → {text, hit: [start, end] of the reference's label in text, or null}.
+ */
+function snippetOf(e, raw, max = SNIP_MAX) {
+  const labels = []; let mine = -1;
+  // references become placeholders first, so that a full stop inside one never ends a sentence
+  const src = String(e.text || '').replace(REF_RX, (m, inner) => {
+    const r = parseRefText(inner), i = labels.length;
+    labels.push(r ? refText(r) : flat(inner.split('|').pop()));
+    if (mine < 0 && inner.trim() === raw) mine = i;
+    return `${i}`;
+  });
+  // a full stop that ends no sentence is set aside (\uE002) until the sentence is found: after an abbreviation notes use
+  // ('cf. [[Romans 5:8]]', 'e.g. in'), inside a word or a number ('p.m', 'John 3.16') and before a number ('Gen. 1:3')
+  const kept = src.replace(ABBR_RX, (m, a) => a + m.slice(a.length).replace(/\./g, '\uE002')).replace(/\.(?=[a-z\d]|\s+\d)/g, '\uE002');
+  const parts = kept.match(/[^\n.!?]+[.!?]*/g) || [kept];
+  const part = parts.find(p => p.includes(`${mine}`)) || parts[0] || '';
+  const s = flat(part.replace(/[*_>#`]/g, '').replace(/^\s*[-+]\s+/, '')).replace(/^[\s”’)\]]+/, '').replace(/\uE002/g, '.');
+  let text = '', hit = null, last = 0;
+  for (const m of s.matchAll(/(\d+)/g)) {
+    text += s.slice(last, m.index);
+    const lab = labels[+m[1]] || '';
+    if (+m[1] === mine && !hit) hit = [text.length, text.length + lab.length];
+    text += lab; last = m.index + m[0].length;
+  }
+  text += s.slice(last);
+  const lead = e.kind !== 'note' && e.phrase ? `“${e.phrase}${flat(e.quote).length > e.phrase.length ? '…' : ''}” · ` : '';
+  const room = Math.max(80, max - lead.length);
+  if (text.length > room) {
+    const [i, j] = hit || [0, 0];
+    // about a third of the room before the reference, the rest after it
+    let a = Math.max(0, Math.min(i - Math.floor((room - (j - i)) / 3), text.length - room)), z = Math.min(text.length, a + room);
+    if (a > 0) { const sp = text.indexOf(' ', a); if (sp >= 0 && sp < i) a = sp + 1; }
+    if (z < text.length) { const sp = text.lastIndexOf(' ', z); if (sp > Math.max(j, a)) z = sp; }
+    const pre = a > 0 ? '…' : '';
+    text = pre + text.slice(a, z).replace(/[\s,;:–—-]+$/, '') + (z < text.length ? '…' : '');
+    if (hit) hit = [i - a + pre.length, j - a + pre.length];
+  }
+  if (hit) hit = [hit[0] + lead.length, hit[1] + lead.length];
+  return { text: lead + text, hit };
+}
+const newest = e => e.updated || e.created || 0;
+/**
+ * The verses your notes and comments name, as links still to make, for the verse b.c.v or (v = 0) every verse of the
+ * chapter: [{here: {b, c, v}, other: {b, c, v, ve}, dir: 'out' | 'in', sources: [{entry, ref, snippet, hit}]}].
+ * out: a reference in the note on `here`, or in the comment of a highlight or comment starting there; in: a note or
+ * comment on another verse whose text references `here` (as Mentioned in counts it; a reference to a highlight or
+ * comment counts as its verse). Chapter references, references to the verse itself and pairs already linked (any link,
+ * either way: opts.linked(here, other)) are left out. One suggestion per pair, its sources those on `here` first, then
+ * newest; out before in, then by the newest source. In a chapter, an `in` reference to a range sits under the first of
+ * its verses there.
+ * `hit` is where the reference's label sits in `snippet` (the Mine tab shows it bold).
+ */
+export function noteLinkSuggestions(b, c, v = 0, { linked = lk ? lk.linkedBetween : null, list = entries() } = {}) {
+  b = +b; c = +c; v = +v || 0;
+  const by = new Map();
+  const isLinked = (h, o) => { try { return typeof linked === 'function' && !!linked(h, o); } catch (e) { console.error(e); return false; } };
+  const add = (here, other, dir, e, r) => {
+    const hk = endKey({ ...here, ve: here.v }), ok = endKey(other), k = hk < ok ? `${hk}|${ok}` : `${ok}|${hk}`;
+    let s = by.get(k);
+    if (!s) { if (isLinked(here, other)) return; by.set(k, s = { here, other, dir, sources: [] }); }
+    else if (dir === 'out' && s.dir === 'in') Object.assign(s, { here, other, dir }); // the same two verses both ways: from the note on here
+    if (s.sources.some(x => x.entry.id === e.id)) return;
+    const sn = snippetOf(e, r.raw);
+    s.sources.push({ entry: e, ref: r, snippet: sn.text, hit: sn.hit });
+  };
+  for (const e of list) {
+    if (!e.text || !e.v || !bookOf(e.b)) continue; // a chapter note is on no verse: there is nothing to link it from
+    const onHere = e.b === b && e.c === c && (!v || e.v === v);
+    for (const r of parseRefs(e.text)) {
+      const o = refVerse(r); if (!o || coversV(o, e.b, e.c, e.v)) continue;
+      if (onHere) add({ b, c, v: e.v }, o, 'out', e, r);
+      if (o.b === b && o.c === c && (v ? coversV(o, b, c, v) : true)) add({ b, c, v: v || o.v }, { b: e.b, c: e.c, v: e.v, ve: e.v }, 'in', e, r);
+    }
+  }
+  const out = [...by.values()];
+  // a pair named both ways: the entries on `here` lead (the card names its first source and shows that one's sentence)
+  const atHere = (s, e) => e.b === s.here.b && e.c === s.here.c && e.v === s.here.v;
+  for (const s of out) s.sources.sort((x, y) => atHere(s, y.entry) - atHere(s, x.entry) || newest(y.entry) - newest(x.entry));
+  const t = s => Math.max(...s.sources.map(x => newest(x.entry)));
+  return out.sort((x, y) => x.here.v - y.here.v || (x.dir === y.dir ? 0 : x.dir === 'out' ? -1 : 1) || t(y) - t(x));
+}
+
 // ------------------------------------------------------------ verse helpers (ported)
 /** Does a data row [b, c, v, ve, …] (a topic verse or a cross-reference) include the verse b.c.v? */
 export function covers(row, b, c, v) {

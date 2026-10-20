@@ -10,6 +10,9 @@ import { renderMd } from './drawer.js';
 let library = null;
 import('./library.js').then(m => { library = m; }, e => { console.error('library.js failed to load', e); });
 const libFn = name => (library && typeof library[name] === 'function' ? library[name] : null);
+// study.js (the verses your notes name: note-links brief §1) likewise: the Mine tab offers them once it has loaded
+let study = null;
+import('./study.js').then(m => { if (m && typeof m.noteLinkSuggestions === 'function') { study = m; queueSugg(); } }, e => { console.error('study.js failed to load', e); });
 const safe = (fn, ...a) => { try { return typeof fn === 'function' ? fn(...a) : undefined; } catch (e) { console.error(e); return undefined; } };
 
 export const links = { loaded: false, scope: null, rev: 0, byId: new Map(), byVerse: new Map(), offline: false };
@@ -102,6 +105,16 @@ export function linksInChapter(b, c) {
   return out;
 }
 export const linkCount = () => links.byId.size;
+/** Does a link (any type, either way) join the verse a to the verse or range o (its first verse)? note-links brief §1. */
+export function linkedBetween(a, o) {
+  const ids = a && o ? links.byVerse.get(`${+a.b}.${+a.c}.${+a.v}`) : null; if (!ids) return false;
+  for (const id of ids) {
+    const l = links.byId.get(id); if (!l) continue;
+    const f = parseLinkRef(l.from), t = parseLinkRef(l.to);
+    if ((covers(f, +a.b, +a.c, +a.v) && covers(t, +o.b, +o.c, +o.v)) || (covers(t, +a.b, +a.c, +a.v) && covers(f, +o.b, +o.c, +o.v))) return true;
+  }
+  return false;
+}
 /** Every tag in use, most used first (composer suggestions; Library filters). */
 export function allTags() {
   const n = new Map();
@@ -610,6 +623,27 @@ function finishPick(to) {
   if (from.b === state.book && from.c === state.chapter) { focusRef = null; A?.select?.(from.v, { tab: 'mine', focus: true }); }
   else { focusRef = { b: from.b, c: from.c, v: from.v }; A?.openTab?.('mine', { focus: true }); }
 }
+/**
+ * Link a verse your notes name (note-links brief §2): the composer opens prefilled as a pick leaves it, From `here`
+ * To `other` (dir 'in': From `other` To `here`), with focus on the type chips, in the Mine tab of `here` (selected
+ * when it is in the reader's chapter, as a pick does). drawer.js's “Link the verses in this note” chips call it too.
+ * here, other: {b, c, v[, ve]} or 'b.c.v[-ve]'. False when nothing opened (a hosted guest gets the sign-in prompt).
+ */
+export function connectFromNote(here, other, dir = 'out') {
+  const h = toRef(here), o = toRef(other); if (!h || !o) return false;
+  if (guestBlocked()) return false;
+  if (pick) cancelPick();
+  const at = verseKey(h.b, h.c, h.v);
+  draft = newDraft({ at, fixed: { b: h.b, c: h.c, v: h.v, ve: h.v }, other: o, swapped: dir === 'in', focus: 'type' });
+  // the Mine tab already shows this verse: the composer opens in place, and Cancel goes back to the card's Link
+  if (mineHost && mineHost.isConnected && viewKey() === at && state.drawerOpen && state.drawerTab === 'mine') {
+    draft.back = `[data-sugg="${at}>${linkRefStr(o)}"] [data-sugg-link]`;
+    renderComposer('.mc-types [aria-checked="true"]'); draft.focus = null; return true;
+  }
+  if (h.b === state.book && h.c === state.chapter) { focusRef = null; A?.select?.(h.v, { tab: 'mine', focus: true }); }
+  else { focusRef = { b: h.b, c: h.c, v: h.v }; A?.openTab?.('mine', { focus: true }); }
+  return true;
+}
 
 // ------------------------------------------------------------ the Mine tab body (§3.3) and the composer (§3.5)
 let draft = null;      // the open composer, for the verse whose Mine body shows it (draft.at)
@@ -638,10 +672,10 @@ function leaveFocus(sels) {
   return true;
 }
 
-function newDraft({ at, fixed, other = null, link = null, focus = 'to' }) {
+function newDraft({ at, fixed, other = null, link = null, focus = 'to', swapped = false }) {
   const t = link ? link.type : 'related';
   return {
-    at, id: link ? link.id : null, fixed, toText: other ? linkRefLabel(other) : '', swapped: !!link && linkRefStr(fixed) === link.to && link.to !== link.from,
+    at, id: link ? link.id : null, fixed, toText: other ? linkRefLabel(other) : '', swapped: link ? linkRefStr(fixed) === link.to && link.to !== link.from : !!swapped,
     // a custom link's label is its phrase (edited here); another type's optional caption is kept as it was
     type: t, label: link && t === 'custom' ? link.label : '', caption: link && t !== 'custom' ? link.label : '',
     dir: link ? link.dir : TYPE.get(t).dirDefault, dirTouched: !!link,
@@ -694,8 +728,9 @@ export function renderMine(host, { b, c, v } = {}) {
   if (!bookOf(b)) return host;
   const ae = document.activeElement;
   const keep = ae && ae.id && host.contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
+  if (suggAll && suggAll !== verseKey(b, c, v)) suggAll = '';
   mineHost = host; mineView = { b, c, v };
-  host.innerHTML = `<div class="mine" data-mine="${verseKey(b, c, v)}">${headHtml()}<div class="mc-slot">${draft && draft.at === viewKey() ? composerHtml(draft) : ''}</div><div class="mine-body">${listHtml()}</div></div>`;
+  host.innerHTML = `<div class="mine" data-mine="${verseKey(b, c, v)}">${headHtml()}<div class="mc-slot">${draft && draft.at === viewKey() ? composerHtml(draft) : ''}</div><div class="mine-body">${bodyHtml()}</div></div>`;
   bindHost(host);
   afterRender(host, keep);
   return host;
@@ -716,18 +751,87 @@ function chapterRows(b, c) {
   for (const v of [...ch.keys()].sort((x, y) => x - y)) for (const id of ch.get(v)) if (!first.has(id)) first.set(id, v);
   return [...first].map(([id, v]) => [v, links.byId.get(id)]).filter(x => x[1]);
 }
-function listHtml() {
-  const { b, c, v } = mineView;
+/** The links; under the suggestions (head) they carry a heading of their own. */
+function listHtml(head = false) {
+  const { b, c, v } = mineView, lh = head ? '<div class="lh mine-list-lh"><h3 id="mine-list-h">Linked</h3></div>' : '';
   if (v) {
     const list = linksFor(b, c, v);
     if (!list.length) return emptyHtml(`No links from ${esc(refLabel(b, c, v))} yet`, 'Connect this verse to another with + Connect, or press c and choose a verse anywhere in the Bible.');
-    return `<ul class="group av mine-list" aria-labelledby="mine-h">${list.map(l => cardHtml(l, b, c, v)).join('')}</ul>`;
+    return `${lh}<ul class="group av mine-list" aria-labelledby="${head ? 'mine-list-h' : 'mine-h'}">${list.map(l => cardHtml(l, b, c, v)).join('')}</ul>`;
   }
   const rows = chapterRows(b, c);
   if (!rows.length) return emptyHtml(`No links in ${esc(refLabel(b, c))} yet`, 'Select a verse, then press c and choose a verse anywhere in the Bible, or use + Connect.');
   const by = new Map();
   for (const [vv, l] of rows) { if (!by.has(vv)) by.set(vv, []); by.get(vv).push(l); }
-  return [...by].sort((x, y) => x[0] - y[0]).map(([vv, ls]) => `<h4 class="act-day" id="mine-v${vv}">Verse ${vv}</h4><ul class="group av mine-list" aria-labelledby="mine-v${vv}">${ls.map(l => cardHtml(l, b, c, vv)).join('')}</ul>`).join('');
+  return lh + [...by].sort((x, y) => x[0] - y[0]).map(([vv, ls]) => `<h4 class="act-day" id="mine-v${vv}">Verse ${vv}</h4><ul class="group av mine-list" aria-labelledby="mine-v${vv}">${ls.map(l => cardHtml(l, b, c, vv)).join('')}</ul>`).join('');
+}
+/** The Mine body: the verses your notes name (From your notes), then the links. */
+function bodyHtml() {
+  const { b, c, v } = mineView, list = suggFor(b, c, v);
+  suggSig = suggSigOf(list);
+  return suggHtml(list) + listHtml(list.length > 0);
+}
+
+// ------------------------------------------------------------ From your notes (note-links brief §2)
+const SUGG_N = 5;
+let suggAll = '';  // the view (viewKey) whose suggestions all show (Show all)
+let suggSig = '';  // what the drawn suggestions came from: a change to the notes or marks redraws the body only when it differs
+/** The verses your notes name for b.c.v (v 0: the chapter) that are not linked yet: none for a hosted guest, or until study.js loads. */
+function suggFor(b, c, v) {
+  if (!study || readOnlyGuest()) return [];
+  return safe(study.noteLinkSuggestions, b, c, v, { linked: linkedBetween }) || [];
+}
+const suggKey = s => `${s.here.b}.${s.here.c}.${s.here.v}>${linkRefStr(s.other)}`;
+const suggSigOf = list => `${viewKey()}#${suggAll === viewKey()}#` + list.map(s => `${suggKey(s)}:${s.dir}:${s.sources.map(x => `${x.entry.id}@${x.snippet}`).join(',')}`).join('|');
+let suggQueued = false;
+/** Notes or marks changed (or study.js loaded): the Mine body is drawn again when its suggestions differ. */
+function queueSugg() {
+  if (suggQueued) return;
+  suggQueued = true;
+  setTimeout(() => {
+    suggQueued = false;
+    if (!mineHost || !mineHost.isConnected || !mineView) return;
+    if (suggSigOf(suggFor(mineView.b, mineView.c, mineView.v)) !== suggSig) refreshMine();
+  }, 0);
+}
+function suggHtml(list) {
+  if (!list.length) return '';
+  const shown = suggAll === viewKey() ? list : list.slice(0, SUGG_N);
+  let rows = '';
+  if (mineView.v) rows = `<ul class="group av mine-sugg" aria-labelledby="mine-sugg-h">${shown.map(suggCardHtml).join('')}</ul>`;
+  else {
+    // the chapter: by verse, as the chapter's links are
+    const by = new Map();
+    for (const s of shown) { if (!by.has(s.here.v)) by.set(s.here.v, []); by.get(s.here.v).push(s); }
+    rows = [...by].map(([vv, xs]) => `<h4 class="act-day" id="ms-v${vv}">Verse ${vv}</h4><ul class="group av mine-sugg" aria-labelledby="ms-v${vv}">${xs.map(suggCardHtml).join('')}</ul>`).join('');
+  }
+  const more = shown.length < list.length ? `<button class="link mine-sugg-all" type="button" data-sugg-all>Show all ${list.length}</button>` : '';
+  return `<section class="mine-sugg-sec" aria-labelledby="mine-sugg-h"><div class="lh"><h3 id="mine-sugg-h">From your notes<span class="mine-n"> · ${list.length}</span></h3></div>${rows}${more}</section>`;
+}
+/** A verse a note names: the verse and its text (Read in context), where it is named and the sentence that names it, and Link. */
+function suggCardHtml(s) {
+  const o = s.other, lab = linkRefLabel(o), hereLab = refLabel(s.here.b, s.here.c, s.here.v), src = s.sources[0], e = src.entry;
+  // the line names where the first source sits (on this verse or on the other), not the suggestion's direction
+  const said = e.b === s.here.b && e.c === s.here.c && e.v === s.here.v ? (e.kind === 'note' ? 'In your note' : `In your comment on “${e.phrase}”`)
+    : `Your ${e.kind === 'note' ? 'note' : 'comment'} on ${e.label} mentions this verse`;
+  const more = s.sources.length > 1 ? ` · ${s.sources.length - 1} more` : '';
+  const sn = src.snippet || '', [i, j] = src.hit || [0, 0];
+  // the reference bold, its verse never broken across lines ('Isaiah 53:4–6'); a mark's words may wrap
+  const ref = sn.slice(i, j), dot = ref.indexOf(' · ');
+  const refH = dot >= 0 ? `<span class="nw">${esc(ref.slice(0, dot))}</span>${esc(ref.slice(dot))}` : `<span class="nw">${esc(ref)}</span>`;
+  const snip = src.hit ? `${esc(sn.slice(0, i))}<b>${refH}</b>${esc(sn.slice(j))}` : esc(sn);
+  const [from, to] = s.dir === 'in' ? [lab, hereLab] : [hereLab, lab];
+  const id = `ms-${s.here.v}-${linkRefStr(o).replace(/\D+/g, '-')}`;
+  return `<li class="mine-card sugg" data-sugg="${suggKey(s)}" data-here="${s.here.b}.${s.here.c}.${s.here.v}" data-other="${linkRefStr(o)}" data-dir="${s.dir}">
+    <div class="mine-main">
+      <div class="mine-r1"><button class="link mine-go" type="button" data-link-go="${linkRefStr(o)}">${esc(lab)}</button><span class="sugg-src">${esc(said)}${more}</span></div>
+      <p class="cell-sub serif mine-prev" data-link-prev="${o.b}.${o.c}.${o.v}.${o.ve}"></p>
+      <button class="link mine-ctx" type="button" data-link-ctx aria-expanded="false" aria-controls="${id}">Read in context</button>
+      <div class="expand" id="${id}" role="region" aria-label="${esc(lab)} in context" inert><div><div class="expand-in"></div></div></div>
+      ${sn ? `<p class="sugg-snip serif">${snip}</p>` : ''}
+    </div>
+    <button class="btn btn-tinted sm sugg-link" type="button" data-sugg-link aria-label="Link ${esc(from)} to ${esc(to)}">${icon('link-node')}Link</button>
+  </li>`;
 }
 const emptyHtml = (title, body) => `<div class="empty mine-empty"><span class="tile-i blue">${icon('link-node')}</span><h4>${title}</h4><p>${body}</p></div>`;
 function cardHtml(l, b, c, v) {
@@ -815,6 +919,7 @@ function renderComposer(focusSel) {
   const nb = $('[data-link-new]', mineHost); if (nb) nb.setAttribute('aria-expanded', String(!!slot.firstElementChild));
   if (focusSel) $(focusSel, mineHost)?.focus({ preventScroll: true });
   const f = $('#mine-composer', mineHost);
+  if (f && focusSel === '#mc-to') showSugg(f); // focusin opens it too, but not while the window is in the background
   if (f && focusSel) f.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
 }
 /** Re-render the header count and the list (the composer and its caret are left alone). */
@@ -830,10 +935,12 @@ function refreshMine() {
   const card = inList && ae.closest('[data-link]');
   const at = card ? { id: card.dataset.link, v: card.dataset.v, sel: ae.matches('[data-link-menu]') ? '[data-link-menu]' : ae.matches('[data-link-go]') ? '[data-link-go]' : '' } : null;
   const order = card ? $$('[data-link]', body).map(x => x.dataset.link) : [];
+  const sg = inList && !card && ae.closest('[data-sugg]');
+  const sat = sg ? { key: sg.dataset.sugg, sel: ae.matches('[data-link-go]') ? '[data-link-go]' : ae.matches('[data-link-ctx]') ? '[data-link-ctx]' : '[data-sugg-link]', order: $$('[data-sugg]', body).map(x => x.dataset.sugg) } : null;
   // a ⋯ menu open on a card (a colour was just picked) moves to the redrawn card's button, so Esc returns there
   const menu = $('.menu.link-menu'), mc = menu && menu._opener && body.contains(menu._opener) ? menu._opener.closest('[data-link]') : null;
   const mat = mc ? `[data-link="${mc.dataset.link}"][data-v="${mc.dataset.v}"] [data-link-menu]` : '';
-  body.innerHTML = listHtml();
+  body.innerHTML = bodyHtml();
   fillPreviews(body); clampNotes(body);
   if (mat) { const nb = $(mat, body); if (nb) { menu._opener = nb; nb.setAttribute('aria-expanded', 'true'); } else ui.closeMenu(false); }
   if (afterFocus) { const t = takeAfter(mineHost); if (t) { t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() }); return; } }
@@ -842,6 +949,12 @@ function refreshMine() {
     let t = $(`[data-link="${at.id}"][data-v="${at.v}"] ${at.sel || '[data-link-go]'}`, body);
     if (!t) for (const id of order.slice(order.indexOf(at.id) + 1)) { t = $(`[data-link="${id}"] [data-link-menu]`, body); if (t) break; }
     (t || $('[data-link-new]', mineHost) || $('[data-link-menu]', body))?.focus({ preventScroll: true });
+  }
+  if (sat) {
+    // a suggestion that was linked (or whose reference went) has gone: the next one's Link, else the first, else the header
+    let t = $(`[data-sugg="${sat.key}"] ${sat.sel}`, body);
+    if (!t) for (const k of sat.order.slice(sat.order.indexOf(sat.key) + 1)) { t = $(`[data-sugg="${k}"] [data-sugg-link]`, body); if (t) break; }
+    (t || $('[data-sugg-link]', body) || $('[data-link-new]', mineHost) || $('[data-link-go]', body))?.focus({ preventScroll: true });
   }
 }
 function afterRender(host, keep) {
@@ -852,7 +965,13 @@ function afterRender(host, keep) {
     const sel = d.focus === 'type' ? '.mc-types [aria-checked="true"]' : '#mc-to';
     d.focus = null;
     const t = $(sel, host);
-    if (t) { t.focus({ preventScroll: true }); $('#mine-composer', host)?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() }); return; }
+    if (t) {
+      t.focus({ preventScroll: true });
+      const f = $('#mine-composer', host);
+      if (f && sel === '#mc-to') showSugg(f);
+      f?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
+      return;
+    }
   }
   if (afterFocus) { const t = takeAfter(host); if (t) { t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() }); return; } }
   if (keep) {
@@ -992,14 +1111,47 @@ function showBooks(form) {
   const inp = $('#mc-to', form), lb = $('#mc-books', form); if (!inp || !lb) return;
   const hits = bookMatches(inp.value);
   if (!hits.length || (hits.length === 1 && flat(hits[0].name) === flat(inp.value))) { hideBooks(form); return; }
+  lb.setAttribute('aria-label', 'Books');
   lb.innerHTML = hits.map((bk, i) => `<li role="option" id="mc-bk${i}" data-mc-book="${esc(bk.name)}" aria-selected="false">${esc(bk.name)}</li>`).join('');
   lb.hidden = false; inp.setAttribute('aria-expanded', 'true'); inp.removeAttribute('aria-activedescendant');
 }
 function hideBooks(form) {
   const root = form || mineHost; if (!root) return;
   const lb = $('#mc-books', root), inp = $('#mc-to', root);
-  if (lb) { lb.hidden = true; lb.innerHTML = ''; }
+  if (lb) { lb.hidden = true; lb.innerHTML = ''; lb.setAttribute('aria-label', 'Books'); }
   if (inp) { inp.setAttribute('aria-expanded', 'false'); inp.removeAttribute('aria-activedescendant'); }
+}
+/**
+ * The To field focused and empty: the verses your notes name for the composer's verse, both ways, up to 6
+ * (note-links brief §4), in the book list's place: 'Isaiah 53:5 — the first words of the verse…'. Nothing to offer: none.
+ */
+const SUGG_TO = 6;
+function showSugg(form) {
+  const inp = $('#mc-to', form), lb = $('#mc-books', form); if (!inp || !lb || !draft) return;
+  const f = draft.fixed, list = inp.value.trim() || !f ? [] : suggFor(f.b, f.c, f.v).slice(0, SUGG_TO);
+  if (!list.length) { hideBooks(form); return; }
+  lb.setAttribute('aria-label', 'From your notes');
+  lb.innerHTML = '<li class="mc-books-h" role="presentation" aria-hidden="true">From your notes</li>' + list.map((x, i) => {
+    const o = x.other;
+    return `<li role="option" id="mc-bk${i}" data-mc-sugg="${linkRefStr(o)}" data-dir="${x.dir}" aria-selected="false"><b>${esc(linkRefLabel(o))}</b><span class="mc-sugg-t" data-mc-prev="${o.b}.${o.c}.${o.v}.${o.ve}"></span></li>`;
+  }).join('');
+  lb.hidden = false; inp.setAttribute('aria-expanded', 'true'); inp.removeAttribute('aria-activedescendant');
+  for (const sp of $$('[data-mc-prev]', lb)) {
+    const [b, c, v, ve] = sp.dataset.mcPrev.split('.').map(Number);
+    previewText(b, c, v, ve > v ? ve : 0).then(r => { if (sp.isConnected && r && r.text) sp.textContent = ` — ${clip(r.text, 72)}`; }, () => {});
+  }
+}
+/** A verse from your notes chosen for the To field: it fills it, and an 'in' one reads From that verse To this one. */
+function chooseSugg(form, ref, dir) {
+  const o = parseLinkRef(ref); if (!o || !draft) return;
+  draft.toText = linkRefLabel(o);
+  hideBooks(form);
+  const sw = dir === 'in';
+  if (draft.swapped !== sw) { draft.swapped = sw; renderComposer('#mc-to'); form = $('#mine-composer', mineHost); }
+  const inp = form && $('#mc-to', form); if (!inp) return;
+  inp.value = draft.toText; inp.focus();
+  try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) { /* ignore */ }
+  syncComposer(form);
 }
 function chooseBook(form, name) {
   const inp = $('#mc-to', form); if (!inp || !draft) return;
@@ -1010,6 +1162,7 @@ function chooseBook(form, name) {
 }
 function bookKeys(e, form) {
   const lb = $('#mc-books', form), inp = e.target;
+  if (lb && lb.hidden && e.key === 'ArrowDown' && !inp.value.trim() && !e.altKey) showSugg(form); // ↓ in the empty field opens your verses again
   if (!lb || lb.hidden) return false;
   const opts = $$('[role=option]', lb); if (!opts.length) return false;
   let i = opts.findIndex(o => o.getAttribute('aria-selected') === 'true');
@@ -1021,7 +1174,12 @@ function bookKeys(e, form) {
     opts[i].scrollIntoView({ block: 'nearest' });
     return true;
   }
-  if (e.key === 'Enter' && (i >= 0 || opts.length === 1)) { e.preventDefault(); chooseBook(form, opts[Math.max(0, i)].dataset.mcBook); return true; }
+  if (e.key === 'Enter' && (i >= 0 || opts.length === 1)) {
+    e.preventDefault();
+    const o = opts[Math.max(0, i)];
+    if (o.dataset.mcSugg) chooseSugg(form, o.dataset.mcSugg, o.dataset.dir); else chooseBook(form, o.dataset.mcBook);
+    return true;
+  }
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hideBooks(form); return true; }
   return false;
 }
@@ -1032,10 +1190,11 @@ function bindHost(host) {
   if (boundHosts.has(host)) return;
   boundHosts.add(host);
   host.addEventListener('click', e => onHostClick(e, host));
-  host.addEventListener('mousedown', e => { if (e.target.closest('[data-mc-book]')) e.preventDefault(); }); // keep the caret in the field
+  host.addEventListener('mousedown', e => { if (e.target.closest('[data-mc-book], [data-mc-sugg], .mc-books-h')) e.preventDefault(); }); // keep the caret in the field
+  host.addEventListener('focusin', e => { if (e.target.id === 'mc-to' && draft) { const form = e.target.closest('#mine-composer'); if (form && !e.target.value.trim()) showSugg(form); } });
   host.addEventListener('input', e => {
     const t = e.target, form = t.closest('#mine-composer'); if (!form || !draft) return;
-    if (t.id === 'mc-to') { draft.toText = t.value; showBooks(form); syncComposer(form); }
+    if (t.id === 'mc-to') { draft.toText = t.value; if (t.value.trim()) showBooks(form); else showSugg(form); syncComposer(form); }
     else if (t.id === 'mc-label') { draft.label = t.value; syncComposer(form); }
     else if (t.id === 'mc-note') { draft.note = t.value; if (draft.tried) noteSync(form); }
     else if (t.id === 'mc-tags') {
@@ -1052,7 +1211,8 @@ function bindHost(host) {
     const t = e.target; if (t.id !== 'mc-dir' || !draft) return;
     draft.dir = t.checked ? 'both' : 'to'; draft.dirTouched = true;
   });
-  host.addEventListener('focusout', e => { const form = e.target.closest?.('#mine-composer'); if (form && e.target.id === 'mc-to' && !form.contains(e.relatedTarget)) hideBooks(form); });
+  // the list closes as focus leaves To (Tab to Swap, a click on another control), so it never covers the fields below
+  host.addEventListener('focusout', e => { const form = e.target.closest?.('#mine-composer'); if (form && e.target.id === 'mc-to' && !$('#mc-books', form)?.contains(e.relatedTarget)) hideBooks(form); });
   host.addEventListener('submit', e => { const form = e.target.closest('#mine-composer'); if (!form) return; e.preventDefault(); submitDraft(form); });
   host.addEventListener('keydown', e => {
     const t = e.target, form = t.closest?.('#mine-composer');
@@ -1078,10 +1238,12 @@ function onHostClick(e, host) {
   const t = e.target;
   const form = t.closest('#mine-composer');
   if (form) {
-    if (t.closest('[data-mc-cancel]')) { closeComposer(); return; }
+    if (t.closest('[data-mc-cancel]')) { const back = draft && draft.back; closeComposer(back && $(back, mineHost) ? back : '[data-link-new]'); return; }
     const ty = t.closest('[data-mc-type]'); if (ty) { pickType(ty.dataset.mcType, form); return; }
     const co = t.closest('[data-mc-color]'); if (co) { pickColour(co.dataset.mcColor, form); return; }
     const bk = t.closest('[data-mc-book]'); if (bk) { chooseBook(form, bk.dataset.mcBook); return; }
+    const sg = t.closest('[data-mc-sugg]'); if (sg) { chooseSugg(form, sg.dataset.mcSugg, sg.dataset.dir); return; }
+    if (t.id === 'mc-to' && !t.value.trim() && $('#mc-books', form)?.hidden) { showSugg(form); return; }
     const un = t.closest('[data-mc-untag]');
     if (un) { draft.tags = draft.tags.filter(x => x !== un.dataset.mcUntag); redrawTags(form); $('#mc-tags', form)?.focus(); return; }
     if (t.closest('[data-mc-swap]')) {
@@ -1097,6 +1259,19 @@ function onHostClick(e, host) {
   if (t.closest('[data-link-new]')) {
     if (draft && draft.at === viewKey()) closeComposer();
     else openComposer({ fixed: { ...mineView, ve: mineView.v }, focus: 'to' });
+    return;
+  }
+  const sg = t.closest('[data-sugg]');
+  if (sg) {
+    const go = t.closest('[data-link-go]'); if (go) { goTo(go.dataset.linkGo); return; }
+    const cx = t.closest('[data-link-ctx]'); if (cx) { expandCtx(sg, cx); return; }
+    if (t.closest('[data-sugg-link]')) connectFromNote(sg.dataset.here, sg.dataset.other, sg.dataset.dir);
+    return;
+  }
+  if (t.closest('[data-sugg-all]')) {
+    const n = $$('[data-sugg]', host).length;
+    suggAll = viewKey(); refreshMine();
+    $$('[data-sugg]', host)[n]?.querySelector('[data-link-go]')?.focus({ preventScroll: true });
     return;
   }
   const card = t.closest('[data-link]');
@@ -1242,6 +1417,8 @@ export function initLinks(actions) {
   document.addEventListener('bs:chapter-rendered', () => { if (pick) markPick(); });
   document.addEventListener('bs:verse-selected', () => { focusRef = null; });
   document.addEventListener('bs:links-changed', () => refreshMine());
+  // From your notes follows the notes and comments (note-links brief §2)
+  ['notes-changed', 'bs:notes-replaced', 'bs:note-saved', 'bs:marks-changed'].forEach(n => document.addEventListener(n, queueSugg));
   // lifecycle: send on hide or close; pick up another tab's save when shown
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { if (dirty.size && !DRY) flushLinks({ keepalive: true }); }
