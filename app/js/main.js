@@ -5,7 +5,7 @@ import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadC
 import * as reader from './reader.js';
 import * as drawer from './drawer.js';
 import * as viz from './viz.js';
-import { initAuth, initAccountUI, renderAccountButton, openAuth } from './account.js';
+import { initAuth, initAccountUI, renderAccountButton, openAuth, openProfile, signOut } from './account.js';
 import { closeDialog, showDialog, menuOpen as uiMenuOpen, relTime } from './ui.js';
 
 // Optional modules, loaded in parallel with the rest: a missing or broken library.js, tracker.js, art.js, links.js or marks.js
@@ -156,12 +156,13 @@ const A = {
     if (!has(library, 'toggleBookmark')) { toast('Bookmarks are unavailable right now. Reload to try again.'); return undefined; }
     return libCall('toggleBookmark', b, c, v);
   },
-  /** The Library: home, a book ({book}), a bookmark ({bookmark: id}) or My map ({view: 'map', tag}: a link card's tag chip). */
+  /** The Library: home, a book ({book}), a bookmark ({bookmark: id}), My map ({view: 'map', tag}: a link card's tag chip)
+   *  or the Study views ({view: 'study'}: the iOS app's Study tab). */
   openLibrary(opts = {}) {
     if (!has(library, 'openLibrary')) { toast('The Library is unavailable right now. Reload to try again.'); return; }
     hideResume();
     const { book = null, bookmark = null, view = null, tag = null } = opts || {};
-    libCall('openLibrary', { book, bookmark, view: view === 'map' ? 'map' : null, tag: view === 'map' && typeof tag === 'string' ? tag : null });
+    libCall('openLibrary', { book, bookmark, view: view === 'map' || view === 'study' ? view : null, tag: view === 'map' && typeof tag === 'string' ? tag : null });
   },
   resume(pos, opts = {}) { resumeTo(pos, opts); },
   markRead(b, c, read) { return markRead(b, c, read); },
@@ -693,6 +694,20 @@ function openSettings() {
   const th = $('#theme');
   if (th) { th.classList.add('no-anim'); drawer.setRadio(th, b => b.dataset.themeOpt === state.theme); setTimeout(() => th.classList.remove('no-anim'), 50); }
 }
+/** The reading size (the Settings slider's range), from the slider or the app shell (shell.js). */
+function setFont(px) {
+  const v = px === '' || px == null ? NaN : Math.round(+px); if (!Number.isFinite(v)) return; // not a size: nothing changes
+  const n = Math.min(32, Math.max(12, v));
+  document.documentElement.style.setProperty('--read-size', n + 'px'); lsSet('bs-font', String(n));
+  const fs = $('#fontsize'); if (fs) { fs.value = String(n); setRangeFill(fs); }
+}
+/** Choose a translation as the top bar's select does (its handler runs); false for an id the select does not offer. */
+function setTr(which, id) {
+  const sel = $(which === 'tr2' ? '#tr2' : '#tr'); if (!sel) return false;
+  const opt = [...sel.options].find(o => o.value === id); if (!opt || opt.disabled) return false;
+  if (sel.value === id) return true;
+  sel.value = id; sel.dispatchEvent(new Event('change', { bubbles: true })); return true;
+}
 function bindSettings() {
   const th = $('#theme');
   if (th) {
@@ -701,7 +716,7 @@ function bindSettings() {
     if ('ResizeObserver' in window) new ResizeObserver(() => drawer.moveInd(th)).observe(th);
   }
   const fs = $('#fontsize');
-  fs.addEventListener('input', () => { document.documentElement.style.setProperty('--read-size', fs.value + 'px'); lsSet('bs-font', fs.value); setRangeFill(fs); });
+  fs.addEventListener('input', () => setFont(fs.value));
   // "Show Doré engravings in the text" (inline plates and the floating card) applies at once, like the theme and the reading size
   $('#art-float')?.addEventListener('change', e => { artCall('setPlates', !!e.target.checked); });
   $('#woc-on')?.addEventListener('change', e => { const on = !!e.target.checked; document.documentElement.classList.toggle('woc-off', !on); lsSet('bs-woc', on ? '1' : '0'); });
@@ -1452,7 +1467,8 @@ function bindProfileEvents() {
  *  production site only, never locally, on a preview deployment or in a dry run. */
 const PROD_HOSTS = new Set(['www.biblelantern.com', 'biblelantern.com']);
 function loadAnalytics() {
-  if (DRY || !PROD_HOSTS.has(location.hostname) || document.querySelector('script[src="/_vercel/insights/script.js"]')) return;
+  // never inside the iOS app either (ios-brief §3: no tracking there)
+  if (DRY || !PROD_HOSTS.has(location.hostname) || document.documentElement.classList.contains('app-shell') || document.querySelector('script[src="/_vercel/insights/script.js"]')) return;
   const s = document.createElement('script');
   s.defer = true; s.src = '/_vercel/insights/script.js';
   document.head.appendChild(s);
@@ -1536,14 +1552,23 @@ async function boot() {
     adoptSavedTranslations(savedTr, savedTr2);
     render({ keepScroll: true }); refreshPicker(); homeCall('refresh');
   }
+  // the iOS app's bridge (ios-brief §2), after the reader and the account are known; if it cannot start, the app says so
+  if (document.documentElement.classList.contains('app-shell')) import('./shell.js').then(m => m.initShell(A, { openPicker, applyTheme, setFont, setTr, openProfile, signOut })).catch(e => { console.error('shell.js failed to load', e); shellFailed(e); });
   if (DRY) toast('Dry run: nothing will be saved.');
   else if (!state.serverOk) toast(hostedMsg('Running without serve.py, so notes are kept in this browser only.', 'Can’t reach the server right now. Reading works; saving will be back shortly.'));
   const last = validPos(libCall('currentPosition'));
   if (hadHash && last && (last.b !== state.book || last.c !== state.chapter) && Date.now() - last.t < 60 * DAY) showResume(last);
   (window.requestIdleCallback || (f => setTimeout(f, 400)))(() => { [data.people(), data.places(), data.events(), data.orig(state.book), data.topics()].forEach(p => p && p.catch && p.catch(() => {})); });
 }
+/** Inside the iOS app, a page that cannot start tells the shell itself (shell.js may never have loaded), so it offers
+ *  Try again instead of a dead page; in a browser check (?app=ios) there is no handler and nothing is sent. */
+function shellFailed(e) {
+  if (!document.documentElement.classList.contains('app-shell')) return;
+  try { window.webkit?.messageHandlers?.bl?.postMessage({ type: 'failed', message: String((e && e.message) || e) }); } catch (err) { /* no handler */ }
+}
 boot().catch(e => {
   console.error(e);
+  shellFailed(e); // first: nothing below may stop it
   if (state.home) setHomeShown(false); // the message sits in the reader
   const el = document.getElementById('reader');
   const how = likelyHosted() ? 'Reload the page to try again.' : 'Run <code>python3 serve.py</code> and open http://localhost:8765.';

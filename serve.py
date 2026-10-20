@@ -1099,6 +1099,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self._is_api(): return self.api("GET")
         if self._raw_path() in DONATE_PATHS: return self.send_redirect(DONATE_URL)
         if self._raw_path() == "/": self.path = "/index.html" + self.path[1:]
+        elif self._raw_path() == "/privacy": self.path = "/privacy.html" + self.path[len("/privacy"):]  # as vercel.json rewrites it
         return super().do_GET()
 
     def do_HEAD(self):

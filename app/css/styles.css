@@ -2695,3 +2695,23 @@ body.tb-dragging, body.tb-dragging * { cursor: grabbing !important; }
   .ls-chip[aria-pressed="true"], .rc-sec .ls-chip[aria-expanded="true"] { outline: 2px solid Highlight; }
 }
 @media print { .rc-range, .rc-close, .rc-acts, .rc-foot, .rc-hero .btn, .ls-info, .lib-ncard, .lib-ncard-scrim, .tb-arrow { display: none !important; } }
+
+/* ------------------------------------------------------------ app shell (ios-brief §2)
+   Inside the iOS app (html.app-shell, set by index.html from the user agent or ?app=ios) the native tab bar and Read
+   toolbar replace the top bar: it is hidden and the page starts at the top. Nothing else changes. */
+html.app-shell { --bar-h: env(safe-area-inset-top, 0px); } /* the glass toolbar's height, from the web view's safe area (ios-brief §6) */
+html.app-shell #topbar { display: none; }
+html.app-shell .page { padding-bottom: env(safe-area-inset-bottom, 0px); } /* the floating tab bar */
+html.app-shell #home { padding-top: 0; padding-bottom: 0; } /* the cover runs under the status bar */
+/* the colophon (Home's last block, Today and Welcome alike) runs on under the floating tab bar, dark to the edge */
+html.app-shell #home .colo { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+html.app-shell #home .mast { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+/* a dialog keeps clear of the status bar and the floating tab bar (the page runs under both) */
+html.app-shell dialog.modal { margin-top: calc(env(safe-area-inset-top, 0px) + 12px); margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px); }
+/* iOS zooms the page in when a field smaller than 16px takes focus; the app's fields keep the page where it is */
+html.app-shell :is(input, select, textarea):not([type=range], [type=checkbox], [type=radio]) { font-size: 16px; }
+/* no donation links inside the app (App Review 3.1.1; ios-brief §6, pending Ji's call): the give rows with their headings
+   (Settings, the profile card), Home's colophon line, the Help footer's link and the sign-up pause's button go; the
+   pause's own words stay. The open web keeps them all. */
+html.app-shell :is(.group-h:has(+ .group > li > .give), .group:has(> li > .give), .colo-g, .pause-go, .ac-go, a[href="/donate"], a[href="/support"]) { display: none !important; }
+html.app-shell .help-foot { justify-content: flex-end; } /* Done keeps its place at the right */
