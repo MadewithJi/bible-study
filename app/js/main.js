@@ -1,7 +1,7 @@
 // Wiring: boot, the action object A, the study-sheet state machine, top bar, stage panels, picker,
 // search, settings, dialogs, toast, keyboard, profiles (resume prompt, library marks) and the art panel.
 import { icon } from './icons.js'; // first import: injects the icon sprite
-import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted, QUOTA_MSG } from './store.js';
+import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted, QUOTA_MSG, applyLicensed, LICENSED_IDS } from './store.js';
 import * as reader from './reader.js';
 import * as drawer from './drawer.js';
 import * as viz from './viz.js';
@@ -40,9 +40,10 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const TABS = ['xref', 'context', 'orig', 'notes', 'media', 'mine', 'search'];
 /** The study panel's Mine tab (links-spec §3.3) is shown once drawer.js can draw it; until then it is never opened. */
 const mineReady = () => { const t = document.getElementById('tab-mine'); return !!t && !t.hidden; };
+// the NIV, NKJV and NASB open here while serve.py cannot serve them from API.Bible (store.js applyLicensed)
+const gateway = v => (b, c) => `https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookOf(b).name + ' ' + c)}&version=${v}`;
 const EXTERNAL = {
-  niv: (b, c) => `https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookOf(b).name + ' ' + c)}&version=NIV`,
-  nkjv: (b, c) => `https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookOf(b).name + ' ' + c)}&version=NKJV`,
+  niv: gateway('NIV'), nkjv: gateway('NKJV'), nasb: gateway('NASB'),
   lsb: (b, c) => `https://read.lsbible.org/?q=${encodeURIComponent(bookOf(b).name + ' ' + c)}`,
 };
 const SKELETON = '<div class="skeleton" aria-busy="true"><i style="width:92%"></i><i style="width:70%"></i><i style="width:84%"></i><i style="width:56%"></i></div>';
@@ -701,12 +702,28 @@ async function removeKey(id) {
   toast(`${t.abbr} key removed.`);
   render({ keepScroll: true });
 }
+/** The keys' footnote names the texts that open another website: the NIV, NKJV and NASB only while serve.py cannot
+ *  serve them from API.Bible (index.html's sentence is the one for that case, without the NASB). */
+function syncElsewhere(el) {
+  if (!el) return;
+  let s = el.querySelector('[data-elsewhere]');
+  if (!s) {
+    const m = el.innerHTML.match(/NIV, NKJV and LSB have no free API.*?read\.lsbible\.org\./); if (!m) return;
+    el.innerHTML = el.innerHTML.replace(m[0], '<span data-elsewhere></span>'); s = el.querySelector('[data-elsewhere]');
+  }
+  const and = l => (l.length > 1 ? `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}` : l[0] || '');
+  const of = k => state.translations.filter(t => t.kind === k), lic = of('licensed'), ext = of('external');
+  const sites = [ext.some(t => LICENSED_IDS.includes(t.id)) && 'Bible Gateway', ext.some(t => t.id === 'lsb') && 'read.lsbible.org'].filter(Boolean);
+  s.textContent = [lic.length && `${and(lic.map(t => t.abbr))} ${lic.length === 1 ? 'is' : 'are'} read here through API.Bible.`,
+    ext.length && `${and(ext.map(t => t.abbr))} ${ext.length === 1 ? 'has' : 'have'} no free API here, so choosing ${ext.length === 1 ? 'it' : 'them'} opens the chapter on ${sites.join(' or ')}.`].filter(Boolean).join(' ');
+}
 function openSettings() {
   const d = $('#settings'); if (!d) return;
   // hosted, only the owner sees (and may change) the ESV and NLT keys; serve.py refuses anyone else
   const off = ownerOnlyKeys(), kr = $('#key-rows'), ko = $('#keys-owner'), kf = $('#keys-foot');
   if (kr) kr.hidden = off; if (ko) ko.hidden = !off; if (kf) kf.hidden = off;
   if (kf && state.auth.hosted) kf.innerHTML = kf.innerHTML.replace('cached on this computer', 'cached on the server');
+  syncElsewhere(ko); syncElsewhere(kf);
   $('#esv-key').value = ''; $('#nlt-key').value = '';
   syncKeyRow('esv'); syncKeyRow('nlt'); syncSettingsDone();
   const fs = $('#fontsize');
@@ -1086,10 +1103,11 @@ function fillTranslationSelects() {
   const g = kind => state.translations.filter(t => t.kind === kind);
   const group = (label, list) => list.length ? `<optgroup label="${label}">${list.map(opt).join('')}</optgroup>` : '';
   const api = group(off ? 'Available to the site owner' : 'With API key', g('api'));
-  $('#tr').innerHTML = group('Bundled', g('bundled')) + api + group('Opens a website', g('external'));
-  $('#tr2').innerHTML = '<option value="">Parallel</option>' + group('Bundled', g('bundled')) + api;
+  const lic = group('Licensed', g('licensed')); // NIV, NKJV and NASB through API.Bible: every reader, guests included
+  $('#tr').innerHTML = group('Bundled', g('bundled')) + lic + api + group('Opens a website', g('external'));
+  $('#tr2').innerHTML = '<option value="">Parallel</option>' + group('Bundled', g('bundled')) + lic + api;
 }
-/** A text the current session can read: bundled, or an API one with a key it may use. */
+/** A text the current session can read: bundled, licensed (API.Bible), or an API one with a key it may use. */
 const usableTr = id => { const t = state.translations.find(x => x.id === id); return !!t && t.kind !== 'external' && (t.kind !== 'api' || !!state.apiKeys[t.id]); };
 function bindTranslations() {
   const after = () => { updateBar(); renderReader(); drawer.renderDrawer({ keepScroll: true }); homeCall('refresh'); };
@@ -1102,7 +1120,8 @@ function bindTranslations() {
       const url = EXTERNAL[t.id] ? EXTERNAL[t.id](state.book, state.chapter) : null;
       if (url) window.open(url, '_blank', 'noopener');
       sel.value = state[which] || '';
-      toast(`${t.abbr} has no free API, so this chapter opened on ${t.id === 'lsb' ? 'read.lsbible.org' : 'BibleGateway'} in a new tab.`);
+      toast(LICENSED_IDS.includes(t.id) ? `${t.abbr} isn’t available in the app right now, so this chapter opened on Bible Gateway in a new tab.`
+        : `${t.abbr} has no free API, so this chapter opened on ${t.id === 'lsb' ? 'read.lsbible.org' : 'BibleGateway'} in a new tab.`);
       return;
     }
     // the parallel column never repeats the main text
@@ -1505,18 +1524,21 @@ function loadAnalytics() {
 // is drawn in one go), longer only where the page needs the server first (Home's position, an ESV or NLT text).
 const BOOT_GRACE = 350, BOOT_CAP = 6000;
 const delay = ms => new Promise(r => setTimeout(r, ms));
-const apiTr = id => !!id && (state.translations.find(x => x.id === id) || {}).kind === 'api';
-/** The saved ESV or NLT choice, usable now that /api/config has answered (the first paint fell back to the KJV). */
+// a text that needs /api/config first: ESV, NLT, and NIV, NKJV or NASB (which it lists when API.Bible can serve them)
+const apiTr = id => !!id && ((state.translations.find(x => x.id === id) || {}).kind === 'api' || LICENSED_IDS.includes(id));
+/** The saved ESV, NLT, NIV, NKJV or NASB choice, usable now that /api/config has answered (the first paint fell back to
+ *  the KJV). The menus are filled again either way: /api/config decides which of NIV, NKJV and NASB are in the app. */
 function adoptSavedTranslations(tr, tr2) {
   let changed = false;
   if (tr !== state.tr && usableTr(tr)) { state.tr = tr; changed = true; }
   if (tr2 !== state.tr2 && (!tr2 || (usableTr(tr2) && tr2 !== state.tr))) { state.tr2 = tr2; changed = true; }
-  if (changed) fillTranslationSelects();
+  fillTranslationSelects();
   return changed;
 }
 async function boot() {
   loadAnalytics();
   const meta = await data.meta(); state.meta = meta; state.books = meta.books; state.translations = meta.translations || [];
+  applyLicensed(); // the NASB beside the NIV and NKJV, all three Bible Gateway links until /api/config says otherwise
   [library, tracker, art, lnk, mrk] = await modsP;
   artCall('init', A);
   artCall('load'); // art.json in the background; never throws

@@ -109,7 +109,8 @@ def record_accounts(path, entries, renamed=None):
 HOSTING_ENV = ("PORT", "HOST", "BS_DATA_DIR", "BS_HOSTED", "BS_ALLOWED_HOSTS", "BS_ALLOWED_ORIGINS", "BS_TRUST_PROXY",
                "BS_OWNER_EMAILS", "BS_PROXY_SECRET", "BS_OWNER_SETUP_TOKEN", "RAILWAY_VOLUME_MOUNT_PATH", "BS_SIGNUP",
                "BS_TURNSTILE_SITEKEY", "BS_TURNSTILE_SECRET", "BS_TURNSTILE_VERIFY_URL", "BS_MAX_USERS",
-               "BS_PROFILE_QUOTA_MB", "BS_MIN_FREE_MB", "BS_DONATE_URL")
+               "BS_PROFILE_QUOTA_MB", "BS_MIN_FREE_MB", "BS_DONATE_URL",
+               "BS_APIBIBLE_KEY", "BS_APIBIBLE_URL", "BS_APIBIBLE_BIBLES", "BS_APIBIBLE_MONTHLY")  # never a real key
 
 
 def server_env(extra=None):
@@ -414,9 +415,10 @@ def setUpModule():
 def tearDownModule():
     if H:
         H.cleanup()
-    if FakeTurnstile.server:
-        FakeTurnstile.server.shutdown()
-        FakeTurnstile.server.server_close()
+    for fake in (FakeTurnstile, FakeApiBible):
+        if fake.server:
+            fake.server.shutdown()
+            fake.server.server_close()
 
 
 class Base(unittest.TestCase):
@@ -498,10 +500,10 @@ class T02_GuestCompat(Base):
         c = Client()
         r = c.req("PUT", "/api/config", {"esvKey": "test-not-a-key"})
         self.assertEqual(r.status, 200, r)
-        self.assertEqual(r.json, {"esv": True, "nlt": False})
-        self.assertEqual(c.req("GET", "/api/config").json, {"esv": True, "nlt": False})
+        self.assertEqual(r.json, {"esv": True, "nlt": False, "licensed": []})
+        self.assertEqual(c.req("GET", "/api/config").json, {"esv": True, "nlt": False, "licensed": []})
         self.assertEqual(c.req("PUT", "/api/config", {"esvKey": ""}).json["esv"], False)
-        self.assertEqual(c.req("GET", "/api/config").json, {"esv": False, "nlt": False}, "an emptied key reads back as off")
+        self.assertEqual(c.req("GET", "/api/config").json, {"esv": False, "nlt": False, "licensed": []}, "an emptied key reads back as off")
 
     def test_b4_unknown_path_and_wrong_method(self):
         c = Client()
@@ -3788,7 +3790,7 @@ class T21_HostingEnv(Base):
         self.assertNotIn("secure", r.set_cookies()[0].lower())
         me = c.me().json
         self.assertEqual((me["hosted"], me["signup"], me["owner"]), (False, "open", False))
-        self.assertEqual(c.req("GET", "/api/config").json, {"esv": False, "nlt": False})
+        self.assertEqual(c.req("GET", "/api/config").json, {"esv": False, "nlt": False, "licensed": []})
         self.assertEqual(c.req("PUT", "/api/config", {}).status, 200, "anyone may set keys locally")
         self.assertErr(c.req("GET", "/api/admin/traffic"), 404, "not_found")
         self.assertFalse(os.path.exists(os.path.join(H.data, "metrics.json")), "nothing is counted locally")
@@ -3948,17 +3950,17 @@ class T22_Hosted(Base):
                                    {"verses": ["v1", "v2"], "fetched": "2026-10-07", "v": 4})
         r = self.owner.req("GET", "/api/passage?tr=nlt&book=43&chapter=3")
         self.assertEqual((r.status, r.json["verses"]), (200, ["v1", "v2"]))
-        self.assertEqual(self.owner.req("GET", "/api/config").json, {"esv": False, "nlt": True})
+        self.assertEqual(self.owner.req("GET", "/api/config").json, {"esv": False, "nlt": True, "licensed": []})
         for c in (self.member, HostedClient()):
             for tr in ("nlt", "esv"):
                 r = c.req("GET", f"/api/passage?tr={tr}&book=43&chapter=3")
                 self.assertErr(r, 403, "owner_only")
                 self.assertEqual(r.json["message"], "ESV and NLT are available only to the owner of this site.")
-            self.assertEqual(c.req("GET", "/api/config").json, {"esv": False, "nlt": False})
+            self.assertEqual(c.req("GET", "/api/config").json, {"esv": False, "nlt": False, "licensed": []})
             self.assertErr(c.req("PUT", "/api/config", {"esvKey": "theirs"}), 403, "owner_only")
         self.assertEqual(read_json_file(os.path.join(self.data, "config.json")), {"nltKey": "test-key"})
         r = self.owner.req("PUT", "/api/config", {"esvKey": " owner-key "})
-        self.assertEqual((r.status, r.json), (200, {"esv": True, "nlt": True}))
+        self.assertEqual((r.status, r.json), (200, {"esv": True, "nlt": True, "licensed": []}))
         self.assertEqual(read_json_file(os.path.join(self.data, "config.json"))["esvKey"], "owner-key")
 
     def test_w10_owner_emails_are_reserved(self):
@@ -3995,7 +3997,8 @@ class T22_Hosted(Base):
     def test_w14_site_activity_for_owners_only(self):
         """GET /api/admin/traffic (open sign-up brief §1.4): the API's own daily counts, for owners; 404 for anyone else."""
         t0 = self.traffic()
-        self.assertEqual(set(t0), {"days", "totals", "turnstile", "signup", "signupPause", "storage"})
+        self.assertEqual(set(t0), {"days", "totals", "turnstile", "signup", "signupPause", "storage", "apibible"})
+        self.assertEqual(t0["apibible"], {"calls": 0, "limit": 4800}, "no API.Bible key on this server: nothing called")
         self.assertEqual((t0["turnstile"], t0["signup"], t0["signupPause"]), (True, "open", None))
         days = t0["days"]
         self.assertEqual(len(days), 30)
@@ -4332,7 +4335,7 @@ class T25_Release1Fixes(Base):
         self.assertRegex(self.log(), rf"owner-email-unclaimed uid={stranger.scope}")
         accounts.write_json_atomic(os.path.join(self.data, "config.json"), {"esvKey": "owner-key"})
         self.assertErr(stranger.req("GET", "/api/passage?tr=esv&book=43&chapter=3"), 403, "owner_only")
-        self.assertEqual(stranger.req("GET", "/api/config").json, {"esv": False, "nlt": False})
+        self.assertEqual(stranger.req("GET", "/api/config").json, {"esv": False, "nlt": False, "licensed": []})
         self.assertErr(stranger.req("PUT", "/api/config", {"esvKey": "theirs"}), 403, "owner_only")
         for method, path in (("GET", "/api/admin/traffic"), ("POST", "/api/admin/traffic"), ("GET", "/api/invites")):
             self.assertErr(stranger.req(method, path, {} if method == "POST" else None), 404, "not_found")
@@ -5272,6 +5275,496 @@ class T28_Studies(Base):
         self.assertEqual(vl("[[John 1:4 · “the light of men”]]"), "[[John 1.4|John 1:4 · “the light of men”]]")
         self.assertEqual(vl("[[Psalm 23:1 · “he leadeth”|mine]]"), "[[Psalms 23.1|mine]]")
         self.assertEqual(vl("[[Grace · “words”]]"), "[[Grace · “words”]]", "not a verse: unchanged")
+
+# ======================================================================= AC. NIV, NKJV and NASB via API.Bible (translations brief §1)
+def ab_text(text, vid=None):
+    node = {"text": text, "type": "text"}
+    if vid:
+        node["attrs"] = {"verseId": vid, "verseOrgIds": [vid]}
+    return node
+
+
+def ab_tag(name, style, *items, **attrs):
+    return {"name": name, "type": "tag", "attrs": dict(attrs, style=style), "items": list(items)}
+
+
+def ab_verse(ref, n):
+    return ab_tag("verse", "v", ab_text(str(n)), number=str(n), sid=f"{ref} {n}")
+
+
+def ab_chapter(usfm, ch):
+    """Chapter content shaped like API.Bible's JSON (content-type=json): John 3 (a heading, a footnote, wj spans, a verse
+    across paragraphs, a verse marked with no text), Psalm 23 (a title, the divine name, poetry lines); any other
+    chapter: three verses with 2-3 combined."""
+    p = lambda style, *items: ab_tag("para", style, *items)  # noqa: E731
+    wj = lambda *items: ab_tag("char", "wj", *items)  # noqa: E731
+    if (usfm, ch) == ("JHN", 3):
+        v = lambda n: f"JHN.3.{n}"  # noqa: E731
+        return [
+            p("s1", ab_text("Jesus Teaches Nicodemus")),
+            p("p", ab_verse("JHN 3", 1), ab_text("Now there was a Pharisee, a man named Nicodemus.", v(1)),
+              ab_verse("JHN 3", 2), ab_text("He came to Jesus at night and said, “Rabbi, we know.”", v(2)),
+              {"name": "note", "type": "tag", "attrs": {"style": "f", "caller": "+"},
+               "items": [ab_tag("char", "fr", ab_text("3:2 ", v(2))), ab_tag("char", "ft", ab_text("A footnote that never shows", v(2)))]},
+              ab_verse("JHN 3", 3), ab_text("Jesus replied, ", v(3)), wj(ab_text("“Very truly I tell you, no one can see the kingdom of God", v(3)))),
+            p("p", wj(ab_text("unless they are born again.”", v(3)))),
+            p("p", ab_verse("JHN 3", 4)),
+            p("s2", ab_text("A heading between verses")),
+            p("p", ab_verse("JHN 3", 5), ab_text("Jesus answered, ", v(5)), wj(ab_text("“Very truly I tell you", v(5))), ab_text(".", v(5))),
+            p("p", ab_verse("JHN 3", 16), ab_text("For God so loved the world.", v(16)))]
+    if (usfm, ch) == ("PSA", 23):
+        return [
+            p("d", ab_text("A psalm of "), ab_tag("char", "pn", ab_text("David")), ab_text(".")),
+            p("q1", ab_verse("PSA 23", 1), ab_text("The ", "PSA.23.1"), ab_tag("char", "nd", ab_text("Lord", "PSA.23.1")),
+              ab_text(" is my shepherd,", "PSA.23.1")),
+            p("q2", ab_text("I lack nothing.", "PSA.23.1")),
+            p("q1", ab_verse("PSA 23", 2), ab_text("He makes me lie down in green pastures,", "PSA.23.2"))]
+    ref, v = f"{usfm} {ch}", lambda n: f"{usfm}.{ch}.{n}"  # noqa: E731
+    return [p("p", ab_verse(ref, 1), ab_text(f"First verse of {usfm} {ch}.", v(1)),
+              ab_tag("verse", "v", ab_text("2-3"), number="2-3", sid=f"{ref} 2-3"), ab_text("Two and three together.", v(2)),
+              ab_verse(ref, 4), ab_text("Four.", v(4)))]
+
+
+class FakeApiBible(http.server.BaseHTTPRequestHandler):
+    """API.Bible faked on 127.0.0.1 (the tests have no real key and never call the real one). `seen` keeps each
+    request's path and api-key header. Chapters ROM.1-6 misbehave: 500, slow, empty, 403, no copyright, 429."""
+    server, seen, gone = None, [], set()
+    key = "fake-apibible-key-" + secrets.token_hex(8)
+    BIBLES = [{"id": "fake-kjv-01", "abbreviation": "engKJV", "abbreviationLocal": "KJV", "name": "King James Version"},
+              {"id": "fake-nivuk-01", "abbreviation": "NIVUK", "abbreviationLocal": "NIVUK", "name": "NIV (UK)"},
+              {"id": "fake-niv-01", "abbreviation": "NIV", "abbreviationLocal": "NIV", "name": "New International Version"},
+              {"id": "fake-nkjv-01", "abbreviation": "engNKJV", "abbreviationLocal": "NKJV", "name": "New King James Version"},
+              {"id": "fake-nasb95-01", "abbreviation": "NASB1995", "abbreviationLocal": "NASB1995", "name": "NASB 1995"},
+              {"id": "fake-nasb20-01", "abbreviation": "NASB 2020", "abbreviationLocal": "NASB", "name": "NASB 2020"}]
+    bibles = list(BIBLES)
+
+    @classmethod
+    def url(cls):
+        if cls.server is None:
+            cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), cls)
+            cls.server.daemon_threads = True
+            threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        return f"http://127.0.0.1:{cls.server.server_address[1]}/v1"
+
+    @classmethod
+    def env(cls, **extra):
+        return {"BS_APIBIBLE_KEY": cls.key, "BS_APIBIBLE_URL": cls.url(), **extra}
+
+    @classmethod
+    def paths(cls, start=0):
+        return [p.split("?")[0] for p, _ in cls.seen[start:]]
+
+    def log_message(self, *a):
+        pass
+
+    def answer(self, status, obj):
+        data = json.dumps(obj).encode("utf-8")
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except OSError:  # the slow chapter's caller has given up
+            pass
+
+    def do_GET(self):
+        FakeApiBible.seen.append((self.path, self.headers.get("api-key")))
+        path = urllib.parse.urlsplit(self.path).path
+        if self.headers.get("api-key") != self.key:
+            return self.answer(401, {"statusCode": 401, "error": "Unauthorized", "message": "Invalid API key"})
+        if path == "/v1/bibles":
+            return self.answer(200, {"data": self.bibles})
+        m = re.fullmatch(r"/v1/bibles/([^/]+)/chapters/([0-9A-Z]{3})\.(\d+)", path)
+        if not m or m.group(1) in self.gone or not m.group(1).startswith(("fake-", "pin-")):
+            return self.answer(404, {"statusCode": 404, "error": "Not Found", "message": "bible not found"})
+        bid, usfm, ch = m.group(1), m.group(2), int(m.group(3))
+        odd = {"ROM.1": 500, "ROM.4": 403, "ROM.6": 429}.get(f"{usfm}.{ch}")
+        if odd:
+            return self.answer(odd, {"statusCode": odd, "error": "Error", "message": "No"})
+        if f"{usfm}.{ch}" == "ROM.2":
+            time.sleep(3)
+        content = [] if f"{usfm}.{ch}" == "ROM.3" else ab_chapter(usfm, ch)
+        data = {"id": f"{usfm}.{ch}", "bibleId": bid, "number": str(ch), "bookId": usfm, "reference": f"{usfm} {ch}",
+                "content": content, "verseCount": 3, "next": {"id": f"{usfm}.{ch + 1}"}, "previous": {"id": f"{usfm}.{ch - 1}"},
+                "copyright": f"Text of {bid} copyright ©  2026\n  Fake Publisher. Used by permission."}
+        if f"{usfm}.{ch}" == "ROM.5":
+            del data["copyright"]
+        self.answer(200, {"data": data, "meta": {"fumsToken": f"fums-{bid}-{usfm}.{ch}-{len(FakeApiBible.seen)}"}})
+
+
+class T29_ApiBibleUnits(Base):
+    """serve.py's API.Bible proxy in-process against FakeApiBible: the JSON content parser, discovery and pinning,
+    the 14-day cache, upstream errors, an outage, the monthly budget and each client's allowance."""
+    restart = False
+
+    @classmethod
+    def setUpClass(cls):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ResourceWarning)
+            import serve  # noqa: E402 (starts nothing)
+        cls.serve = serve
+
+    def setUp(self):
+        sv, self.now = self.serve, [time.time()]
+        self.d = tempfile.mkdtemp(prefix="bs-apibible-", dir=H.tmp)
+        accounts.configure(self.d, H.port)
+        saved = (sv.APIBIBLE, sv.USAGE, sv.APIBIBLE_TIMEOUT, sv.UPSTREAM_WINDOW, sv.APIBIBLE_CLIENT_WINDOW)
+        def restore():
+            sv.APIBIBLE, sv.USAGE, sv.APIBIBLE_TIMEOUT, sv.UPSTREAM_WINDOW, sv.APIBIBLE_CLIENT_WINDOW = saved
+            FakeApiBible.bibles, FakeApiBible.gone = list(FakeApiBible.BIBLES), set()
+            accounts.configure(H.data, H.port)
+        self.addCleanup(restore)
+        self.addCleanup(sv.configure_hosting, {})
+        sv.configure_hosting(FakeApiBible.env())
+        sv.APIBIBLE, sv.USAGE = sv.ApiBible(clock=lambda: self.now[0]), sv.ApiBibleUsage()
+        sv.UPSTREAM_WINDOW, sv.APIBIBLE_CLIENT_WINDOW = sv.Window(50, 60), sv.Window(30, 600)
+        self.errors = []  # the [error] lines, kept out of the test output
+        self.addCleanup(setattr, accounts, "log_error", accounts.log_error)
+        accounts.log_error = self.errors.append
+        import contextlib
+        quiet = contextlib.redirect_stdout(io.StringIO())  # and discovery's 'API.Bible: …' line
+        quiet.__enter__()
+        self.addCleanup(quiet.__exit__, None, None, None)
+
+    def cache(self, tr, b, c):
+        return os.path.join(self.d, "cache", tr, f"{b:02d}-{c}.json")
+
+    def age(self, path, days):
+        obj = read_json_file(path)
+        obj["fetched"] = str(datetime.datetime.now(datetime.timezone.utc).date() - datetime.timedelta(days=days))
+        accounts.write_json_atomic(path, obj)
+
+    def test_a01_json_content_parser(self):
+        sv = self.serve
+        verses, title = sv.apibible_verses(ab_chapter("JHN", 3), "JHN", 3)
+        self.assertEqual(title, "", "only a psalm has a title")
+        self.assertEqual(verses[1], "Now there was a Pharisee, a man named Nicodemus.")
+        self.assertEqual(verses[2], "He came to Jesus at night and said, “Rabbi, we know.”", "no footnote, no verse number")
+        self.assertEqual(verses[3], "Jesus replied, “Very truly I tell you, no one can see the kingdom of God unless they are born again.”",
+                         "across wj spans and two paragraphs")
+        self.assertEqual(verses[4], "", "marked, with no text")
+        self.assertEqual(verses[5], "Jesus answered, “Very truly I tell you.")
+        self.assertEqual(verses[16], "For God so loved the world.")
+        self.assertFalse(any("Nicodemus" in t and "Teaches" in t or "heading" in t or "footnote" in t for t in verses.values()))
+        verses, title = sv.apibible_verses(ab_chapter("PSA", 23), "PSA", 23)
+        self.assertEqual(title, "A psalm of David.")
+        self.assertEqual(verses, {1: "The LORD is my shepherd, I lack nothing.", 2: "He makes me lie down in green pastures,"})
+        verses, _ = sv.apibible_verses(ab_chapter("ROM", 8), "ROM", 8)
+        self.assertEqual(verses, {1: "First verse of ROM 8.", 2: "Two and three together.", 3: "", 4: "Four."}, "2-3 combined")
+        other = [ab_tag("para", "p", ab_verse("ROM 9", 1), ab_text("Not this chapter.", "ROM.9.1"))]
+        self.assertEqual(sv.apibible_verses(other, "ROM", 8), ({1: ""}, ""), "text of another chapter is dropped")
+        self.assertEqual(sv.apibible_verses([{"type": "text"}, 3, {"name": "para", "items": "x"}], "ROM", 8), ({}, ""))
+
+    def test_a02_discovery_by_abbreviation_and_pins(self):
+        sv = self.serve
+        self.assertEqual(sv.apibible_pick(FakeApiBible.BIBLES), {"niv": "fake-niv-01", "nkjv": "fake-nkjv-01", "nasb": "fake-nasb20-01"},
+                         "NIV not NIVUK; NKJV by its local abbreviation; NASB 2020 before NASB1995")
+        self.assertEqual(sv.apibible_pick([{"id": "a-01", "abbreviation": "NASB95"}, {"id": "b-01", "abbreviation": "NASB1995"}]),
+                         {"nasb": "b-01"})
+        self.assertEqual(sv.apibible_pick([{"id": "c-01", "abbreviation": "NASB"}, {"id": "bad id", "abbreviation": "NIV"}]), {"nasb": "c-01"})
+        start = len(FakeApiBible.seen)
+        self.assertEqual(sv.APIBIBLE.licensed(wait=10), ["niv", "nkjv", "nasb"])
+        self.assertEqual(FakeApiBible.seen[start:], [("/v1/bibles?language=eng", FakeApiBible.key)])
+        on_disk = read_json_file(os.path.join(self.d, "cache", "apibible", "bibles.json"))
+        self.assertEqual(on_disk["ids"], {"niv": "fake-niv-01", "nkjv": "fake-nkjv-01", "nasb": "fake-nasb20-01"})
+        self.assertNotIn(FakeApiBible.key, json.dumps(on_disk))
+        self.assertEqual(sv.APIBIBLE.licensed(), ["niv", "nkjv", "nasb"])
+        sv.APIBIBLE = sv.ApiBible(clock=lambda: self.now[0])  # a restart: from bibles.json, no call
+        self.assertEqual((sv.APIBIBLE.licensed(), len(FakeApiBible.seen)), (["niv", "nkjv", "nasb"], start + 1))
+        self.now[0] += 15 * 86400  # 14 days on: discovered again
+        FakeApiBible.bibles = [b for b in FakeApiBible.BIBLES if b["id"] != "fake-nkjv-01"]
+        self.assertEqual(sv.APIBIBLE.licensed(wait=10), ["niv", "nasb"])
+        self.assertEqual(FakeApiBible.paths(start + 1), ["/v1/bibles"])
+        sv.configure_hosting(FakeApiBible.env(BS_APIBIBLE_KEY="another-key"))  # another key: not the old map, and a 401
+        self.assertEqual(sv.APIBIBLE.licensed(wait=10), [])
+        self.assertEqual(FakeApiBible.seen[-1], ("/v1/bibles?language=eng", "another-key"))
+        self.assertEqual(self.errors[-1], "apibible: cannot list the key's Bibles (HTTP 401)")
+        err = io.StringIO()
+        import contextlib
+        with contextlib.redirect_stderr(err):
+            sv.configure_hosting(FakeApiBible.env(BS_APIBIBLE_BIBLES=" NIV=pin-niv-01, nkjv=pin-nkjv-01,nasb=pin-nasb-01, esv=x, niv=bad id"))
+        self.assertEqual(sv.APIBIBLE_PINS, {"niv": "pin-niv-01", "nkjv": "pin-nkjv-01", "nasb": "pin-nasb-01"})
+        self.assertIn("BS_APIBIBLE_BIBLES: ignored esv=x", err.getvalue())
+        self.assertIn("BS_APIBIBLE_BIBLES: ignored niv=bad id", err.getvalue())
+        start = len(FakeApiBible.seen)
+        self.assertEqual(sv.APIBIBLE.ids_now(wait=10), {"niv": "pin-niv-01", "nkjv": "pin-nkjv-01", "nasb": "pin-nasb-01"})
+        out, st = sv.apibible_passage("nkjv", 45, 8)
+        self.assertEqual((st, FakeApiBible.paths(start)), (200, ["/v1/bibles/pin-nkjv-01/chapters/ROM.8"]), "pinned: never discovered")
+        sv.configure_hosting(FakeApiBible.env(BS_APIBIBLE_BIBLES="niv=pin-niv-01"))
+        self.assertEqual(sv.APIBIBLE.ids_now(wait=10), {"niv": "pin-niv-01", "nasb": "fake-nasb20-01"}, "the others discovered")
+        with contextlib.redirect_stderr(err):
+            sv.configure_hosting({"BS_APIBIBLE_KEY": "bad key\r\nX: y", "BS_APIBIBLE_URL": "ftp://x", "BS_APIBIBLE_MONTHLY": "-3"})
+        self.assertEqual((sv.APIBIBLE_KEY, sv.APIBIBLE_URL, sv.APIBIBLE_MONTHLY), ("", "https://rest.api.bible/v1", 4800))
+        self.assertIn("BS_APIBIBLE_KEY: ignored a value that is not valid", err.getvalue())
+        self.assertEqual(sv.APIBIBLE.licensed(), [], "no key: nothing licensed")
+        self.assertEqual(sv.apibible_passage("niv", 43, 3), ({"error": "NIV is not available here."}, 400))
+
+    def test_a03_chapter_shape_and_14_day_cache(self):
+        sv = self.serve
+        sv.APIBIBLE.licensed(wait=10)
+        start = len(FakeApiBible.seen)
+        out, st = sv.apibible_passage("niv", 43, 3)
+        self.assertEqual(st, 200, out)
+        self.assertEqual(set(out), {"verses", "copyright", "fumsToken", "fetched", "v"})
+        self.assertEqual(len(out["verses"]), 16)
+        self.assertEqual((out["verses"][3], out["verses"][6]), ("", ""))
+        self.assertEqual(out["copyright"], "Text of fake-niv-01 copyright © 2026 Fake Publisher. Used by permission.")
+        self.assertTrue(out["fumsToken"].startswith("fums-fake-niv-01-JHN.3-"))
+        self.assertEqual((out["v"], out["fetched"]), (1, time.strftime("%Y-%m-%d", time.gmtime())))
+        path, query = FakeApiBible.seen[start][0].split("?")
+        self.assertEqual(path, "/v1/bibles/fake-niv-01/chapters/JHN.3")
+        self.assertEqual(dict(urllib.parse.parse_qsl(query)), {
+            "content-type": "json", "include-notes": "false", "include-titles": "false", "include-chapter-numbers": "false",
+            "include-verse-numbers": "true", "include-verse-spans": "false", "fums-version": "3"})
+        self.assertEqual(read_json_file(self.cache("niv", 43, 3)), dict(out, id="fake-niv-01"))
+        self.assertEqual(sv.apibible_passage("niv", 43, 3), (out, 200))
+        ps, _ = sv.apibible_passage("nasb", 19, 23)
+        self.assertEqual((ps["title"], ps["verses"][0]), ("A psalm of David.", "The LORD is my shepherd, I lack nothing."))
+        self.assertEqual(len(FakeApiBible.seen), start + 2, "each chapter fetched once, then from the cache")
+        self.age(self.cache("niv", 43, 3), 13)
+        self.assertEqual(sv.apibible_passage("niv", 43, 3)[0]["fumsToken"], out["fumsToken"], "13 days: the cached copy")
+        self.age(self.cache("niv", 43, 3), 15)
+        again, st = sv.apibible_passage("niv", 43, 3)
+        self.assertEqual((st, len(FakeApiBible.seen), again["fetched"]), (200, start + 3, out["fetched"]), "15 days: fetched again")
+        self.assertNotEqual(again["fumsToken"], out["fumsToken"])
+        old = read_json_file(self.cache("niv", 43, 3))
+        accounts.write_json_atomic(self.cache("niv", 43, 3), dict(old, id="fake-niv-00"))
+        sv.apibible_passage("niv", 43, 3)
+        self.assertEqual(len(FakeApiBible.seen), start + 4, "a copy from another Bible id is not this one")
+        threads = [threading.Thread(target=sv.apibible_passage, args=("nkjv", 45, 8)) for _ in range(6)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        self.assertEqual(FakeApiBible.paths(start + 4), ["/v1/bibles/fake-nkjv-01/chapters/ROM.8"], "six readers at once: one call")
+
+    def test_a04_upstream_errors(self):
+        sv = self.serve
+        sv.APIBIBLE.licensed(wait=10)
+        sv.APIBIBLE_TIMEOUT = 0.5
+        msg = {"error": "NKJV could not be loaded just now. Try again in a few minutes."}
+        for ch, why, down in ((1, "HTTP 500", True), (2, "timeout", True), (3, "no verses", False), (5, "no copyright", False),
+                              (1, "HTTP 500", True)):
+            self.assertEqual(sv.apibible_passage("nkjv", 45, ch), (msg, 502), ch)
+            self.assertFalse(os.path.exists(self.cache("nkjv", 45, ch)), "never cached")
+            self.assertEqual(self.errors[-1], f"apibible: NKJV ROM.{ch}: {why}")
+            self.assertEqual(sv.APIBIBLE.is_paused("nkjv"), down, f"{why}: a minute without NKJV calls only when API.Bible is down")
+            self.now[0] += 61
+        sv.apibible_passage("nasb", 45, 8)
+        self.age(self.cache("nasb", 45, 8), 20)
+        start = len(FakeApiBible.seen)
+        self.assertEqual(sv.apibible_passage("nasb", 45, 4), ({"error": "NASB could not be loaded just now. Try again in a few minutes."}, 502))
+        self.assertEqual(self.errors[-1], "apibible: NASB ROM.4: HTTP 403")
+        self.assertEqual(sv.apibible_passage("nasb", 45, 9)[1], 502, "refused: no more NASB calls for 10 minutes")
+        self.assertEqual(sv.apibible_passage("nasb", 45, 8)[1], 200, "a cached copy still serves")
+        self.assertEqual(len(FakeApiBible.seen), start + 1)
+        self.now[0] += 601
+        self.assertEqual(sv.apibible_passage("nasb", 45, 9)[1], 200)
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 6), ({"error": "Too many NKJV requests at once. Try again in about a minute."}, 429))
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 7)[1], 502, "throttled: a minute without NKJV calls")
+        self.now[0] += 61
+        sv.apibible_passage("nkjv", 45, 8)
+        self.age(self.cache("nkjv", 45, 8), 20)
+        FakeApiBible.gone.add("fake-nkjv-01")  # API.Bible no longer knows the id: 502, then discovered again
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 9), (msg, 502))
+        self.assertTrue(sv.APIBIBLE.stale)
+        stale, st = sv.apibible_passage("nkjv", 45, 8)
+        self.assertEqual((st, stale["fetched"]), (200, read_json_file(self.cache("nkjv", 45, 8))["fetched"]),
+                         "a failed refresh keeps a copy under 30 days old")
+        FakeApiBible.bibles = [dict(b, id="fake-nkjv-02") if b["id"] == "fake-nkjv-01" else b for b in FakeApiBible.BIBLES]
+        start = len(FakeApiBible.seen)
+        self.now[0] += 601  # at most one discovery every 10 minutes
+        out, st = sv.apibible_passage("nkjv", 45, 9)
+        self.assertEqual((st, FakeApiBible.paths(start)), (200, ["/v1/bibles", "/v1/bibles/fake-nkjv-02/chapters/ROM.9"]))
+        self.assertEqual(sv.APIBIBLE.ids_now(0)["nkjv"], "fake-nkjv-02")
+        self.assertNotIn(FakeApiBible.key, json.dumps(self.errors))
+
+    def test_a04b_outage(self):
+        sv = self.serve
+        sv.APIBIBLE.licensed(wait=10)
+        msg = {"error": "NKJV could not be loaded just now. Try again in a few minutes."}
+        start, calls = len(FakeApiBible.seen), sv.USAGE.report()["calls"]
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 1), (msg, 502))  # HTTP 500
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 8), (msg, 502), "a 5xx: a minute without NKJV calls")
+        self.assertEqual((len(FakeApiBible.seen), sv.USAGE.report()["calls"]), (start + 1, calls + 1),
+                         "the second chapter made no upstream call and spent nothing")
+        self.assertEqual(sv.apibible_passage("niv", 45, 8)[1], 200, "the other two still call")
+        self.now[0] += 61
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 8)[1], 200)
+        with socket.socket() as s:  # a port nothing listens on: API.Bible unreachable
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        sv.configure_hosting(FakeApiBible.env(BS_APIBIBLE_URL=f"http://127.0.0.1:{port}/v1",
+                                              BS_APIBIBLE_BIBLES="niv=fake-niv-01,nkjv=fake-nkjv-01,nasb=fake-nasb20-01"))
+        calls, usage = sv.USAGE.report()["calls"], os.path.join(self.d, "cache", "apibible", "usage.json")
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 9), (msg, 502))
+        self.assertEqual(self.errors[-1], "apibible: NKJV ROM.9: ConnectionRefusedError")
+        self.assertEqual((sv.USAGE.report()["calls"], read_json_file(usage)["calls"]), (calls, calls),
+                         "a call that never left is given back")
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 10), (msg, 502))
+        self.assertEqual(self.errors[-1], "apibible: NKJV ROM.9: ConnectionRefusedError", "paused: no second attempt")
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 8)[1], 200, "a cached chapter still serves")
+
+    def test_a04c_client_allowance(self):
+        sv = self.serve
+        sv.APIBIBLE.licensed(wait=10)
+        sv.APIBIBLE_CLIENT_WINDOW = sv.Window(2, 600)
+        a, b = "203.0.113.5", "198.51.100.7"
+        self.assertEqual([sv.apibible_passage("niv", 45, c, a)[1] for c in (8, 9)], [200, 200])
+        start = len(FakeApiBible.seen)
+        self.assertEqual(sv.apibible_passage("niv", 45, 10, a),
+                         ({"error": "Too many NIV requests at once. Try again in about 10 minutes."}, 429))
+        self.assertEqual(sv.apibible_passage("niv", 45, 8, a)[1], 200, "a cached chapter does not count")
+        self.assertEqual(len(FakeApiBible.seen), start)
+        self.assertEqual(sv.apibible_passage("niv", 45, 10, b)[1], 200, "another client has its own allowance")
+        self.assertEqual(sv.apibible_passage("niv", 45, 11)[1], 200, "locally ('*') only the shared limit")
+        self.assertEqual(len(sv.UPSTREAM_WINDOW.hits["apibible"]), 4, "a client's refused call takes no shared room")
+        sv.UPSTREAM_WINDOW.limit = 4  # everyone's 50 a minute used up: a client's own allowance is not spent either
+        self.assertEqual(sv.apibible_passage("niv", 45, 12, "192.0.2.9")[1], 429)
+        self.assertNotIn("192.0.2.9", sv.APIBIBLE_CLIENT_WINDOW.hits)
+
+    def test_a05_monthly_budget(self):
+        sv = self.serve
+        sv.configure_hosting(FakeApiBible.env(BS_APIBIBLE_MONTHLY="5"))
+        month = [datetime.datetime(2026, 10, 31, 23, 0, tzinfo=datetime.timezone.utc).timestamp()]
+        sv.USAGE = sv.ApiBibleUsage(clock=lambda: month[0])
+        fired = []
+        class Rec:
+            def fire(self, kind, text): fired.append((kind, text)); return True
+        self.addCleanup(setattr, sv, "ALERTS", sv.ALERTS)
+        sv.ALERTS = Rec()
+        alert = ("apibible_budget", "4 of 5 API.Bible calls used this month (80%)")
+        self.assertEqual(sv.APIBIBLE.licensed(wait=10), ["niv", "nkjv", "nasb"])  # call 1
+        self.assertEqual([sv.apibible_passage("niv", 45, c)[1] for c in (8, 9, 10)], [200, 200, 200])  # 2-4
+        self.assertEqual(fired, [alert], "80% at the fourth call")
+        self.assertTrue(sv.USAGE.take())  # 5
+        self.assertEqual(len(fired), 1)
+        self.assertEqual(sv.USAGE.report(), {"calls": 5, "limit": 5})
+        start = len(FakeApiBible.seen)
+        self.assertEqual(sv.apibible_passage("niv", 45, 11), ({"error": sv.MSG_APIBIBLE_BUDGET}, 429))
+        self.assertEqual(sv.MSG_APIBIBLE_BUDGET, "This site has used its NIV, NKJV and NASB allowance for the month. "
+                                                 "Chapters read recently still open; the rest return next month.")
+        self.assertEqual(sv.apibible_passage("niv", 45, 8)[1], 200, "a cached chapter is still served")
+        self.age(self.cache("niv", 45, 9), 20)
+        self.assertEqual(sv.apibible_passage("niv", 45, 9)[1], 200, "an older copy under 30 days too")
+        self.age(self.cache("niv", 45, 10), 31)
+        self.assertEqual(sv.apibible_passage("niv", 45, 10)[1], 429, "not one past 30 days")
+        self.assertEqual(len(FakeApiBible.seen), start, "nothing went upstream")
+        self.assertEqual(sv.UPSTREAM_WINDOW.check("apibible", record=False), 0)
+        self.assertEqual(len(sv.UPSTREAM_WINDOW.hits.get("apibible", ())), 3, "a refused call takes no rate-limit room")
+        usage = os.path.join(self.d, "cache", "apibible", "usage.json")
+        self.assertEqual(read_json_file(usage), {"v": 1, "month": "2026-10", "calls": 5, "alerted": True})
+        sv.USAGE = sv.ApiBibleUsage(clock=lambda: month[0])  # a restart keeps the count
+        self.assertEqual((sv.USAGE.take(), sv.USAGE.report()), (False, {"calls": 5, "limit": 5}))
+        month[0] += 3600  # November (UTC): a new month
+        self.assertEqual(sv.USAGE.report(), {"calls": 0, "limit": 5})
+        for _ in range(4):
+            self.assertTrue(sv.USAGE.take())
+        self.assertEqual(fired, [alert, alert], "once a month, at 80%")
+        self.assertTrue(sv.USAGE.take())
+        self.assertEqual(len(fired), 2)
+        self.assertEqual(read_json_file(usage), {"v": 1, "month": "2026-11", "calls": 5, "alerted": True})
+        sv.configure_hosting(FakeApiBible.env(BS_APIBIBLE_MONTHLY="0"))
+        self.assertFalse(sv.USAGE.take(), "0 stops every call")
+
+
+class T30_ApiBibleServer(Base):
+    """The proxy through a running serve.py: config.licensed, the passage route open to hosted guests (ESV still the
+    owner's), the budget's 429 and [alert] line, Site activity's count, and the key in no response, log or file."""
+    restart = False
+
+    @classmethod
+    def setUpClass(cls):
+        cls.bodies = []
+
+    @classmethod
+    def tearDownClass(cls):
+        H.restart()
+
+    def req(self, c, path, **kw):
+        r = c.req("GET", path, **kw)
+        self.bodies.append(r.raw + str(r.headers).encode("utf-8"))
+        return r
+
+    def test_b01_without_a_key(self):
+        H.restart()
+        c = Client()
+        self.assertEqual(self.req(c, "/api/config").json["licensed"], [])
+        r = self.req(c, "/api/passage?tr=niv&book=43&chapter=3")
+        self.assertEqual((r.status, r.json), (400, {"error": "NIV is not available here."}), "the app opens Bible Gateway instead")
+        self.assertEqual(self.req(c, "/api/passage?tr=nasb&book=43&chapter=99").status, 400)
+
+    def test_b02_local_with_a_key(self):
+        d = os.path.join(H.tmp, "apibible-local")
+        start = len(FakeApiBible.seen)
+        H.restart("--data-dir", d, env=FakeApiBible.env())
+        c = Client()
+        self.assertEqual(self.req(c, "/api/config").json, {"esv": False, "nlt": False, "licensed": ["niv", "nkjv", "nasb"]})
+        r = self.req(c, "/api/passage?tr=NKJV&book=19&chapter=23")
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual((r.json["title"], r.json["verses"][0]), ("A psalm of David.", "The LORD is my shepherd, I lack nothing."))
+        self.assertEqual(set(r.json), {"verses", "title", "copyright", "fumsToken", "fetched", "v"})
+        self.assertEqual(self.req(c, "/api/passage?tr=nkjv&book=19&chapter=23").json, r.json)
+        self.assertEqual(FakeApiBible.paths(start), ["/v1/bibles", "/v1/bibles/fake-nkjv-01/chapters/PSA.23"])
+        self.assertErr(self.req(c, "/api/passage?tr=niv&book=19&chapter=23", headers={"Origin": "http://evil.example"}), 403, "csrf")
+        self.assertEqual(self.req(c, "/api/passage?tr=niv&book=19&chapter=151").json, {"error": "bad ref"})
+        self.assertEqual(len(FakeApiBible.seen), start + 2)
+        with open(H.log_path, encoding="utf-8", errors="replace") as f:
+            log = f.read()
+        self.assertIn("API.Bible: key set, 4800 calls a month\n", log)
+        self.assertIn("API.Bible: NIV, NKJV, NASB for this key\n", log)
+
+    def test_b03_hosted_guests_read_niv_not_esv(self):
+        d = os.path.join(H.tmp, "apibible-hosted")
+        os.makedirs(os.path.join(d, "cache", "esv"), exist_ok=True)
+        accounts.write_json_atomic(os.path.join(d, "config.json"), {"esvKey": "test-key"})
+        accounts.write_json_atomic(os.path.join(d, "cache", "esv", "43-3.json"), {"verses": ["v1"], "fetched": "2026-10-20", "v": 2})
+        owner, pw = H.account("apibible-owner", "API.Bible: hosted owner")
+        H.restart("--data-dir", d, env=FakeApiBible.env(BS_HOSTED="1", BS_OWNER_EMAILS=owner, BS_APIBIBLE_MONTHLY="5"))
+        guest = HostedClient()
+        self.assertEqual(self.req(guest, "/api/config").json, {"esv": False, "nlt": False, "licensed": ["niv", "nkjv", "nasb"]})
+        start = len(FakeApiBible.seen)
+        r = self.req(guest, "/api/passage?tr=niv&book=43&chapter=3")
+        self.assertEqual((r.status, r.json["verses"][0]), (200, "Now there was a Pharisee, a man named Nicodemus."), r)
+        r = self.req(guest, "/api/passage?tr=esv&book=43&chapter=3")
+        self.assertErr(r, 403, "owner_only")
+        self.assertEqual(r.json["message"], "ESV and NLT are available only to the owner of this site.")
+        self.assertErr(self.req(guest, "/api/passage?tr=xyz&book=43&chapter=3"), 403, "owner_only")
+        o = HostedClient()
+        self.assertEqual(o.signup(owner, pw).status, 201)
+        self.assertEqual(self.req(o, "/api/passage?tr=esv&book=43&chapter=3").json["verses"], ["v1"])
+        traffic = lambda: self.req(o, "/api/admin/traffic").json["apibible"]  # noqa: E731
+        self.assertEqual(traffic(), {"calls": 2, "limit": 5}, "discovery and one chapter")
+        for c, st in ((4, 200), (5, 200), (6, 200), (7, 429)):  # calls 3, 4 (80%: the alert), 5, then none
+            r = self.req(HostedClient(), f"/api/passage?tr=nasb&book=40&chapter={c}")
+            self.assertEqual(r.status, st, r)
+        self.assertEqual(r.json, {"error": "This site has used its NIV, NKJV and NASB allowance for the month. "
+                                           "Chapters read recently still open; the rest return next month."})
+        self.assertEqual(self.req(HostedClient(), "/api/passage?tr=niv&book=43&chapter=3").status, 200, "the cache still serves")
+        self.assertEqual(traffic(), {"calls": 5, "limit": 5})
+        self.assertEqual(len(FakeApiBible.seen), start + 4)
+        H.restart("--data-dir", d, env=FakeApiBible.env(BS_HOSTED="1", BS_OWNER_EMAILS=owner, BS_APIBIBLE_MONTHLY="5"))
+        self.assertEqual(self.req(guest, "/api/passage?tr=nkjv&book=43&chapter=3").status, 429, "the count survives a restart")
+        self.assertEqual(self.req(guest, "/api/config").json["licensed"], ["niv", "nkjv", "nasb"], "from bibles.json")
+        self.assertEqual(len(FakeApiBible.seen), start + 4)
+        with open(H.log_path, encoding="utf-8", errors="replace") as f:
+            alerts = [ln for ln in f if ln.startswith("[alert]") and "apibible_budget" in ln]
+        self.assertEqual(len(alerts), 1, alerts)
+        self.assertRegex(alerts[0], r"^\[alert\] \S+ apibible_budget: 4 of 5 API\.Bible calls used this month \(80%\)$")
+
+    def test_b04_the_key_is_nowhere(self):
+        self.assertGreater(len(self.bodies), 10)
+        key = FakeApiBible.key.encode()
+        self.assertFalse([b[:200] for b in self.bodies if key in b], "in no response")
+        with open(H.log_path, "rb") as f:
+            self.assertNotIn(key, f.read(), "in no log line")
+        for d in ("apibible-local", "apibible-hosted"):
+            for root, _, files in os.walk(os.path.join(H.tmp, d)):
+                for fn in files:
+                    with open(os.path.join(root, fn), "rb") as f:
+                        self.assertNotIn(key, f.read(), fn)
+        self.assertFalse([p for p, _ in FakeApiBible.seen if FakeApiBible.key in p], "never in a URL")
+
 
 class T99_Hygiene(Base):
     restart = False

@@ -73,15 +73,16 @@ struct ChapterStepper: View {
     }
 }
 
-/// The primary translation and the parallel one, as the page's two selects offer them (an owner's licensed ESV or
-/// NLT stays out for everyone else; a translation that opens another website is left to the page).
+/// The primary translation and the parallel one, as the page's two selects offer them: the bundled texts, the NIV, NKJV
+/// and NASB when the site serves them (kind "licensed", for everyone), and the owner's ESV or NLT (kept out for everyone
+/// else). A translation that opens another website is left to the page.
 struct TranslationMenu: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
         let list = model.web.translations
         let cur = model.page.tr
-        let usable = list.filter { ($0.kind == "bundled" || $0.kind == "api") && !$0.disabled }
+        let usable = ["bundled", "licensed", "api"].flatMap { kind in list.filter { $0.kind == kind && !$0.disabled } } // the page's order
         Menu {
             Section("Translation") {
                 ForEach(usable) { t in

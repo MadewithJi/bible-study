@@ -32,7 +32,7 @@ export const state = {
   xfilter: 'all',               // Links tab testament filter: 'all' | 'ot' | 'nt'
   history: [], future: [],
   notes: { refs: {}, studies: [], themes: { accepted: [], renamed: {}, merged: {}, removed: [] } },   // studies and theme choices: study-build-brief §1.5
-  apiKeys: { esv: false, nlt: false },
+  apiKeys: { esv: false, nlt: false, licensed: [] }, // GET /api/config; licensed: the API.Bible texts serve.py can serve
   serverOk: false,
   theme: lsGet('bs-theme', 'auto'),
   // profiles (profiles-spec §5.2). server: /api/auth/me answered; legacy: a pre-profiles serve.py (whole-object notes PUT)
@@ -47,6 +47,36 @@ export const state = {
 
 const cache = new Map();
 const titles = new Map(); // `${tr}:${b}:${c}` -> psalm title from /api/passage (ESV/NLT), kept apart from the per-book chapter objects
+const credits = new Map(); // `${tr}:${b}:${c}` -> {copyright, fumsToken} of an NIV, NKJV or NASB chapter (API.Bible)
+
+/**
+ * NIV, NKJV and NASB through API.Bible (translations brief §2): in-app texts for every reader, guests on the hosted site
+ * included, while GET /api/config lists them in `licensed`; otherwise each opens the chapter on Bible Gateway, as the
+ * NIV and NKJV always did. applyLicensed sets their kind ('licensed' or 'external') in state.translations.
+ */
+const LICENSED = [
+  { id: 'niv', name: 'New International Version', abbr: 'NIV', by: 'Biblica' },
+  { id: 'nkjv', name: 'New King James Version', abbr: 'NKJV', by: 'Thomas Nelson' },
+  { id: 'nasb', name: 'New American Standard Bible', abbr: 'NASB', by: 'The Lockman Foundation' },
+];
+export const LICENSED_IDS = LICENSED.map(t => t.id);
+/** The texts read through serve.py's /api/passage, a chapter at a time: ESV and NLT (a key), NIV, NKJV and NASB (API.Bible). */
+export const isPassageTr = tr => tr === 'esv' || tr === 'nlt' || LICENSED_IDS.includes(tr);
+export function applyLicensed() {
+  const list = state.translations, on = Array.isArray(state.apiKeys?.licensed) ? state.apiKeys.licensed : [];
+  if (!Array.isArray(list) || !list.length) return;
+  for (const L of LICENSED) {
+    let t = list.find(x => x.id === L.id);
+    if (!t) { // meta.json (build.py) names the NIV and NKJV; the NASB joins after the last of the three
+      t = { id: L.id, name: L.name, abbr: L.abbr };
+      const at = Math.max(...LICENSED_IDS.map(id => list.findIndex(x => x.id === id)));
+      list.splice(at < 0 ? list.length : at + 1, 0, t);
+    }
+    const live = on.includes(L.id);
+    t.kind = live ? 'licensed' : 'external';
+    t.licence = `© ${L.by} — ${live ? 'through API.Bible' : 'opens on Bible Gateway'}`;
+  }
+}
 async function getJSON(url) {
   if (cache.has(url)) return cache.get(url);
   const p = fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} ${url}`); return r.json(); })
@@ -59,7 +89,7 @@ const pad = n => String(n).padStart(2, '0');
 export const data = {
   meta: () => getJSON('data/meta.json'),
   bible: async (tr, b) => {
-    if (tr === 'esv' || tr === 'nlt') {
+    if (isPassageTr(tr)) {
       const key = `passage:${tr}:${b}`;
       if (!cache.has(key)) cache.set(key, {});
       return cache.get(key); // chapters filled by passage()
@@ -72,10 +102,14 @@ export const data = {
     const r = await fetch(`/api/passage?tr=${tr}&book=${b}&chapter=${c}`);
     const j = await r.json();
     if (!r.ok || j.error) throw new Error(j.error || 'passage error');
-    bk[c] = j.verses; titles.set(`${tr}:${b}:${c}`, typeof j.title === 'string' ? j.title : ''); return j.verses;
+    bk[c] = j.verses; titles.set(`${tr}:${b}:${c}`, typeof j.title === 'string' ? j.title : '');
+    if (LICENSED_IDS.includes(tr)) credits.set(`${tr}:${b}:${c}`, { copyright: typeof j.copyright === 'string' ? j.copyright : '', fumsToken: typeof j.fumsToken === 'string' ? j.fumsToken : '' });
+    return j.verses;
   },
   /** The psalm title /api/passage returned with that chapter ('' when none, or before passage() has loaded it). */
   passageTitle: (tr, b, c) => titles.get(`${tr}:${b}:${c}`) || '',
+  /** An NIV, NKJV or NASB chapter's publisher copyright (shown with every display) and FUMS token, once passage() has it. */
+  passageCredit: (tr, b, c) => credits.get(`${tr}:${b}:${c}`) || { copyright: '', fumsToken: '' },
   /** Psalm superscriptions (KJV, BSB) and Psalm 119's letter headings (KJV): {sup: {c: text}, head: {c: {v: text}}}. */
   titles: (tr, b) => (tr === 'kjv' || tr === 'bsb') && b === 19 ? getJSON(`data/bibles/${tr}/19-titles.json`).catch(() => ({})) : Promise.resolve({}),
   xref: b => getJSON(`data/xref/${pad(b)}.json`),
@@ -83,7 +117,8 @@ export const data = {
   redletter: (tr, b) => (tr === 'kjv' || tr === 'bsb') && b >= 40 ? getJSON(`data/redletter/${tr}/${pad(b)}.json`).catch(() => ({})) : Promise.resolve({}),
   /** STEP's words per KJV 'c:v'. While the BSB, ESV or NLT leads, the few verses they divide as the NRSV does
    *  (Phil 1:16–17, Rev 12:17/13:1) come from the file's 'nrsv' table, so reader, drawer and tracker agree. */
-  orig: b => getJSON(`data/orig/${pad(b)}.json`).then(o => (o.nrsv && ['bsb', 'esv', 'nlt'].includes(state.tr) ? { ...o, ...o.nrsv } : o)).catch(() => ({})),
+  // the NIV and NASB divide Phil 1:16–17 as the NRSV does but keep Rev 12:18 in 13:1, as the KJV does
+  orig: b => getJSON(`data/orig/${pad(b)}.json`).then(o => (o.nrsv && (['bsb', 'esv', 'nlt'].includes(state.tr) || (['niv', 'nasb'].includes(state.tr) && b === 50)) ? { ...o, ...o.nrsv } : o)).catch(() => ({})),
   context: b => getJSON(`data/context/${pad(b)}.json`).catch(() => ({})),
   bookIntros: () => getJSON('data/context/books.json'),
   strongs: lang => getJSON(`data/strongs/${lang}.json`),
@@ -1018,6 +1053,7 @@ export async function loadConfig() {
   const timer = ctl ? setTimeout(() => ctl.abort(), 6000) : 0;
   try { const r = await fetch('/api/config', { signal: ctl ? ctl.signal : undefined }); if (r.ok) state.apiKeys = await r.json(); } catch (e) { /* offline */ }
   clearTimeout(timer);
+  applyLicensed();
 }
 
 /** PUT /api/config. Refuses in dry-run (returns null without any request). */
@@ -1026,5 +1062,6 @@ export async function saveConfig(body) {
   const r = await fetch('/api/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`${r.status}`);
   state.apiKeys = await r.json();
+  applyLicensed();
   return state.apiKeys;
 }

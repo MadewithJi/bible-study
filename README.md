@@ -49,7 +49,8 @@ Server tests (start their own server on a free port with a temporary data folder
 |---|---|---|
 | KJV, BSB | bundled, offline | public domain |
 | ESV, NLT | fetched per chapter via the official APIs with **your** free key (Settings ⚙), cached in `notes/cache/` | copyrighted; APIs licensed for personal use |
-| NIV, NKJV, LSB | one click opens the chapter on BibleGateway / read.lsbible.org | copyrighted, no free API |
+| NIV, NKJV, NASB | read in the app through API.Bible when `BS_APIBIBLE_KEY` is set (14-day server cache, FUMS view counts); otherwise opens on Bible Gateway | © Biblica, Thomas Nelson, Lockman |
+| LSB | one click opens the chapter on read.lsbible.org | copyrighted, no free API |
 
 Keys: ESV at <https://api.esv.org/> · NLT at <https://api.nlt.to/>.
 
@@ -132,7 +133,7 @@ Caching: `index.html`, `js/` and `css/` revalidate on every load (cheap 304s, an
 - Anyone can read: the Bible text, cross-references, context, the original languages, maps and videos. Saving notes, links, highlights, bookmarks and reading progress needs an account, so a visitor who isn’t signed in is asked to sign in instead.
 - Anyone can create a profile from the sign-up dialog or Home, behind the Turnstile check when its keys are set. Invite codes are gone: an old `DATA/invites.json` is no longer read and may be deleted.
 - Open sign-up is bounded by the profile cap (`BS_MAX_USERS`), the per-profile quota (`BS_PROFILE_QUOTA_MB`), the free-space guard (`BS_MIN_FREE_MB`) and the rate limits (10 sign-up attempts an hour per visitor and email, 100 an hour across the site; a failed bot check counts). Until `BS_PROXY_SECRET` is set, every visitor reaches the server from one of Vercel’s addresses, so the per-visitor limits are coarse: Turnstile is the real bot gate.
-- ESV and NLT are served only to owners, because the keys are personal-use licences. Everyone else reads KJV and BSB, and NIV, NKJV and LSB open on their own sites as usual.
+- ESV and NLT are served only to owners, because the keys are personal-use licences. Everyone reads KJV and BSB, and NIV, NKJV and NASB through API.Bible when `BS_APIBIBLE_KEY` is set (else they open on Bible Gateway); LSB opens on read.lsbible.org.
 - The session cookie is also `Secure`.
 - The owner’s profile cannot change its email to a non-owner address (409: add the address to `BS_OWNER_EMAILS` first) and the last owner profile cannot be deleted. An ordinary profile cannot move to an owner address.
 

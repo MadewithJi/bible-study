@@ -71,7 +71,9 @@ export const BL = {
   state: snapshot,
   /** The books for the native picker. */
   books: () => state.books.map(b => ({ n: b.n, name: b.name, short: b.short || b.name, test: b.test, chapters: b.chapters.length })),
-  /** The translations for the native menu; disabled ones are the owner's licensed texts (hosting brief §2) or an external site. */
+  /** The translations for the native menu. kind: 'bundled', 'licensed' (NIV, NKJV and NASB through API.Bible, for every
+   *  reader), 'api' (ESV and NLT: disabled for everyone but the hosted site's owner, hosting brief §2) or 'external' (a
+   *  website, as the NIV, NKJV and NASB are when serve.py cannot serve them). */
   translations: () => state.translations.map(t => ({ id: t.id, abbr: t.abbr, name: t.name || t.abbr, kind: t.kind, disabled: !!$(`#tr option[value="${CSS.escape(t.id)}"]`)?.disabled })),
   /** 'home' | 'read' | 'study' | 'library' | 'profile' | 'settings' | 'picker', a hash '43/3/16' or a reference 'John 3:16'. */
   open(where) {
