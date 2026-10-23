@@ -3133,7 +3133,7 @@ class T20_Marks(Base):
         a, k = S["mara"], "mk_0123456789ab"
         M = lambda **kw: self.mark(k, **kw)  # noqa: E731
         no_end = {f: v for f, v in M().items() if f != "end"}
-        bad = [M(tr=None), M(tr="KJV"), M(tr="niv"), M(tr=5), M(start="43.3.37", end="43.3.37"), M(start="43.22.1", end="43.22.1"),
+        bad = [M(tr=None), M(tr="KJV"), M(tr="lsb"), M(tr=5), M(start="43.3.37", end="43.3.37"), M(start="43.22.1", end="43.22.1"),
                M(start="67.1.1"), M(start="43.3"), M(start="43.3.16-17", end="43.3.17"), M(start="43.3.١٦"), M(start="43:3:16"),
                M(start=43316), no_end, M(end="43.4.1"), M(end="45.5.8"), M(start="43.3.17", end="43.3.16"), M(so=-1), M(eo="27"),
                M(so=1.5), M(eo=10_001), M(so=True), M(so=5, eo=5), M(so=9, eo=4), M(quote=None), M(quote=""), M(quote=" \n "),
@@ -3468,6 +3468,29 @@ class T20_Marks(Base):
         z = zipfile.ZipFile(io.BytesIO(A.obsidian_zip({"refs": {}}, None, None, {"marks": {}})))
         self.assertEqual(z.namelist(), ["study-notes/Study Notes Index.md"])
 
+    def test_r10b_marks_in_api_bible_texts(self):
+        # NIV, NKJV and NASB are in-app texts (translations brief): a mark made in one keeps its translation
+        email, pw = H.account("marknas", "Annotations: NIV, NKJV and NASB")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Mark Nas").status, 201)
+        sent = {}
+        for tr in ("niv", "nkjv", "nasb"):
+            mid = new_mark_id()
+            sent[mid] = self.mark(mid, tr=tr)
+        w = self.changes(c, sent)
+        self.assertEqual(w.status, 200, w)
+        got = self.marks(c)["marks"]
+        self.assertEqual({k: {f: got[k][f] for f in m if f != "updated"} for k, m in sent.items()},
+                         {k: {f: v for f, v in m.items() if f != "updated"} for k, m in sent.items()}, "accepted unchanged")
+        # and a stored one is not repaired into a KJV mark when the file is read again
+        path = os.path.join(H.data, "profiles", c.scope, "marks.json")
+        disk = H.read("profiles", c.scope, "marks.json")
+        self.assertEqual(sorted(m["tr"] for m in disk["marks"].values()), ["nasb", "niv", "nkjv"])
+        mid, t = new_mark_id(), now_ms()
+        disk["marks"][mid] = dict(self.mark(mid, tr="niv"), created=t, updated=t)
+        put_raw(path, json.dumps(disk).encode("utf-8"))
+        self.assertEqual(self.marks(c)["marks"][mid]["tr"], "niv")
+
     def test_r11_limit_and_damaged_files(self):
         email, pw = H.account("markcap", "Annotations: limit and repair")
         c = Client()
@@ -3514,7 +3537,7 @@ class T20_Marks(Base):
         # a bad optional field is repaired field by field: only a bad id, ends, offsets or quote lose a mark (and its comment)
         ma, mb, mc, md = (new_mark_id() for _ in range(4))
         put_raw(path, json.dumps({"version": 1, "rev": 2, "marks": {
-            ma: self.mark(ma, tr="niv", color="teal", note="precious comment", pre="p" * 40, suf=["x"], created="x"),
+            ma: self.mark(ma, tr="lsb", color="teal", note="precious comment", pre="p" * 40, suf=["x"], created="x"),
             mb: self.mark(mb, note=["not text"], quote="q" * 2100),
             mc: self.mark(mc, note="n" * 20_001),
             md: self.mark(md, so=30, eo=4, note="lost")}}).encode("utf-8"))
@@ -5613,14 +5636,20 @@ class T29_ApiBibleUnits(Base):
         self.assertEqual([sv.apibible_passage("niv", 45, c, a)[1] for c in (8, 9)], [200, 200])
         start = len(FakeApiBible.seen)
         self.assertEqual(sv.apibible_passage("niv", 45, 10, a),
-                         ({"error": "Too many NIV requests at once. Try again in about 10 minutes."}, 429))
+                         ({"error": "You’ve opened a lot of new NIV, NKJV and NASB chapters in the last few minutes. "
+                                    "Try again in about 10 minutes."}, 429))
+        self.assertEqual(sv.apibible_passage("nkjv", 45, 10, a)[0]["error"].split(".")[0],
+                         "You’ve opened a lot of new NIV, NKJV and NASB chapters in the last few minutes",
+                         "one allowance for the three texts, and the same words for each")
         self.assertEqual(sv.apibible_passage("niv", 45, 8, a)[1], 200, "a cached chapter does not count")
         self.assertEqual(len(FakeApiBible.seen), start)
         self.assertEqual(sv.apibible_passage("niv", 45, 10, b)[1], 200, "another client has its own allowance")
         self.assertEqual(sv.apibible_passage("niv", 45, 11)[1], 200, "locally ('*') only the shared limit")
         self.assertEqual(len(sv.UPSTREAM_WINDOW.hits["apibible"]), 4, "a client's refused call takes no shared room")
         sv.UPSTREAM_WINDOW.limit = 4  # everyone's 50 a minute used up: a client's own allowance is not spent either
-        self.assertEqual(sv.apibible_passage("niv", 45, 12, "192.0.2.9")[1], 429)
+        body, status = sv.apibible_passage("niv", 45, 12, "192.0.2.9")
+        self.assertEqual((status, body["error"].split(" Try")[0]), (429, "Too many NIV requests at once."),
+                         "the shared limit keeps its own words")
         self.assertNotIn("192.0.2.9", sv.APIBIBLE_CLIENT_WINDOW.hits)
 
     def test_a05_monthly_budget(self):

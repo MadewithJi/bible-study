@@ -204,7 +204,11 @@ a:hover { text-decoration: underline; text-underline-offset: .16em; }
 .page { padding-top: var(--bar-h); transition: padding-right .56s var(--ease); }
 body:not(.drawer-open) .page { transition-duration: .42s; }
 body.mode-side.drawer-open .page { padding-right: calc(var(--sheet-w) + 24px); }
-body.mode-overlay.drawer-open.search-push .page { padding-right: calc(var(--sheet-w) + 24px); } /* the Search tab's list beside its verse (main.js syncPush) */
+/* the Search tab's list beside its verse (main.js syncPush): the text under the hero moves aside, as the side layout's
+   page does, while the hero stays exactly as it is under the overlay (its type is sized by the window, not the column) */
+body.mode-overlay #reader > :not(.hero) { transition: padding-right .42s var(--ease), max-width .42s var(--ease); }
+body.mode-overlay.drawer-open #reader > :not(.hero) { transition-duration: .56s; }
+body.mode-overlay.drawer-open.search-push #reader > :not(.hero) { max-width: calc(var(--measure) + 110px + var(--sheet-w) + 24px); padding-right: calc(var(--sheet-w) + 24px); }
 body.sheet-modal { overflow: hidden; }
 #layout { display: block; }
 #reader:focus { outline: none; }

@@ -620,12 +620,13 @@ def _days_old(fetched):
 
 def _apibible_gate(client):
     """Room for one upstream call: the client's own allowance (hosted or behind a proxy; locally every reader is '*'
-    and has none), then 50 a minute for every client. -> seconds to wait (0 = counted in both)."""
+    and has none), then 50 a minute for every client. -> (seconds to wait (0 = counted in both), whether it was the
+    client's own allowance that refused)."""
     wait = APIBIBLE_CLIENT_WINDOW.check(client) if client != "*" else 0
-    if not wait:
-        wait = UPSTREAM_WINDOW.check("apibible")
-        if wait and client != "*": APIBIBLE_CLIENT_WINDOW.unrecord(client)
-    return wait
+    if wait: return wait, True
+    wait = UPSTREAM_WINDOW.check("apibible")
+    if wait and client != "*": APIBIBLE_CLIENT_WINDOW.unrecord(client)
+    return wait, False
 
 
 def apibible_passage(tr, book_n, chapter, client="*"):
@@ -648,8 +649,12 @@ def apibible_passage(tr, book_n, chapter, client="*"):
         keep = public if age is not None and 0 <= age < APIBIBLE_KEEP_DAYS else None
         if APIBIBLE.is_paused(tr):
             return keep or {"error": f"{name} could not be loaded just now. Try again in a few minutes."}, 200 if keep else 502
-        wait = _apibible_gate(client)
-        if wait: return keep or {"error": f"Too many {name} requests at once. Try again in {wait_text(wait)}."}, 200 if keep else 429
+        wait, own = _apibible_gate(client)
+        if wait:
+            # the client's own allowance runs over 10 minutes and is shared by the three texts: nothing was "at once"
+            msg = (f"You’ve opened a lot of new NIV, NKJV and NASB chapters in the last few minutes. Try again in {wait_text(wait)}."
+                   if own else f"Too many {name} requests at once. Try again in {wait_text(wait)}.")
+            return keep or {"error": msg}, 200 if keep else 429
         if not USAGE.take():
             UPSTREAM_WINDOW.unrecord("apibible")
             if client != "*": APIBIBLE_CLIENT_WINDOW.unrecord(client)

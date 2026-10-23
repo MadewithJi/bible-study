@@ -900,7 +900,7 @@ function noteVersesInner(b, c, v, text) {
     const ref = links.linkRefStr(o), lab = links.linkRefLabel(o);
     return safe(links.linkedBetween, here, o)
       ? `<button class="chip sm nv-chip on" type="button" data-nv="${ref}" data-nv-open aria-label="${esc(lab)}, linked. Show My links">${esc(lab)}<span class="nv-st">${icon('check')}Linked</span></button>`
-      : `<button class="chip sm nv-chip" type="button" data-nv="${ref}" data-nv-link="${ref}" aria-label="Link ${esc(hereLab)} to ${esc(lab)}">${esc(lab)}<span class="nv-st">Link</span></button>`;
+      : `<button class="chip sm nv-chip" type="button" data-nv="${ref}" data-nv-link="${ref}">${esc(lab)} <span class="nv-st">Link</span><span class="sr"> from ${esc(hereLab)}</span></button>`;
   }).join('') + '</div>';
 }
 function noteVersesBox(b, c, v, text) {

@@ -380,8 +380,9 @@ function syncDrawer() {
   syncPush();
 }
 /**
- * The overlay layout pushes the page aside, as the side layout does, while the panel shows the Search tab, so a
- * result's verse sits wholly beside the list (topic-keep brief §4); the panel stays modal. The push goes when the
+ * The overlay layout pushes the text under the chapter hero aside, as the side layout pushes the page, while the panel
+ * shows the Search tab, so a result's verse sits wholly beside the list (topic-keep brief §4); the hero stays as it is
+ * under the overlay (styles.css), and the panel stays modal. The push goes when the
  * panel closes or leaves Search. The text reflows either way: the selected verse is kept in view.
  */
 let pushed = false, pushT = 0;
@@ -715,7 +716,7 @@ function syncElsewhere(el) {
   const of = k => state.translations.filter(t => t.kind === k), lic = of('licensed'), ext = of('external');
   const sites = [ext.some(t => LICENSED_IDS.includes(t.id)) && 'Bible Gateway', ext.some(t => t.id === 'lsb') && 'read.lsbible.org'].filter(Boolean);
   s.textContent = [lic.length && `${and(lic.map(t => t.abbr))} ${lic.length === 1 ? 'is' : 'are'} read here through API.Bible.`,
-    ext.length && `${and(ext.map(t => t.abbr))} ${ext.length === 1 ? 'has' : 'have'} no free API here, so choosing ${ext.length === 1 ? 'it' : 'them'} opens the chapter on ${sites.join(' or ')}.`].filter(Boolean).join(' ');
+    ext.length && `${and(ext.map(t => t.abbr))} ${ext.length === 1 ? 'has' : 'have'} no free API, so choosing ${ext.length === 1 ? 'it' : 'them'} opens the chapter on ${sites.join(' or ')}.`].filter(Boolean).join(' ');
 }
 function openSettings() {
   const d = $('#settings'); if (!d) return;
@@ -1121,7 +1122,7 @@ function bindTranslations() {
       if (url) window.open(url, '_blank', 'noopener');
       sel.value = state[which] || '';
       toast(LICENSED_IDS.includes(t.id) ? `${t.abbr} isn’t available in the app right now, so this chapter opened on Bible Gateway in a new tab.`
-        : `${t.abbr} has no free API, so this chapter opened on ${t.id === 'lsb' ? 'read.lsbible.org' : 'BibleGateway'} in a new tab.`);
+        : `${t.abbr} has no free API, so this chapter opened on ${t.id === 'lsb' ? 'read.lsbible.org' : 'Bible Gateway'} in a new tab.`);
       return;
     }
     // the parallel column never repeats the main text

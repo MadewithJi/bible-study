@@ -132,7 +132,7 @@ let lk = null;
 import('./links.js').then(m => { if (m && typeof m.linkedBetween === 'function') lk = m; }, e => console.error('links.js failed to load', e));
 
 const SNIP_MAX = 160;
-const ABBR_RX = /(^|[^A-Za-z])(?:cf|vv?|vs|chs?|ff|viz|etc|e\.g|i\.e|[ap]\.m)\./gi; // their full stop ends no sentence
+const ABBR_RX = /(^|[^A-Za-z\d])(?:cf|cp|vv?|vs|chs?|ff|viz|etc|st|mt|dr|mrs?|ms|jr|sr|rev|fr|vol|nb|e\.g|i\.e|[ap]\.m)\./gi; // their full stop ends no sentence
 const endKey = o => `${o.b}.${o.c}.${o.v}${o.ve > o.v ? '-' + o.ve : ''}`;
 const coversV = (o, b, c, v) => o.b === b && o.c === c && v >= o.v && v <= o.ve;
 /** The verse a reference names as a link end {b, c, v, ve} (ve = v for one verse): a range that leaves its chapter gives its first verse, a chapter reference null. */
@@ -229,7 +229,8 @@ export function noteLinkSuggestions(b, c, v = 0, { linked = lk ? lk.linkedBetwee
     for (const r of parseRefs(e.text)) {
       const o = refVerse(r); if (!o || coversV(o, e.b, e.c, e.v)) continue;
       if (onHere) add({ b, c, v: e.v }, o, 'out', e, r);
-      if (o.b === b && o.c === c && (v ? coversV(o, b, c, v) : true)) add({ b, c, v: v || o.v }, { b: e.b, c: e.c, v: e.v, ve: e.v }, 'in', e, r);
+      // in a chapter, a note here that names a verse here is already its pair's 'out' (a range would not merge)
+      if (!(onHere && !v) && o.b === b && o.c === c && (v ? coversV(o, b, c, v) : true)) add({ b, c, v: v || o.v }, { b: e.b, c: e.c, v: e.v, ve: e.v }, 'in', e, r);
     }
   }
   const out = [...by.values()];

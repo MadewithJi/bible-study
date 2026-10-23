@@ -812,9 +812,13 @@ function suggHtml(list) {
 function suggCardHtml(s) {
   const o = s.other, lab = linkRefLabel(o), hereLab = refLabel(s.here.b, s.here.c, s.here.v), src = s.sources[0], e = src.entry;
   // the line names where the first source sits (on this verse or on the other), not the suggestion's direction
-  const said = e.b === s.here.b && e.c === s.here.c && e.v === s.here.v ? (e.kind === 'note' ? 'In your note' : `In your comment on “${e.phrase}”`)
-    : `Your ${e.kind === 'note' ? 'note' : 'comment'} on ${e.label} mentions this verse`;
-  const more = s.sources.length > 1 ? ` · ${s.sources.length - 1} more` : '';
+  const atHere = x => x.b === s.here.b && x.c === s.here.c && x.v === s.here.v, kind = x => x.kind === 'note' ? 'note' : 'comment';
+  const said = atHere(e) ? (e.kind === 'note' ? 'In your note' : `In your comment on “${e.phrase}”`)
+    : `Your ${kind(e)} on ${e.label} mentions this verse`;
+  // the other notes and comments that name it: one by where it sits, several counted by kind
+  const rest = s.sources.slice(1).map(x => x.entry), kinds = [...new Set(rest.map(kind))], r = rest[0];
+  const more = rest.length === 1 ? ` · also your ${kind(r)}${atHere(r) ? (r.kind === 'note' ? '' : ` on “${r.phrase}”`) : ` on ${r.label}`}`
+    : rest.length ? ` · and ${rest.length} more ${kinds.length === 1 ? kinds[0] + 's' : 'notes and comments'}` : '';
   const sn = src.snippet || '', [i, j] = src.hit || [0, 0];
   // the reference bold, its verse never broken across lines ('Isaiah 53:4–6'); a mark's words may wrap
   const ref = sn.slice(i, j), dot = ref.indexOf(' · ');
@@ -824,7 +828,7 @@ function suggCardHtml(s) {
   const id = `ms-${s.here.v}-${linkRefStr(o).replace(/\D+/g, '-')}`;
   return `<li class="mine-card sugg" data-sugg="${suggKey(s)}" data-here="${s.here.b}.${s.here.c}.${s.here.v}" data-other="${linkRefStr(o)}" data-dir="${s.dir}">
     <div class="mine-main">
-      <div class="mine-r1"><button class="link mine-go" type="button" data-link-go="${linkRefStr(o)}">${esc(lab)}</button><span class="sugg-src">${esc(said)}${more}</span></div>
+      <div class="mine-r1"><button class="link mine-go" type="button" data-link-go="${linkRefStr(o)}">${esc(lab)}</button><span class="sugg-src">${esc(said + more)}</span></div>
       <p class="cell-sub serif mine-prev" data-link-prev="${o.b}.${o.c}.${o.v}.${o.ve}"></p>
       <button class="link mine-ctx" type="button" data-link-ctx aria-expanded="false" aria-controls="${id}">Read in context</button>
       <div class="expand" id="${id}" role="region" aria-label="${esc(lab)} in context" inert><div><div class="expand-in"></div></div></div>
