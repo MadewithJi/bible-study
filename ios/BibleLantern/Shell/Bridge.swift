@@ -61,7 +61,7 @@ struct Translation: Codable, Identifiable, Hashable {
     var id: String
     var abbr: String
     var name: String
-    var kind: String   // "bundled" | "api" | "external"
+    var kind: String   // "bundled" | "api" | "licensed" | "external"
     var disabled: Bool
 }
 

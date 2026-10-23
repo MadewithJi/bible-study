@@ -11,9 +11,11 @@ Local server for the Bible study app (profiles: python3 serve.py --list-users | 
 
 Serves app/ statically and a JSON API. Signed out ("guest"), everything behaves as before:
   GET  /api/notes, PUT /api/notes     guest notes (DATA/notes.json)
-  GET  /api/config, PUT /api/config   which ESV/NLT keys are configured / set them
+  GET  /api/config, PUT /api/config   which ESV/NLT keys are configured / set them; licensed: what API.Bible serves
   GET  /api/passage?tr=esv&book=43&chapter=3   licensed text via ESV / NLT API (cached in DATA/cache/, ESV at most
                                                500 verses and half of any book, per its terms); same-origin only
+       /api/passage?tr=niv|nkjv|nasb           NIV, NKJV and NASB via API.Bible (.design/translations-brief.md §1):
+                                               BS_APIBIBLE_KEY, open to every reader, 14-day cache, monthly budget
   GET  /api/export/obsidian           zip of notes (plus bookmarks, reading progress, links, highlights) as Obsidian markdown
 Profiles (local email + password, no email is ever sent), per-scope library and export:
   GET  /api/auth/me   POST /api/auth/signup | login | logout
@@ -36,12 +38,12 @@ feed GET /api/admin/traffic (owners only, 404 for anyone else) and '[alert]' lin
 The donation link (.design/donate-brief.md): GET or HEAD /donate and /support answer 302 to BS_DONATE_URL (default
 https://buymeacoffee.com/biblelantern), never a permanent redirect, so it can be re-pointed without changing a link.
 Data layout (DATA = --data-dir, default notes/): notes.json, guest-library.json, guest-links.json and
-guest-marks.json (guest), config.json, cache/, users.json, sessions.json (hashed tokens only),
+guest-marks.json (guest), config.json, cache/ (cache/apibible/: bibles.json, usage.json), users.json, sessions.json (hashed tokens only),
 profiles/<uid>/{notes,library,links,marks}.json, deleted/, owner-claims.json and metrics.json (hosted). Full contract:
 .design/profiles-spec.md, .design/links-spec.md and .design/annotations-brief.md
 """
-import argparse, getpass, hashlib, hmac, http.client, ipaddress, json, math, os, re, secrets, shutil, signal, sys
-import threading, time, traceback, urllib.parse, urllib.request
+import argparse, contextlib, datetime, getpass, hashlib, hmac, http.client, ipaddress, json, math, os, re, secrets, shutil
+import signal, socket, sys, threading, time, traceback, urllib.parse, urllib.request
 from collections import OrderedDict, deque
 from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -208,7 +210,7 @@ FETCHERS = {"esv": ("esvKey", fetch_esv), "nlt": ("nltKey", fetch_nlt)}
 # NltText (v1 files hold footnote text, 'Lord' for LORD and spaces before punctuation; v2 '31/4' for '3¼' and no
 # text-critical notes). nlt 4: verses split at span.vn (v3 put a whole table under its last verse, Ezra 2:3-34 empty)
 # and, as in esv 2, a psalm's title in "title" rather than in verse 1 (NLT) or dropped (ESV).
-CACHE_V = {"esv": 2, "nlt": 4}
+CACHE_V = {"esv": 2, "nlt": 4, "niv": 1, "nkjv": 1, "nasb": 1}
 
 # ESV API terms (api.esv.org): "You may not locally store more than 500 verses or one-half of any book of the Bible
 # (whichever is less)". The NLT terms limit requests, not storage.
@@ -286,6 +288,391 @@ def get_passage(tr, book_n, chapter):
     if title: out["title"] = title  # a psalm's title, shown above verse 1
     cache_passage(tr, book_n, cpath, out)
     return out, 200
+
+
+# ----------------------------------------------------------------- NIV, NKJV and NASB through API.Bible
+# (.design/translations-brief.md §1). One key (BS_APIBIBLE_KEY) on the Starter plan: three licensed Bibles, open to
+# every reader of the site, 5,000 calls a month. The key goes out only in the api-key header, never in a URL, a
+# response or a log line. Chapters are cached for 14 days (the terms say refresh within 30) with the publisher's
+# copyright and the FUMS token the app reports each view with.
+APIBIBLE_TRS = ("niv", "nkjv", "nasb")
+APIBIBLE_ABBRS = {"niv": ("NIV",), "nkjv": ("NKJV",), "nasb": ("NASB", "NASB2020", "NASB1995", "NASB95")}  # in order of preference
+APIBIBLE_DEFAULT_URL = "https://rest.api.bible/v1"
+APIBIBLE_KEY = ""                     # BS_APIBIBLE_KEY
+APIBIBLE_URL = APIBIBLE_DEFAULT_URL   # BS_APIBIBLE_URL (the tests' fake API.Bible)
+APIBIBLE_PINS = {}                    # BS_APIBIBLE_BIBLES 'niv=<id>,nkjv=<id>,nasb=<id>': never discovered
+APIBIBLE_MONTHLY = 4800               # BS_APIBIBLE_MONTHLY: upstream calls a calendar month (UTC), discovery included
+APIBIBLE_TIMEOUT = 20
+APIBIBLE_MAX = 8 * MIB                # the most of one answer read (Psalm 119 is well under 1 MB)
+APIBIBLE_FRESH_DAYS, APIBIBLE_KEEP_DAYS = 14, 30  # refetched after 14 days; a copy under 30 days old covers a failed refresh
+APIBIBLE_QUERY = {"content-type": "json", "include-notes": "false", "include-titles": "false",
+                  "include-chapter-numbers": "false", "include-verse-numbers": "true", "include-verse-spans": "false",
+                  "fums-version": "3"}
+APIBIBLE_KEY_RE = re.compile(r"[!-~]{1,256}", re.ASCII)   # it goes out in a header
+APIBIBLE_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", re.ASCII)
+FUMS_TOKEN_RE = re.compile(r"[!-~]{1,4096}", re.ASCII)
+USFM = ["GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", "EZR", "NEH",
+        "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", "JOL", "AMO", "OBA", "JON",
+        "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL", "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL",
+        "EPH", "PHP", "COL", "1TH", "2TH", "1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN",
+        "JUD", "REV"]
+MSG_APIBIBLE_BUDGET = ("This site has used its NIV, NKJV and NASB allowance for the month. Chapters read recently still "
+                       "open; the rest return next month.")
+
+
+class ApiBibleError(Exception):
+    """An API.Bible call that gave no usable answer. `why` is short and safe to log: never the key or the URL. `down`:
+    no answer came back (a timeout, a failed connection); `unreached`: the call never left this server (a refused
+    connection, a name that did not resolve), so it does not count against the month."""
+    def __init__(self, why, status=None, down=False, unreached=False):
+        super().__init__(why)
+        self.why, self.status, self.down, self.unreached = why, status, down, unreached
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **kw): return None  # a redirect is an error: the api-key header never goes elsewhere
+
+
+APIBIBLE_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def apibible_get(path, query=None):
+    """GET APIBIBLE_URL + path with the key in the api-key header -> the parsed JSON. Raises ApiBibleError."""
+    url = APIBIBLE_URL + path + ("?" + urllib.parse.urlencode(query) if query else "")
+    req = urllib.request.Request(url, headers={"api-key": APIBIBLE_KEY, "Accept": "application/json", "User-Agent": "bible-lantern"})
+    try:
+        with APIBIBLE_OPENER.open(req, timeout=APIBIBLE_TIMEOUT) as r: raw = r.read(APIBIBLE_MAX + 1)
+    except urllib.error.HTTPError as e:
+        e.close()
+        raise ApiBibleError(f"HTTP {e.code}", e.code)
+    except (OSError, http.client.HTTPException) as e:  # URLError, a refused connection and timeouts are OSErrors
+        reason = getattr(e, "reason", None)
+        e = reason if isinstance(reason, Exception) else e
+        raise ApiBibleError("timeout" if isinstance(e, socket.timeout) else e.__class__.__name__, down=True,
+                            unreached=isinstance(e, (ConnectionRefusedError, socket.gaierror)))
+    if len(raw) > APIBIBLE_MAX: raise ApiBibleError("answer too large")
+    try: return json.loads(raw.decode("utf-8"))
+    except ValueError: raise ApiBibleError("not JSON")
+
+
+def apibible_pick(bibles):
+    """{tr: bibleId} out of /bibles' data[], by abbreviation (then abbreviationLocal), the first in APIBIBLE_ABBRS order."""
+    norm = lambda s: re.sub(r"[^0-9A-Z]", "", s.upper()) if isinstance(s, str) else ""  # noqa: E731 ('NASB 1995')
+    found = {}
+    for tr, names in APIBIBLE_ABBRS.items():
+        for name in names:
+            for field in ("abbreviation", "abbreviationLocal"):
+                hit = next((b["id"] for b in bibles if isinstance(b, dict) and norm(b.get(field)) == name
+                            and isinstance(b.get("id"), str) and APIBIBLE_ID_RE.fullmatch(b["id"])), None)
+                if hit: break
+            if hit: found[tr] = hit; break
+    return found
+
+
+class ApiBible:
+    """Which Bible ids the key serves: the pins, plus the rest discovered from /bibles in a background thread, kept in
+    memory and in DATA/cache/apibible/bibles.json (with a hash of the URL and key, so another key discovers again).
+    Discovered again after 14 days (a day when it found none), or when a chapter call says an id is unknown; at most
+    one attempt every 10 minutes, and a failed one keeps the map it had. A translation API.Bible refused (401, 403)
+    or throttled (429) makes no more calls for a while, and for a minute when it gave no answer or a 5xx (each
+    reader's call would wait up to 20 seconds): an error is never cached, so each reader would spend one."""
+    FRESH, FRESH_EMPTY, RETRY = APIBIBLE_FRESH_DAYS * 86400, 86400, 600
+    PAUSE, PAUSE_DOWN = {401: 600, 403: 600, 429: 60}, 60
+
+    def __init__(self, clock=time.time):
+        self.clock, self.lock = clock, threading.Lock()
+        self.where, self.ids, self.at, self.stale, self.next_try, self.running = None, None, 0, False, 0, None
+        self.paused = {}  # tr -> clock time its calls resume
+
+    @staticmethod
+    def _fingerprint():
+        return hashlib.sha256(f"{APIBIBLE_URL}\n{APIBIBLE_KEY}".encode("utf-8")).hexdigest()[:16]
+
+    def _load(self):
+        path, fp = os.path.join(A.CACHE, "apibible", "bibles.json"), self._fingerprint()
+        if self.where == (path, fp): return path
+        self.where, self.ids, self.at, self.stale, self.next_try, self.paused = (path, fp), None, 0, False, 0, {}
+        d = read_json(path, None)
+        if isinstance(d, dict) and d.get("keyHash") == fp and isinstance(d.get("ids"), dict) and A._is_int(d.get("at")):
+            self.ids = {t: i for t, i in d["ids"].items() if t in APIBIBLE_TRS and isinstance(i, str) and APIBIBLE_ID_RE.fullmatch(i)}
+            self.at = d["at"]
+        return path
+
+    def _due(self):
+        now = self.clock()
+        if now < self.next_try: return False
+        age = now - self.at
+        return self.ids is None or self.stale or not 0 <= age < (self.FRESH if self.ids else self.FRESH_EMPTY)
+
+    def ids_now(self, wait):
+        """-> {tr: bibleId} the key can serve now. Starts a discovery when one is due and waits up to `wait` seconds
+        for it (a running one too); past that, what is known so far."""
+        if not APIBIBLE_KEY: return {}
+        pins = dict(APIBIBLE_PINS)
+        if all(t in pins for t in APIBIBLE_TRS): return pins
+        with self.lock:
+            path = self._load()
+            ev = self.running
+            if ev is None and self._due():
+                ev = self.running = threading.Event()
+                self.next_try = self.clock() + self.RETRY
+                threading.Thread(target=self._discover, args=(ev, path, self.where), daemon=True).start()
+        if ev is not None and wait: ev.wait(wait)
+        with self.lock: found = dict(self.ids or {}) if self.where[0] == path else {}
+        return {t: pins.get(t) or found[t] for t in APIBIBLE_TRS if t in pins or t in found}
+
+    def _discover(self, ev, path, where):
+        try:
+            if not USAGE.take(): return  # the month's budget is spent: the map from last time stands
+            try:
+                d = apibible_get("/bibles", {"language": "eng"})
+                if not isinstance(d, dict) or not isinstance(d.get("data"), list): raise ApiBibleError("no list of Bibles")
+            except ApiBibleError as e:
+                A.log_error(f"apibible: cannot list the key's Bibles ({e.why})")
+                if e.unreached: USAGE.refund()
+                return
+            ids, now = apibible_pick(d["data"]), self.clock()
+            with self.lock:
+                if self.where != where: return  # the data directory or key changed meanwhile
+                self.ids, self.at, self.stale = ids, int(now), False
+            try: A.write_json_atomic(path, {"v": 1, "at": int(now), "keyHash": where[1], "ids": ids})
+            except (OSError, ValueError) as e: A.log_error(f"apibible: cannot write bibles.json: {e.__class__.__name__}")
+            names = [t.upper() for t in APIBIBLE_TRS if t in ids]
+            try: print(f"API.Bible: {', '.join(names) if names else 'none of NIV, NKJV or NASB'} for this key", flush=True)
+            except Exception: pass  # noqa
+        finally:
+            with self.lock: self.running = None
+            ev.set()
+
+    def forget(self, tr):
+        """A chapter call said this Bible id is unknown: discover again (a pinned id stays as it is)."""
+        if tr in APIBIBLE_PINS: return
+        with self.lock: self.stale = True
+
+    def pause(self, tr, e):
+        """After a failed chapter call (ApiBibleError e): how long `tr` makes no more calls, if at all."""
+        secs = self.PAUSE.get(e.status) or (self.PAUSE_DOWN if e.down or (e.status or 0) >= 500 else 0)
+        if secs:
+            with self.lock: self.paused[tr] = self.clock() + secs
+
+    def is_paused(self, tr):
+        with self.lock: return self.clock() < self.paused.get(tr, 0)
+
+    def licensed(self, wait=3):
+        """config.licensed: the translations the key serves, in menu order. Waits briefly for a first discovery (the
+        app gives /api/config 6 seconds)."""
+        ids = self.ids_now(wait)
+        return [t for t in APIBIBLE_TRS if t in ids]
+
+
+class ApiBibleUsage:
+    """Upstream calls this calendar month (UTC), in DATA/cache/apibible/usage.json as {"v": 1, "month": "YYYY-MM",
+    "calls": n, "alerted": bool}, written at each call so a restart keeps the count. Past APIBIBLE_MONTHLY nothing
+    more goes upstream; one '[alert]' line the month it reaches 80%."""
+    def __init__(self, clock=time.time):
+        self.clock, self.lock = clock, threading.Lock()
+        self.path, self.month, self.calls, self.alerted = None, "", 0, False
+
+    def _sync(self):
+        path = os.path.join(A.CACHE, "apibible", "usage.json")
+        if path != self.path:
+            d = read_json(path, None)
+            ok = isinstance(d, dict) and isinstance(d.get("month"), str) and A._is_int(d.get("calls")) and d["calls"] >= 0
+            self.path, self.month = path, d["month"] if ok else ""
+            self.calls, self.alerted = (d["calls"], d.get("alerted") is True) if ok else (0, False)
+        month = time.strftime("%Y-%m", time.gmtime(self.clock()))
+        if month != self.month: self.month, self.calls, self.alerted = month, 0, False
+
+    def _save(self):
+        snap = {"v": 1, "month": self.month, "calls": self.calls, "alerted": self.alerted}
+        try: A.write_json_atomic(self.path, snap, indent=None)
+        except (OSError, ValueError) as e: A.log_error(f"apibible: cannot write usage.json: {e.__class__.__name__}")
+
+    def take(self):
+        """Count one upstream call. -> False (and nothing counted) when the month's budget is spent."""
+        with self.lock:
+            self._sync()
+            if self.calls >= APIBIBLE_MONTHLY: return False
+            self.calls += 1
+            alert = not self.alerted and self.calls * 5 >= APIBIBLE_MONTHLY * 4
+            if alert: self.alerted = True
+            calls = self.calls
+            self._save()
+        if alert:
+            ALERTS.fire("apibible_budget", f"{calls} of {APIBIBLE_MONTHLY} API.Bible calls used this month (80%)")
+        return True
+
+    def refund(self):
+        """Give back one counted call that never reached API.Bible (ApiBibleError.unreached)."""
+        with self.lock:
+            self._sync()
+            if self.calls <= 0: return
+            self.calls -= 1
+            self._save()
+
+    def report(self):
+        """The owners' Site activity: {calls: this month's, limit}."""
+        with self.lock:
+            self._sync()
+            return {"calls": self.calls, "limit": APIBIBLE_MONTHLY}
+
+
+APIBIBLE = ApiBible()
+USAGE = ApiBibleUsage()
+
+# API.Bible's JSON content: verse text is in text nodes carrying attrs.verseId ('JHN.3.16'); a verse marker's own
+# items are its number. Headings (include-titles=false should leave none), notes and chapter numbers never reach a
+# verse; a psalm's title is the style-d paragraph before the first verse marker.
+APIBIBLE_HEADING = re.compile(r"(?:s|ms|mr|r|sr|sp|sd|cl|cd|mt|mte|qa|imt|is|ip|ipr|iq|im|ili|iot|io|ie|rem|restore|h|toc|toca|th|thr)\d*")
+APIBIBLE_SKIP = re.compile(r"(?:f|fe|ef|x|ex|fr|fq|fqa|fk|fl|fw|fp|fv|ft|fdc|fm|xo|xk|xq|xt|xta|xop|xot|xnt|xdc|ca|va|vp|fig|c)\d*")
+APIBIBLE_BLOCKS = ("para", "table", "row", "cell", "list", "item")  # one space between them; char spans join as they are
+VERSE_ID = re.compile(r"([0-9A-Z]{3})\.(\d+)\.(\d+)")
+VERSE_NUMBERS = re.compile(r"(\d+)(?:\D+(\d+))?")
+
+
+def apibible_verses(content, usfm, chapter):
+    """-> ({verse: text}, title) from a chapter's JSON content. A verse marked but given no text is ''; a combined
+    verse ('17-18') is its first number's, the rest ''. Text across paragraphs and spans (wj) joins with the spacing
+    the text nodes carry, and one space between paragraphs."""
+    parts, title, last, seen = {}, [], [None], [False]
+
+    def text_of(node, para, marker, upper):
+        attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
+        text = node.get("text")
+        if not isinstance(text, str): return
+        if upper: text = text.upper()  # the divine name (nd), set in small capitals: LORD
+        if usfm == "PSA" and para == "d" and not seen[0] and marker is None:
+            title.append(text); return  # before verse 1, whatever verseId it was given
+        m = VERSE_ID.match(attrs["verseId"]) if isinstance(attrs.get("verseId"), str) else None
+        v = int(m.group(3)) if m and m.group(1) == usfm and int(m.group(2)) == chapter else 0
+        if not v or (marker is not None and text.strip() == marker): return  # a marker's own number
+        parts.setdefault(v, []).append(text); last[0] = v
+
+    def walk(items, para, marker, upper):
+        for node in items if isinstance(items, list) else ():
+            if not isinstance(node, dict): continue
+            if node.get("type") == "text":
+                text_of(node, para, marker, upper); continue
+            attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
+            style, name = attrs.get("style") if isinstance(attrs.get("style"), str) else "", node.get("name")
+            if name in ("note", "chapter") or APIBIBLE_SKIP.fullmatch(style): continue
+            if name == "verse" or style == "v":
+                num = str(attrs.get("number", "")).strip()
+                m = VERSE_NUMBERS.match(num)
+                if m:
+                    a = int(m.group(1)); b = int(m.group(2)) if m.group(2) and 0 <= int(m.group(2)) - a < 10 else a
+                    for n in range(a, b + 1): parts.setdefault(n, [])
+                    seen[0] = True
+                walk(node.get("items"), para, num, upper)  # its number drops; text with a verseId is kept
+                continue
+            if name in APIBIBLE_BLOCKS:
+                if APIBIBLE_HEADING.fullmatch(style): continue
+                if last[0]: parts[last[0]].append(" ")
+                if title: title.append(" ")
+                walk(node.get("items"), style if name == "para" else para, marker, upper)
+                continue
+            walk(node.get("items"), para, marker, upper or style == "nd")
+
+    walk(content, "", None, False)
+    clean = lambda p: re.sub(r"\s+", " ", "".join(p)).strip()  # noqa: E731
+    return {v: clean(p) for v, p in parts.items() if v >= 1}, clean(title)
+
+
+def fetch_apibible(bible_id, book_n, chapter):
+    """One chapter from API.Bible -> (verses, title, copyright, fumsToken). Raises ApiBibleError."""
+    usfm = USFM[book_n - 1]
+    d = apibible_get(f"/bibles/{urllib.parse.quote(bible_id, safe='')}/chapters/{usfm}.{chapter}", APIBIBLE_QUERY)
+    data = d.get("data") if isinstance(d, dict) else None
+    if not isinstance(data, dict) or not isinstance(data.get("content"), list): raise ApiBibleError("no JSON content")
+    try: verses, title = apibible_verses(data["content"], usfm, chapter)
+    except RecursionError: raise ApiBibleError("content nested too deep")
+    cr = re.sub(r"\s+", " ", data["copyright"]).strip() if isinstance(data.get("copyright"), str) else ""
+    if not cr: raise ApiBibleError("no copyright")  # it is shown with every display: no text without it
+    meta = d.get("meta") if isinstance(d.get("meta"), dict) else {}
+    token = meta.get("fumsToken")
+    return verses, title, cr, token if isinstance(token, str) and FUMS_TOKEN_RE.fullmatch(token) else ""
+
+
+class KeyedLocks:
+    """One lock per key while anyone holds or waits for it: two readers of one uncached chapter make one call."""
+    def __init__(self): self.lock, self.locks = threading.Lock(), {}
+
+    @contextlib.contextmanager
+    def hold(self, key):
+        with self.lock:
+            ent = self.locks.setdefault(key, [threading.Lock(), 0])
+            ent[1] += 1
+        try:
+            with ent[0]: yield
+        finally:
+            with self.lock:
+                ent[1] -= 1
+                if not ent[1]: del self.locks[key]
+
+
+APIBIBLE_CHAPTERS = KeyedLocks()
+
+
+def _days_old(fetched):
+    try: return (datetime.datetime.now(datetime.timezone.utc).date() - datetime.date.fromisoformat(fetched)).days
+    except (TypeError, ValueError): return None
+
+
+def _apibible_gate(client):
+    """Room for one upstream call: the client's own allowance (hosted or behind a proxy; locally every reader is '*'
+    and has none), then 50 a minute for every client. -> seconds to wait (0 = counted in both)."""
+    wait = APIBIBLE_CLIENT_WINDOW.check(client) if client != "*" else 0
+    if not wait:
+        wait = UPSTREAM_WINDOW.check("apibible")
+        if wait and client != "*": APIBIBLE_CLIENT_WINDOW.unrecord(client)
+    return wait
+
+
+def apibible_passage(tr, book_n, chapter, client="*"):
+    """/api/passage for niv, nkjv and nasb -> (body, status): {verses, title?, copyright, fumsToken, fetched, v}, the
+    shape ESV and NLT answer in, from DATA/cache/<tr>/BB-C.json while under 14 days old. A failed refresh (the budget,
+    the rate limits, API.Bible down) serves the cached copy while it is under 30 days old. Errors are {error: message}.
+    `client` is Handler._client_key(): only a cache miss counts against its allowance."""
+    name = tr.upper()
+    bid = APIBIBLE.ids_now(wait=APIBIBLE_TIMEOUT + 5).get(tr)
+    if not bid: return {"error": f"{name} is not available here."}, 400
+    cpath = os.path.join(A.CACHE, tr, f"{book_n:02d}-{chapter}.json")
+    with APIBIBLE_CHAPTERS.hold((tr, book_n, chapter)):
+        c = read_json(cpath, None)
+        ok = (isinstance(c, dict) and c.get("v") == CACHE_V[tr] and c.get("id") == bid and isinstance(c.get("verses"), list)
+              and c["verses"] and all(isinstance(t, str) for t in c["verses"]) and isinstance(c.get("copyright"), str)
+              and c["copyright"] and isinstance(c.get("fumsToken"), str))
+        age = _days_old(c.get("fetched")) if ok else None
+        public = {k: c[k] for k in ("verses", "title", "copyright", "fumsToken", "fetched", "v") if k in c} if ok else None
+        if age is not None and 0 <= age < APIBIBLE_FRESH_DAYS: return public, 200
+        keep = public if age is not None and 0 <= age < APIBIBLE_KEEP_DAYS else None
+        if APIBIBLE.is_paused(tr):
+            return keep or {"error": f"{name} could not be loaded just now. Try again in a few minutes."}, 200 if keep else 502
+        wait = _apibible_gate(client)
+        if wait: return keep or {"error": f"Too many {name} requests at once. Try again in {wait_text(wait)}."}, 200 if keep else 429
+        if not USAGE.take():
+            UPSTREAM_WINDOW.unrecord("apibible")
+            if client != "*": APIBIBLE_CLIENT_WINDOW.unrecord(client)
+            return (keep, 200) if keep else ({"error": MSG_APIBIBLE_BUDGET}, 429)
+        try:
+            verses, title, cr, token = fetch_apibible(bid, book_n, chapter)
+            verses = {i: t for i, t in verses.items() if 1 <= i <= 200}
+            if not any(verses.values()): raise ApiBibleError("no verses")
+        except ApiBibleError as e:
+            A.log_error(f"apibible: {name} {USFM[book_n - 1]}.{chapter}: {e.why}")
+            if e.unreached: USAGE.refund()
+            if e.status == 404: APIBIBLE.forget(tr)
+            APIBIBLE.pause(tr, e)
+            if keep: return keep, 200
+            if e.status == 429: return {"error": f"Too many {name} requests at once. Try again in about a minute."}, 429
+            return {"error": f"{name} could not be loaded just now. Try again in a few minutes."}, 502
+        n = max(verses)
+        out = {"verses": [verses.get(i, "") for i in range(1, n + 1)], "copyright": cr, "fumsToken": token,
+               "fetched": time.strftime("%Y-%m-%d", time.gmtime()), "v": CACHE_V[tr]}
+        if title: out["title"] = title
+        try: A.write_json_atomic(cpath, dict(out, id=bid))
+        except (OSError, ValueError) as e: A.log_error(f"apibible: cannot cache {name} {book_n}-{chapter}: {e.__class__.__name__}")
+        return out, 200
 
 
 # ----------------------------------------------------------------- rate limiting (in memory, §3.5)
@@ -378,6 +765,7 @@ NOTES_WINDOW = Window(300, 60)      # per scope
 LINKS_WINDOW = Window(300, 60)      # per scope
 MARKS_WINDOW = Window(300, 60)      # per scope
 UPSTREAM_WINDOW = Window(50, 60)    # ESV/NLT API calls, per translation (ESV throttles a key past 60 a minute)
+APIBIBLE_CLIENT_WINDOW = Window(30, 600)  # API.Bible calls (cache misses) per client, hosted: no one spends the month
 IMPORT_WINDOW = Window(30, 60)      # profile imports, per scope
 # Hosted or behind a proxy, AUTH_WINDOW and SIGNUP_WINDOW count per client (Handler._client_key: the address, and on
 # the site also who the attempt is about), so one client cannot lock everyone else out of signing in; these count
@@ -433,7 +821,7 @@ def configure_hosting(env):
     """Read the hosting variables from `env` (os.environ). Entries that cannot be used are ignored with a warning."""
     global HOSTED, TRUST_PROXY, ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS, PROXY_SECRET, OWNER_SETUP_TOKEN
     global SIGNUP_CLOSED, TURNSTILE, TURNSTILE_SITEKEY, TURNSTILE_SECRET, TURNSTILE_VERIFY_URL, ORIGIN_HOSTS
-    global HOSTED_MAX_USERS, MIN_FREE_BYTES, DONATE_URL
+    global HOSTED_MAX_USERS, MIN_FREE_BYTES, DONATE_URL, APIBIBLE_KEY, APIBIBLE_URL, APIBIBLE_PINS, APIBIBLE_MONTHLY
     HOSTED, TRUST_PROXY = _env_flag(env.get("BS_HOSTED")), _env_flag(env.get("BS_TRUST_PROXY"))
     PROXY_SECRET = (env.get("BS_PROXY_SECRET") or "").strip()
     OWNER_SETUP_TOKEN = (env.get("BS_OWNER_SETUP_TOKEN") or "").strip()
@@ -455,6 +843,21 @@ def configure_hosting(env):
     url = (env.get("BS_DONATE_URL") or "").strip()
     if url and not DONATE_URL_RE.fullmatch(url): bad.append(("BS_DONATE_URL", url[:100])); url = ""
     DONATE_URL = url or DONATE_DEFAULT
+    key = (env.get("BS_APIBIBLE_KEY") or "").strip()  # API.Bible (translations brief §1), locally too
+    if key and not APIBIBLE_KEY_RE.fullmatch(key): bad.append(("BS_APIBIBLE_KEY", "a value that is not valid")); key = ""
+    APIBIBLE_KEY = key
+    url = (env.get("BS_APIBIBLE_URL") or "").strip().rstrip("/")
+    if url and not re.fullmatch(r"https?://[!-~]+", url): bad.append(("BS_APIBIBLE_URL", url[:100])); url = ""
+    APIBIBLE_URL = url or APIBIBLE_DEFAULT_URL
+    pins = {}
+    for item in (env.get("BS_APIBIBLE_BIBLES") or "").split(","):
+        tr, _, bid = item.strip().partition("=")
+        tr, bid = tr.strip().lower(), bid.strip()  # ids keep their case
+        if not item.strip(): continue
+        if tr in APIBIBLE_TRS and APIBIBLE_ID_RE.fullmatch(bid): pins[tr] = bid
+        else: bad.append(("BS_APIBIBLE_BIBLES", item.strip()[:100]))
+    APIBIBLE_PINS = pins
+    APIBIBLE_MONTHLY = _env_count(env, "BS_APIBIBLE_MONTHLY", 4800, bad, low=0)
     for h in _env_list(env.get("BS_ALLOWED_HOSTS")):
         name = PORT_SUFFIX.sub("", h)
         if HOST_NAME_RE.fullmatch(name): hosts.append(name)
@@ -2005,7 +2408,8 @@ class Handler(SimpleHTTPRequestHandler):
         cfg = read_json(A.CONFIG, {})
         cfg = cfg if isinstance(cfg, dict) else {}
         mine = not HOSTED or self.is_owner()
-        self.send_json({"esv": mine and bool(cfg.get("esvKey")), "nlt": mine and bool(cfg.get("nltKey"))})
+        self.send_json({"esv": mine and bool(cfg.get("esvKey")), "nlt": mine and bool(cfg.get("nltKey")),
+                        "licensed": APIBIBLE.licensed()})  # NIV, NKJV and NASB: for every session
 
     def h_config_put(self, body, q, arg):
         if HOSTED: self.owner_or_403()
@@ -2016,20 +2420,22 @@ class Handler(SimpleHTTPRequestHandler):
                 if body[k] is not None and not isinstance(body[k], str): raise ApiError(400, "bad_request", field=k)
                 cfg[k] = (body[k] or "").strip()
         A.write_json_atomic(A.CONFIG, cfg)
-        self.send_json({"esv": bool(cfg.get("esvKey")), "nlt": bool(cfg.get("nltKey"))})
+        self.send_json({"esv": bool(cfg.get("esvKey")), "nlt": bool(cfg.get("nltKey")), "licensed": APIBIBLE.licensed()})
 
     def h_passage(self, body, q, arg):
         # The one GET that reaches past this computer (it spends the user's ESV/NLT quota), so it is same-origin
         # only, like every write: another site's <img src="…/api/passage?…"> must not call the API with the key.
         self.check_same_origin()
-        if HOSTED and not self.is_owner(): raise ApiError(403, "owner_only", MSG_OWNER_TEXT)
         tr = q.get("tr", [""])[0].lower()
+        # NIV, NKJV and NASB (API.Bible) are licensed for the public site: every reader, guests included
+        if tr not in APIBIBLE_TRS and HOSTED and not self.is_owner(): raise ApiError(403, "owner_only", MSG_OWNER_TEXT)
         try: book_n, ch = int(q.get("book", ["0"])[0]), int(q.get("chapter", ["0"])[0])
         except ValueError: return self.send_json({"error": "bad ref"}, 400)
-        if tr not in FETCHERS: return self.send_json({"error": "unknown translation"}, 400)
+        if tr not in FETCHERS and tr not in APIBIBLE_TRS: return self.send_json({"error": "unknown translation"}, 400)
         # a chapter that does not exist is refused here: a failed fetch is not cached, so each one was an API call
         if not (1 <= book_n <= 66 and 1 <= ch <= A.chapters_in(book_n)): return self.send_json({"error": "bad ref"}, 400)
-        obj, status = get_passage(tr, book_n, ch)
+        if tr in APIBIBLE_TRS: obj, status = apibible_passage(tr, book_n, ch, self._client_key())
+        else: obj, status = get_passage(tr, book_n, ch)
         self.send_json(obj, status)
 
     # ------------------------------------------------------------ hosted: site activity and health
@@ -2045,7 +2451,7 @@ class Handler(SimpleHTTPRequestHandler):
                         "totals": {"profiles": n_users, "guests_today": rep["days"][-1]["guests"], "last_7": rep["last_7"],
                                    "last_30": rep["last_30"]},
                         "turnstile": TURNSTILE, "signup": "closed" if pause else "open", "signupPause": pause,
-                        "storage": storage})
+                        "storage": storage, "apibible": USAGE.report()})
 
     def h_health(self, body, q, arg):
         problem = health_problem()
@@ -2313,6 +2719,10 @@ def main():
         n_claims = backfill_owner_claims()
         if n_claims: print(f"Recorded {n_claims} owner claim(s) for profiles made before owner-claims.json existed.", flush=True)
         start_metrics(os.path.join(data, "metrics.json"))
+    if APIBIBLE_KEY:  # which Bibles the key serves, found in the background (from bibles.json while it is recent)
+        pinned = [t.upper() for t in APIBIBLE_TRS if t in APIBIBLE_PINS]
+        print(f"API.Bible: key set, {APIBIBLE_MONTHLY} calls a month" + (f", pinned {', '.join(pinned)}" if pinned else ""), flush=True)
+        APIBIBLE.ids_now(wait=0)
     Handler.serve_mocks = a.dev
     srv = Server((a.host, a.port), Handler)
     n_users = len(A.load_users()["users"])

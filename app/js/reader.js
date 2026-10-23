@@ -1,6 +1,6 @@
 // The reading page: chapter hero, verses (parallel columns, inline interlinear, markers), footer.
 // The document scrolls on the window (not on #reader).
-import { state, data, bookOf, refKey, noteFor, yearLabel, esc, isHebrewBook, isDivine, smart, nobreak, plural, initials, testamentName, divSlug, trInfo, layoutMode, RM, isAramaicWord, aramaicVerses, morphNoLang } from './store.js';
+import { state, data, bookOf, refKey, noteFor, yearLabel, esc, isHebrewBook, isDivine, smart, nobreak, plural, initials, testamentName, divSlug, trInfo, layoutMode, RM, isAramaicWord, aramaicVerses, morphNoLang, DRY, isPassageTr, LICENSED_IDS } from './store.js';
 import { decodeMorph, wordTypeLabel, isVariantWord, variantShort } from './morph.js';
 import { icon } from './icons.js';
 import * as viz from './viz.js';
@@ -23,6 +23,36 @@ const COPYRIGHT = {
   // Tyndale's required credit line for a project that uses more than one translation (tyndale.com permissions)
   nlt: 'Scripture quotations marked (NLT) are taken from the Holy Bible, New Living Translation, copyright ©1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.',
 };
+/**
+ * FUMS v3, API.Bible's fair-use count (translations brief §2): its script loads the first time an NIV, NKJV or NASB
+ * chapter is shown, behind the queueing stub its docs give, and each display of one (the main text or the parallel
+ * column) is one trackView with the token that came with the chapter. Never on ?dry. A window.fums already there (the
+ * script itself, or a check's stub that records the calls) is used as it is.
+ */
+const FUMS_SRC = 'https://pkg.api.bible/fumsV3.min.js';
+function fumsView(token) {
+  if (DRY || !token) return;
+  if (typeof window.fums !== 'function') {
+    window.fumsData = window.fumsData || [];
+    window.fums = function () { window.fumsData.push(arguments); };
+    const s = document.createElement('script'); s.async = true; s.src = FUMS_SRC;
+    document.head.appendChild(s);
+  }
+  try { window.fums('trackView', token); } catch (e) { console.error(e); }
+}
+/** The licensed texts on screen ('niv:43.3'): a re-render that keeps one (a note, a selection, the interlinear) is not a new view. */
+let fumsShown = new Set();
+function countViews(b, c, trs, fresh) {
+  if (fresh) fumsShown = new Set(); // another chapter, or the reader again after Home (which empties it)
+  const now = new Set();
+  for (const t of trs) {
+    const k = `${t}:${b}.${c}`;
+    if (!LICENSED_IDS.includes(t) || now.has(k)) continue;
+    if (!fumsShown.has(k)) fumsView(data.passageCredit(t, b, c).fumsToken);
+    now.add(k);
+  }
+  fumsShown = now;
+}
 const readerEl = () => document.getElementById('reader');
 const safeCall = (fn, ...a) => { try { return typeof fn === 'function' ? fn(...a) : undefined; } catch (e) { console.error(e); return undefined; } };
 /** library.js / art.js calls: undefined when the module is missing or throws. */
@@ -62,7 +92,7 @@ let PEOPLE = null;            // people.json once loaded (hero monograms)
 
 async function getChapter(tr, b, c) {
   try {
-    if (tr === 'esv' || tr === 'nlt') {
+    if (isPassageTr(tr)) { // ESV and NLT (a key), NIV, NKJV and NASB (API.Bible): /api/passage
       const verses = await data.passage(tr, b, c);
       const title = b === 19 ? safeCall(data.passageTitle, tr, b, c) : ''; // a psalm's title ("title" of /api/passage), never part of verse 1
       return { verses, title: typeof title === 'string' ? title : '' };
@@ -340,8 +370,11 @@ export async function renderReader(opts = {}) {
     <button class="foot-tile prev" type="button" data-nav="-1"${prev ? '' : ' disabled'}><small>Previous</small><span>${icon('arrow-left')}${prev ? esc(chName(prev.b, prev.c)) : ''}</span></button>
     <button class="foot-tile next" type="button" data-nav="1"${next ? '' : ' disabled'}><small>Next</small><span>${next ? esc(chName(next.b, next.c)) : ''}${icon('arrow-right')}</span></button>
   </nav>`;
-  // the ESV API terms: a link to www.esv.org on every page that shows ESV text
-  const lines = [...new Set([shownTr, tr2].filter(Boolean))].map(t => COPYRIGHT[t] ? esc(COPYRIGHT[t]) + (t === 'esv' ? ' <a href="https://www.esv.org" target="_blank" rel="noopener">www.esv.org</a>' : '') : `${esc(trInfo(t).name)} · ${esc(trInfo(t).licence || '')}`);
+  // the ESV API terms: a link to www.esv.org on every page that shows ESV text. API.Bible's: the publisher's copyright
+  // line that came with an NIV, NKJV or NASB chapter, with every display of it (each column's, when they differ)
+  const credit = t => (LICENSED_IDS.includes(t) ? data.passageCredit(t, b, c).copyright : '');
+  const lines = [...new Set([shownTr, tr2].filter(Boolean))].map(t => COPYRIGHT[t] ? esc(COPYRIGHT[t]) + (t === 'esv' ? ' <a href="https://www.esv.org" target="_blank" rel="noopener">www.esv.org</a>' : '')
+    : credit(t) ? `<span class="cr-pub" data-cr="${esc(t)}">${esc(credit(t))}</span>` : `${esc(trInfo(t).name)} · ${esc(trInfo(t).licence || '')}`);
   if (orig) lines.push(heb ? `${aramaicVerses(b, c).length ? 'Hebrew and Aramaic' : 'Hebrew'}: STEPBible TAHOT (CC BY 4.0)` : 'Greek: STEPBible TAGNT (CC BY 4.0)');
   lines.push('Cross-references: OpenBible.info (CC BY)');
   html += `<p class="copyright">${lines.join('<br>')}</p>`;
@@ -354,6 +387,7 @@ export async function renderReader(opts = {}) {
   el.dataset.ch = `${b}.${c}`;
   el.dataset.abbr = trInfo(shownTr).abbr; // the copied text's reference (bindReader's copy handler)
   el.dataset.tr = shownTr; el.dataset.tr2 = tr2; // the translation of each column: marks.js draws a mark only in its own
+  countViews(b, c, [shownTr, tr2].filter(Boolean), fresh);
   try { if (typeof viz.renderSignature === 'function') { const r = viz.renderSignature(document.getElementById('sig-arcs'), { animate: fresh }); if (r && r.catch) r.catch(e => console.error(e)); } } catch (e) { console.error(e); }
   if (artReady) artCall('attachReader', el, b, c);
 
