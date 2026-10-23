@@ -25,6 +25,7 @@ optional(import('./links.js'), 'links.js').then(m => {
   if (!m || typeof m.renderMine !== 'function') return;
   links = m;
   const t = document.getElementById('tab-mine'); if (t) t.hidden = false;
+  paintNoteVerses();
 });
 // marks.js (highlights and comments, annotations-brief §3.4) likewise: the Notes tab lists them once it has loaded
 let mrk = null;
@@ -32,7 +33,7 @@ optional(import('./marks.js'), 'marks.js').then(m => { if (!m || typeof m.marksF
 // study.js (note references, the [[ picker and Mentioned in: study-build-brief §1.1) likewise: until it has loaded,
 // a reference to a highlight or comment renders as a plain verse link
 let study = null;
-optional(import('./study.js'), 'study.js').then(m => { if (!m || typeof m.attachPicker !== 'function') return; study = m; refreshNoteMarks(); });
+optional(import('./study.js'), 'study.js').then(m => { if (!m || typeof m.attachPicker !== 'function') return; study = m; refreshNoteMarks(); paintNoteVerses(); });
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const bodyEl = () => document.getElementById('drawer-body');
@@ -41,13 +42,21 @@ const SKELETON = '<div class="skeleton" aria-busy="true"><i style="width:92%"></
 const IN_VERSE = '<span class="in-verse">This verse</span>';
 
 let searchState = { title: '', html: '', has: false };
+// the Search tab's list stays put while you read (topic-keep brief): searchGen names the results in searchState, the
+// view drawn from them carries it (data-search), and a click on a result never draws them again. Another tab keeps the
+// view aside (searchKeep: the node and its scroll) to put back as it was; a new search drops it. searchPick: the row
+// clicked last, the one marked when two rows go to the same verse (a heading and its verse).
+let searchGen = 0, searchKeep = null, searchPick = null;
 let origFocus = null;                 // {word:i} | {strong:'G26', word?:i, aram?:bool}
 let mdMode = 'preview', mdKey = null; // notes editor mode: UI state only, never stored on the note
 let renderSeq = 0;
 
 export function setOrigFocus(f) { origFocus = f; }
-export function setSearchResults(title, html) {
+/** New results for the Search tab. same: the list on show was changed in place to this markup (Show more, the
+ *  testament filter), so it is still these results and stays as it is. */
+export function setSearchResults(title, html, same = false) {
   searchState = { title, html, has: true };
+  if (!same) { searchGen++; searchKeep = null; searchPick = null; }
   const t = document.getElementById('tab-search'); if (t) t.hidden = false;
 }
 
@@ -274,10 +283,14 @@ export async function renderDrawer(opts = {}) {
   const el = bodyEl();
   const hadFocus = !!(el && ae && ae !== document.body && (el.contains(ae) || !!menuEl?.contains(ae)));
   closeMenu(false);
+  A.syncPush(); // the overlay's page push follows the Search tab (main.js)
   if (!state.drawerOpen || !el) return;
   playerHost(el); syncPlayer();
   const token = String(++renderSeq); el.dataset.token = token;
   const prevScroll = el.scrollTop;
+  const shown = searchView(el);
+  if (state.drawerTab === 'search' && keepSearch(el, shown, opts, hadFocus)) return;
+  if (shown && +shown.dataset.search === searchGen) searchKeep = { gen: searchGen, node: shown, top: el.scrollTop }; // left: kept to come back to
   const skel = setTimeout(() => { if (el.dataset.token === token) setView(el, SKELETON); }, 90);
   const b = state.book, c = state.chapter, v = state.selected;
   let html = '';
@@ -297,11 +310,72 @@ export async function renderDrawer(opts = {}) {
   if (el.dataset.token !== token) return; // superseded
   const cls = opts.push ? 'view push' : opts.pop ? 'view pop' : 'view';
   const still = opts.keepScroll && !opts.push && !opts.pop; // in-place edits: no entrance animation
-  setView(el, `<div class="${cls}" style="--dx:${opts.dx || 0}px${still ? ';animation:none' : ''}">${html}</div>`);
+  const tag = state.drawerTab === 'search' ? ` data-search="${searchGen}"` : '';
+  setView(el, `<div class="${cls}"${tag} style="--dx:${opts.dx || 0}px${still ? ';animation:none' : ''}">${html}</div>`);
   el.scrollTop = opts.keepScroll ? prevScroll : 0;
   document.getElementById('drawer')?.classList.toggle('scrolled', el.scrollTop > 2);
   afterRender(opts);
   placeFocus(el, opts, hadFocus);
+}
+
+// ------------------------------------------------------------ Search: the list stays put (topic-keep brief)
+const searchView = el => (el ? $(':scope > .view[data-search]', el) : null);
+/**
+ * The Search tab again with the same results: the list on show stays as it is (its scroll, Show more pages, the
+ * filter and the focused row), or the view kept aside when another tab took over comes back at its scroll. False when
+ * the results are new, to be drawn from their markup.
+ */
+function keepSearch(el, shown, opts, hadFocus) {
+  let view = shown && +shown.dataset.search === searchGen ? shown : null;
+  if (!view && searchKeep && searchKeep.gen === searchGen) {
+    view = searchKeep.node;
+    setView(el, '');
+    view.className = 'view'; view.setAttribute('style', `--dx:${opts.dx || 0}px`); // the tab's entrance, as a drawn view has
+    el.append(view);
+    el.scrollTop = searchKeep.top;
+    observeSegs(el);
+    const occ = $('.occ', view); if (occ && !occ.children.length) renderOcc(occ); // left before its first page came
+  }
+  searchKeep = null;
+  if (!view) return false;
+  markSearchRows(el);
+  document.getElementById('drawer')?.classList.toggle('scrolled', el.scrollTop > 2);
+  placeFocus(el, opts, hadFocus);
+  return true;
+}
+/**
+ * The current result (topic-keep brief §3): the Search tab's row for the verse the reader has selected (the chapter's
+ * title row when no verse is) has aria-current, and the mark follows the selection. main.js calls it after its own
+ * changes to the list (Show more, the testament filter) and to the selection.
+ */
+export function markSearchRows(root = bodyEl()) {
+  const view = state.drawerTab === 'search' ? searchView(root) : null; if (!view) return;
+  const key = `${state.book}.${state.chapter}.${state.selected || 0}`;
+  const rows = $$('.cell[data-go]', view), hit = rows.filter(r => r.dataset.go === key);
+  const on = hit.length > 1 && hit.includes(searchPick) ? [searchPick] : hit;
+  rows.forEach(r => { if (on.includes(r)) r.setAttribute('aria-current', 'true'); else if (r.hasAttribute('aria-current')) r.removeAttribute('aria-current'); });
+}
+/** The Search tab shows a row marked current: the b key then bookmarks that verse (main.js toggleBookmark). */
+export const searchRowCurrent = () => !!searchView(bodyEl())?.querySelector('.cell[aria-current="true"]');
+
+/**
+ * The phone sheet came down to its medium detent under the list (main.js openResult): it keeps its scroll, so a row
+ * low in the tall sheet can end up below the shorter one. Once the sheet rests, the current row is brought back.
+ */
+export function revealSearchRow() {
+  const d = document.getElementById('drawer'), el = bodyEl(); if (!d || !el) return;
+  const go = () => {
+    const view = state.drawerTab === 'search' && state.drawerOpen ? searchView(el) : null;
+    const row = view && (searchPick?.isConnected && view.contains(searchPick) && searchPick.hasAttribute('aria-current') ? searchPick : $('.cell[aria-current="true"]', view));
+    if (!row) return;
+    const r = row.getBoundingClientRect(), br = el.getBoundingClientRect();
+    const dy = r.bottom > br.bottom - 8 ? Math.min(r.bottom - br.bottom + 8, r.top - br.top - 8) : r.top < br.top + 8 ? r.top - br.top - 8 : 0;
+    if (Math.abs(dy) >= 1) el.scrollBy({ top: dy, behavior: scrollBehavior() });
+  };
+  // the detent's height transition (styles.css): measured once it has ended, or been cut short by a drag
+  if (typeof d.getAnimations !== 'function') { setTimeout(go, 620); return; }
+  const moving = d.getAnimations().filter(a => a.transitionProperty === 'height');
+  Promise.all(moving.map(a => a.finished.catch(() => {}))).then(go);
 }
 
 // ------------------------------------------------------------ Links
@@ -767,6 +841,7 @@ async function renderOcc(ul, page = 20) {
     const start = ul.children.length; // rows of unknown books are dropped, so the new rows are counted, not `shown`
     ul.insertAdjacentHTML('beforeend', refs.map((r, i) => { const t = clip(texts[i], 150); return `<li><button class="cell" type="button" data-go="${r.b}.${r.c}.${r.v || 1}"><span class="cell-body"><span class="cell-title">${esc(r.v ? refLabel(r.b, r.c, r.v) : `${refLabel(r.b, r.c)} (title)`)}</span>${t ? `<span class="cell-sub serif">${esc(t)}</span>` : ''}</span>${icon('chev-right', 'chev')}</button></li>`; }).join(''));
     ul.dataset.shown = String(shown + next.length);
+    markSearchRows(); // the Search tab's own list (a person's or place's verses): its new rows
     const more = ul.parentElement?.querySelector('[data-more-occ]');
     if (more) {
       const done = shown + next.length >= occ.length;
@@ -801,7 +876,7 @@ function notesTab(b, c, v, opts) {
       <div class="editor"><div class="editor-top"><span>Markdown</span><div class="segmented sm" id="md-mode" role="radiogroup" aria-label="Editor mode"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-mode="write" aria-checked="${!preview}" tabindex="${preview ? -1 : 0}">Write</button><button type="button" role="radio" data-mode="preview" aria-checked="${preview}" tabindex="${preview ? 0 : -1}"${text ? '' : ' disabled'}>Preview</button></div></div>
         ${preview ? `<div class="md" data-md>${renderMd(text)}</div>` : `<textarea id="note-text" class="note-text" aria-label="Note" maxlength="100000" placeholder="Write your note… Link verses like [[Romans 5:8]].">${esc(text)}</textarea>`}</div>
       <div class="tokens" id="tokens">${icon('tag')}${tags.map(t => `<span class="token">#${esc(t)}<button type="button" data-untag="${esc(t)}" aria-label="Remove tag ${esc(t)}">${icon('xmark')}</button></span>`).join('')}<input id="note-tags" placeholder="${tags.length ? 'Add tag' : 'Add tags'}" aria-label="Add a tag, then press Return" autocomplete="off" spellcheck="false"></div>
-    </section>`;
+    </section>${v ? noteVersesBox(b, c, v, text) : ''}`;
   return `${editor}
     ${study ? safe(study.mentionsHtml, b, c, v) || '' : ''}
     ${v ? markSecHtml(b, c, v) : ''}
@@ -812,6 +887,39 @@ function notesTab(b, c, v, opts) {
       ${allNotesHtml(all, '', ALL_PAGE)}</details>
     ${ro ? '' : `<div class="export-row"><button class="btn btn-tinted sm" type="button" data-export-obsidian>${icon('export')}Export for Obsidian</button><button class="btn btn-tinted sm" type="button" data-export-json>${icon('export')}Export JSON</button><button class="btn btn-tinted sm" type="button" data-import-json>${icon('import')}Import JSON</button><input type="file" id="import-json" accept="application/json" hidden></div>`}`;
 }
+/**
+ * “Link the verses in this note” (note-links brief §3): under a verse note's card, the verses its text names, each a
+ * chip: Link (links.js connectFromNote: the Mine tab, its composer open) or, already linked, Linked (the Mine tab).
+ * It follows the text as it is typed (paintNoteVerses); empty and hidden when the note names no verse.
+ */
+function noteVersesInner(b, c, v, text) {
+  if (!study || !links || typeof study.noteVerses !== 'function' || typeof links.connectFromNote !== 'function' || S.readOnlyGuest()) return '';
+  const list = safe(study.noteVerses, text, b, c, v) || []; if (!list.length) return '';
+  const here = { b, c, v }, hereLab = refLabel(b, c, v);
+  return '<div class="nv-chips" role="group" aria-labelledby="nv-k"><span class="nv-k" id="nv-k">Link the verses in this note</span>' + list.map(o => {
+    const ref = links.linkRefStr(o), lab = links.linkRefLabel(o);
+    return safe(links.linkedBetween, here, o)
+      ? `<button class="chip sm nv-chip on" type="button" data-nv="${ref}" data-nv-open aria-label="${esc(lab)}, linked. Show My links">${esc(lab)}<span class="nv-st">${icon('check')}Linked</span></button>`
+      : `<button class="chip sm nv-chip" type="button" data-nv="${ref}" data-nv-link="${ref}">${esc(lab)} <span class="nv-st">Link</span><span class="sr"> from ${esc(hereLab)}</span></button>`;
+  }).join('') + '</div>';
+}
+function noteVersesBox(b, c, v, text) {
+  const h = noteVersesInner(b, c, v, text);
+  return `<div class="note-verses" id="note-verses"${h ? '' : ' hidden'}>${h}</div>`;
+}
+let nvT = 0;
+/** The chips again, from the editor's text as typed (else the saved note): in place, with focus kept on the same verse's chip. */
+function paintNoteVerses() {
+  clearTimeout(nvT);
+  const root = bodyEl(), box = root && state.drawerTab === 'notes' ? $('#note-verses', root) : null; if (!box || !state.selected) return;
+  const ta = $('#note-text', root), n = noteFor(refKey(state.book, state.chapter, state.selected));
+  const h = noteVersesInner(state.book, state.chapter, state.selected, ta ? ta.value : (n && n.text) || '');
+  if (box._nv === h) return;
+  const ae = document.activeElement, was = box.contains(ae) ? ae.dataset.nv : null;
+  box._nv = h; box.innerHTML = h; box.hidden = !h;
+  if (was) ($(`[data-nv="${was}"]`, box) || $('[data-nv]', box) || ta || $('#note-tags', root))?.focus({ preventScroll: true });
+}
+const soonNoteVerses = () => { clearTimeout(nvT); nvT = setTimeout(paintNoteVerses, 300); };
 const ALL_PAGE = 200;
 const NONE_YET = '<li class="cell"><span class="cell-sub">None yet.</span></li>';
 let allLimit = ALL_PAGE; // the All notes rows shown (Show more adds a page)
@@ -894,7 +1002,7 @@ function refreshNoteMarks() {
   if (v && mrk) {
     const li = sec && sec.contains(ae) ? ae.closest('[data-mk]') : null;
     const was = sec && sec.contains(ae) ? { id: li && li.dataset.mk, at: ['data-mk-show', 'data-mk-edit', 'data-mk-del', 'data-mk-more'].find(a => ae.hasAttribute(a)), i: li ? $$('[data-mk]', sec).indexOf(li) : -1 } : null;
-    if (sec) sec.outerHTML = markSecHtml(b, c, v); else $('.note-card', root)?.insertAdjacentHTML('afterend', markSecHtml(b, c, v));
+    if (sec) sec.outerHTML = markSecHtml(b, c, v); else ($('#note-verses', root) || $('.note-card', root))?.insertAdjacentHTML('afterend', markSecHtml(b, c, v));
     const ns = $('#mk-sec', root);
     if (ns) {
       safe(mrk.foldNotes, ns);
@@ -906,7 +1014,7 @@ function refreshNoteMarks() {
   }
   // Mentioned in (study.js): a comment elsewhere may reference this verse or one of its marks
   const mn = $('#mentions', root), mh = study ? safe(study.mentionsHtml, b, c, v) || '' : '';
-  if (mn) { if (mh) mn.outerHTML = mh; else mn.remove(); } else if (mh) $('.note-card', root)?.insertAdjacentHTML('afterend', mh);
+  if (mn) { if (mh) mn.outerHTML = mh; else mn.remove(); } else if (mh) ($('#note-verses', root) || $('.note-card', root))?.insertAdjacentHTML('afterend', mh);
   const ul = $('#ch-notes', root), row = rowSel(ul), inCh = chapterEntries(b, c);
   ul.innerHTML = inCh.map(entryRow).join('') || NONE_YET;
   setText('ch-notes-n', String(inCh.length));
@@ -1019,6 +1127,7 @@ function bindNotes(root, opts) {
       const n = noteFor(key, true); n.text = ta.value; touchNote(key); A.refreshMarker(state.selected);
       const p = $('#md-mode [data-mode="preview"]', root); if (p) p.disabled = !ta.value;
       fit();
+      soonNoteVerses();
     });
     fit();
     if (opts.focus) { ta.focus({ preventScroll: true }); const L = ta.value.length; try { ta.setSelectionRange(L, L); } catch (e) { /* ignore */ } }
@@ -1301,7 +1410,7 @@ function afterRender(opts) {
     if (opts.intro) setTimeout(() => { const ic = $('#intro-card', root); if (ic && ic.isConnected) scrollInSheet(ic, 'start'); }, 120);
     safe(art && art.attachDrawer, root);
   }
-  if (tab === 'search') { const occ = $('.occ', root); if (occ) renderOcc(occ); }
+  if (tab === 'search') { const occ = $('.occ', root); if (occ) renderOcc(occ); markSearchRows(root); }
   if (tab === 'orig') {
     const occ = $('.occ', root); if (occ) renderOcc(occ);
     if (origFocus && !origFocus.strong && origFocus.word != null) setTimeout(() => { const w = $('#' + wordId(origFocus.word), root); if (w) scrollInSheet(w, 'center'); }, 60);
@@ -1327,7 +1436,20 @@ function onBodyClick(e) {
     const sl = window.getSelection?.(); if (sl && !sl.isCollapsed && t.closest('[data-md]').contains(sl.anchorNode)) return; // selecting text to copy
     mdMode = 'write'; renderDrawer({ keepScroll: true, focus: true }); return;
   }
-  const go = t.closest('[data-go]'); if (go) { const p = go.dataset.go.split('.').map(Number); A.navigate(p[0], p[1], p[2] || 0); A.yieldToPage(); return; }
+  const nv = t.closest('[data-nv]');
+  if (nv && links) {
+    const here = { b: state.book, c: state.chapter, v: state.selected };
+    if (nv.dataset.nvLink) safe(links.connectFromNote, here, nv.dataset.nvLink, 'out');
+    else A.openTab('mine', { focusTo: el => $(`.mine-list [data-link-go="${nv.dataset.nv}"]`, el) || $('.mine-list [data-link-go]', el) || $('[data-link-new]', el) });
+    return;
+  }
+  const go = t.closest('[data-go]');
+  if (go) {
+    const p = go.dataset.go.split('.').map(Number);
+    // a result: the reader goes to it while the list stays (main.js openResult); every other tab's row as before
+    if (state.drawerTab === 'search' && searchView(root)?.contains(go)) { searchPick = go.matches('.cell') ? go : null; A.openResult(p[0], p[1], p[2] || 0); return; }
+    A.navigate(p[0], p[1], p[2] || 0); A.yieldToPage(); return;
+  }
   const mk = t.closest('[data-mk-show], [data-mk-edit], [data-mk-del], [data-mk-go], [data-mk-more]'); if (mk) { if (mrk) onMarkAction(mk); return; }
   const sel = t.closest('[data-select]'); if (sel) { A.select(+sel.dataset.select); return; }
   const gr = t.closest('[data-graph]'); if (gr) { const p = gr.dataset.graph.split('.').map(Number); A.navigate(p[0], p[1], p[2] || 0, { panel: 'graph' }); A.yieldToPage(true); return; }
@@ -1466,7 +1588,8 @@ export function bindDrawer() {
     if (typeof A.toggleBookmark === 'function') A.toggleBookmark(b, c, v); else safe(libFn('toggleBookmark'), b, c, v);
   });
   document.addEventListener('bs:library-changed', () => { const { b, c, v } = bookmarkTarget(); if (bookOf(b)) renderBookmarkBtn(b, c, v); });
-  document.addEventListener('bs:links-changed', () => renderMineCount()); // links.js redraws an open Mine body itself
+  document.addEventListener('bs:links-changed', () => { renderMineCount(); paintNoteVerses(); }); // links.js redraws an open Mine body itself
+  ['bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soonNoteVerses)); // a save elsewhere, a sync
   // highlights and comments (marks.js): drawn again after each change and chapter render ('Text moved' is known then)
   document.addEventListener('bs:marks-changed', queueNoteMarks);
   document.addEventListener('bs:marks-drawn', queueNoteMarks);

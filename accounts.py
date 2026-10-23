@@ -1730,7 +1730,7 @@ def link_phrase(link, side):
 
 # ------------------------------------------------------------------ marks (annotations brief §1, §2)
 MARK_ID_RE = re.compile(r"mk_[0-9a-f]{12}", re.ASCII)
-MARK_TRS = ("kjv", "bsb", "esv", "nlt")
+MARK_TRS = ("kjv", "bsb", "esv", "nlt", "niv", "nkjv", "nasb")
 MARK_COLORS = ("yellow", "green", "blue", "pink", "purple", "orange")  # or "" for a comment-only underline
 MAX_MARKS = 20_000
 MARK_MAX_BYTES = 32 * 1024
@@ -1766,7 +1766,7 @@ def clean_mark(raw, now=None, check_size=True):
         raise ValueError("A highlight id is “mk_” followed by 12 hex digits.")
     tr = raw.get("tr")
     if tr not in MARK_TRS:
-        raise ValueError("The translation must be kjv, bsb, esv or nlt.")
+        raise ValueError("The translation must be kjv, bsb, esv, nlt, niv, nkjv or nasb.")
     ends = {}
     for f in ("start", "end"):
         p = parse_mark_end(raw.get(f))

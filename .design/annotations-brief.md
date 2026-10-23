@@ -44,7 +44,7 @@ They share the scope lock, `.bak` and corrupt-file rules with links. Lock order:
 - **Anchor text.**
   - `quote`: the selected text, 1–2,000 chars.
   - `pre`/`suf`: up to 32 chars of context. They are used to re-anchor if the offsets no longer fit.
-- **`tr`.** The translation the mark was made in: kjv, bsb, esv or nlt. Word highlighting draws only in that translation. Every other view shows the mark at verse level (§3.4).
+- **`tr`.** The translation the mark was made in: kjv, bsb, esv, nlt, niv, nkjv or nasb. Word highlighting draws only in that translation. Every other view shows the mark at verse level (§3.4).
 - **`color`.** One of yellow, green, blue, pink, purple or orange (reuse the `--bm-*` and highlight tokens), or `""` for a comment-only underline.
 - **`note`.** Up to 20,000 chars, markdown like the Notes tab. A mark with an empty note is a plain highlight.
 - **Limits:**

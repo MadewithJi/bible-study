@@ -204,6 +204,11 @@ a:hover { text-decoration: underline; text-underline-offset: .16em; }
 .page { padding-top: var(--bar-h); transition: padding-right .56s var(--ease); }
 body:not(.drawer-open) .page { transition-duration: .42s; }
 body.mode-side.drawer-open .page { padding-right: calc(var(--sheet-w) + 24px); }
+/* the Search tab's list beside its verse (main.js syncPush): the text under the hero moves aside, as the side layout's
+   page does, while the hero stays exactly as it is under the overlay (its type is sized by the window, not the column) */
+body.mode-overlay #reader > :not(.hero) { transition: padding-right .42s var(--ease), max-width .42s var(--ease); }
+body.mode-overlay.drawer-open #reader > :not(.hero) { transition-duration: .56s; }
+body.mode-overlay.drawer-open.search-push #reader > :not(.hero) { max-width: calc(var(--measure) + 110px + var(--sheet-w) + 24px); padding-right: calc(var(--sheet-w) + 24px); }
 body.sheet-modal { overflow: hidden; }
 #layout { display: block; }
 #reader:focus { outline: none; }
@@ -753,6 +758,10 @@ a.cell, a.cell:hover { text-decoration: none; } /* a row that leaves the app (Su
 .dist-t i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); transform-origin: left; animation: grow .9s var(--ease-out) both; }
 .dist-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--label); font-weight: 500; }
 .group.occ .cell-title { font-variant-numeric: tabular-nums; }
+/* the Search tab's current result (topic-keep brief §3): the verse the reader has selected, at light's --verse-cur in
+   both themes (dark's 18% puts the row's text under AA contrast) */
+.group .cell[aria-current="true"] { background: color-mix(in srgb, var(--accent) 11%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+.group .cell[aria-current="true"]:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 /* Notes tab */
 .card { border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); }
 .note-card { padding: 14px 14px 12px; }
@@ -1091,6 +1100,8 @@ kbd.k { display: inline-grid; place-items: center; min-width: 26px; height: 26px
   .foot-tile.next:hover .i { transform: translateX(3px); }
   .cell:hover { background: var(--fill-3); }
   .cell:active { background: var(--fill-2); }
+  .group .cell[aria-current="true"]:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+  .group .cell[aria-current="true"]:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
   .intro-card > summary:hover { background: var(--fill-3); }
   .outline button:hover { background: var(--fill-2); }
   .ow:hover { background: var(--fill-2); }
@@ -1569,6 +1580,7 @@ body.mode-side.drawer-open dialog > .resume, body.mode-side.drawer-open dialog >
 @media (forced-colors: active) {
   .verse[aria-current="true"] { outline: 2px solid Highlight; }
   .verse[aria-current="true"]::before { display: none; }
+  .group .cell[aria-current="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
   .seg-ind { border: 2px solid Highlight; }
   .sw[aria-checked="true"] { outline: 2px solid Highlight; }
   .chip, .btn, .pill-select, .toggle, .pill-tog { border: 1px solid ButtonText; }
@@ -1795,6 +1807,33 @@ body.link-picking #reader .verse.link-anchor { background: var(--accent-tint-2);
 .mine-composer .mc-err { margin: -6px 2px 0; }
 .mine-composer .mc-err[hidden] { display: none; }
 .mc-foot { display: flex; justify-content: flex-end; gap: 8px; }
+/* verses in your notes, ready to link (note-links brief §2–§4): From your notes in the Mine tab, the To field's list
+   and the chips under a verse note */
+.mine-sugg-sec { margin-bottom: 4px; }
+.group.av.mine-sugg > li + li::before { left: 16px; }
+.mine-sugg .mine-card { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 16px; }
+.mine-sugg .sugg-src { font-size: 12px; line-height: 1.3; color: var(--label-2); }
+.mine-sugg .sugg-snip { margin: 0; align-self: stretch; font: 400 14px/1.45 var(--serif); color: var(--label-2); overflow-wrap: anywhere; }
+.mine-sugg .sugg-snip b { font-weight: 600; color: var(--label); }
+.mine-sugg .sugg-snip .nw { white-space: nowrap; }
+.mine-sugg .sugg-link { flex: none; margin-top: -2px; }
+.group.av.mine-sugg .expand-in { padding: 4px 0 2px; }
+.mine-sugg-all { display: block; margin: 10px 4px 0; font-size: 13px; }
+.mine-list-lh { margin-top: 22px; }
+.mc-books .mc-books-h { padding: 6px 10px 4px; font: 600 12px/1.2 var(--sans); color: var(--label-2); cursor: default; }
+.mc-books [data-mc-sugg] { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-books [data-mc-sugg] b { font-weight: 600; }
+.mc-sugg-t { color: var(--label-2); }
+.mc-books [aria-selected="true"] .mc-sugg-t { color: rgba(255,255,255,.82); }
+.note-verses { margin: 10px 4px 0; }
+.note-verses[hidden] { display: none; }
+.nv-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.note-verses .nv-k { margin-right: 2px; font-size: 13px; color: var(--label-2); }
+.note-verses .chip.sm { height: 26px; padding: 0 10px; font-size: 13px; gap: 6px; }
+.nv-st { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; color: var(--link); }
+.nv-chip.on .nv-st { font-weight: 500; color: var(--label-2); }
+.nv-chip.on .nv-st .i { width: 12px; height: 12px; stroke-width: 2.6; color: var(--sw-green, var(--bm-green)); }
+.nv-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .link-menu { min-width: 240px; }
 /* the Arcs and Graph stages (§3.6): the night tile keeps the dark bookmark palette in both themes (viz.js reads
    the night stage tokens' --bm-*); the OpenBible · Mine · Both control, whose wrapper carries the title while the pill is off */

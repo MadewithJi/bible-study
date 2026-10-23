@@ -19,7 +19,7 @@ export const marks = { loaded: false, scope: null, rev: 0, byId: new Map(), byVe
 
 /** Highlight colours (§1): the bookmark palette, with pink from the swatches. '' is a comment shown as a dotted underline. */
 export const COLORS = ['yellow', 'green', 'blue', 'pink', 'purple', 'orange'];
-const TRS = ['kjv', 'bsb', 'esv', 'nlt'];
+const TRS = ['kjv', 'bsb', 'esv', 'nlt', 'niv', 'nkjv', 'nasb'];
 const MARKS_KEY = 'bs-marks-v1', DIRTY_KEY = 'bs-marks-dirty-v1';
 const ID_RX = /^mk_[0-9a-f]{12}$/;
 const REF_RX = /^(\d{1,2})\.(\d{1,3})\.(\d{1,3})$/;
