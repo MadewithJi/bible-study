@@ -41,13 +41,21 @@ const SKELETON = '<div class="skeleton" aria-busy="true"><i style="width:92%"></
 const IN_VERSE = '<span class="in-verse">This verse</span>';
 
 let searchState = { title: '', html: '', has: false };
+// the Search tab's list stays put while you read (topic-keep brief): searchGen names the results in searchState, the
+// view drawn from them carries it (data-search), and a click on a result never draws them again. Another tab keeps the
+// view aside (searchKeep: the node and its scroll) to put back as it was; a new search drops it. searchPick: the row
+// clicked last, the one marked when two rows go to the same verse (a heading and its verse).
+let searchGen = 0, searchKeep = null, searchPick = null;
 let origFocus = null;                 // {word:i} | {strong:'G26', word?:i, aram?:bool}
 let mdMode = 'preview', mdKey = null; // notes editor mode: UI state only, never stored on the note
 let renderSeq = 0;
 
 export function setOrigFocus(f) { origFocus = f; }
-export function setSearchResults(title, html) {
+/** New results for the Search tab. same: the list on show was changed in place to this markup (Show more, the
+ *  testament filter), so it is still these results and stays as it is. */
+export function setSearchResults(title, html, same = false) {
   searchState = { title, html, has: true };
+  if (!same) { searchGen++; searchKeep = null; searchPick = null; }
   const t = document.getElementById('tab-search'); if (t) t.hidden = false;
 }
 
@@ -274,10 +282,14 @@ export async function renderDrawer(opts = {}) {
   const el = bodyEl();
   const hadFocus = !!(el && ae && ae !== document.body && (el.contains(ae) || !!menuEl?.contains(ae)));
   closeMenu(false);
+  A.syncPush(); // the overlay's page push follows the Search tab (main.js)
   if (!state.drawerOpen || !el) return;
   playerHost(el); syncPlayer();
   const token = String(++renderSeq); el.dataset.token = token;
   const prevScroll = el.scrollTop;
+  const shown = searchView(el);
+  if (state.drawerTab === 'search' && keepSearch(el, shown, opts, hadFocus)) return;
+  if (shown && +shown.dataset.search === searchGen) searchKeep = { gen: searchGen, node: shown, top: el.scrollTop }; // left: kept to come back to
   const skel = setTimeout(() => { if (el.dataset.token === token) setView(el, SKELETON); }, 90);
   const b = state.book, c = state.chapter, v = state.selected;
   let html = '';
@@ -297,11 +309,72 @@ export async function renderDrawer(opts = {}) {
   if (el.dataset.token !== token) return; // superseded
   const cls = opts.push ? 'view push' : opts.pop ? 'view pop' : 'view';
   const still = opts.keepScroll && !opts.push && !opts.pop; // in-place edits: no entrance animation
-  setView(el, `<div class="${cls}" style="--dx:${opts.dx || 0}px${still ? ';animation:none' : ''}">${html}</div>`);
+  const tag = state.drawerTab === 'search' ? ` data-search="${searchGen}"` : '';
+  setView(el, `<div class="${cls}"${tag} style="--dx:${opts.dx || 0}px${still ? ';animation:none' : ''}">${html}</div>`);
   el.scrollTop = opts.keepScroll ? prevScroll : 0;
   document.getElementById('drawer')?.classList.toggle('scrolled', el.scrollTop > 2);
   afterRender(opts);
   placeFocus(el, opts, hadFocus);
+}
+
+// ------------------------------------------------------------ Search: the list stays put (topic-keep brief)
+const searchView = el => (el ? $(':scope > .view[data-search]', el) : null);
+/**
+ * The Search tab again with the same results: the list on show stays as it is (its scroll, Show more pages, the
+ * filter and the focused row), or the view kept aside when another tab took over comes back at its scroll. False when
+ * the results are new, to be drawn from their markup.
+ */
+function keepSearch(el, shown, opts, hadFocus) {
+  let view = shown && +shown.dataset.search === searchGen ? shown : null;
+  if (!view && searchKeep && searchKeep.gen === searchGen) {
+    view = searchKeep.node;
+    setView(el, '');
+    view.className = 'view'; view.setAttribute('style', `--dx:${opts.dx || 0}px`); // the tab's entrance, as a drawn view has
+    el.append(view);
+    el.scrollTop = searchKeep.top;
+    observeSegs(el);
+    const occ = $('.occ', view); if (occ && !occ.children.length) renderOcc(occ); // left before its first page came
+  }
+  searchKeep = null;
+  if (!view) return false;
+  markSearchRows(el);
+  document.getElementById('drawer')?.classList.toggle('scrolled', el.scrollTop > 2);
+  placeFocus(el, opts, hadFocus);
+  return true;
+}
+/**
+ * The current result (topic-keep brief §3): the Search tab's row for the verse the reader has selected (the chapter's
+ * title row when no verse is) has aria-current, and the mark follows the selection. main.js calls it after its own
+ * changes to the list (Show more, the testament filter) and to the selection.
+ */
+export function markSearchRows(root = bodyEl()) {
+  const view = state.drawerTab === 'search' ? searchView(root) : null; if (!view) return;
+  const key = `${state.book}.${state.chapter}.${state.selected || 0}`;
+  const rows = $$('.cell[data-go]', view), hit = rows.filter(r => r.dataset.go === key);
+  const on = hit.length > 1 && hit.includes(searchPick) ? [searchPick] : hit;
+  rows.forEach(r => { if (on.includes(r)) r.setAttribute('aria-current', 'true'); else if (r.hasAttribute('aria-current')) r.removeAttribute('aria-current'); });
+}
+/** The Search tab shows a row marked current: the b key then bookmarks that verse (main.js toggleBookmark). */
+export const searchRowCurrent = () => !!searchView(bodyEl())?.querySelector('.cell[aria-current="true"]');
+
+/**
+ * The phone sheet came down to its medium detent under the list (main.js openResult): it keeps its scroll, so a row
+ * low in the tall sheet can end up below the shorter one. Once the sheet rests, the current row is brought back.
+ */
+export function revealSearchRow() {
+  const d = document.getElementById('drawer'), el = bodyEl(); if (!d || !el) return;
+  const go = () => {
+    const view = state.drawerTab === 'search' && state.drawerOpen ? searchView(el) : null;
+    const row = view && (searchPick?.isConnected && view.contains(searchPick) && searchPick.hasAttribute('aria-current') ? searchPick : $('.cell[aria-current="true"]', view));
+    if (!row) return;
+    const r = row.getBoundingClientRect(), br = el.getBoundingClientRect();
+    const dy = r.bottom > br.bottom - 8 ? Math.min(r.bottom - br.bottom + 8, r.top - br.top - 8) : r.top < br.top + 8 ? r.top - br.top - 8 : 0;
+    if (Math.abs(dy) >= 1) el.scrollBy({ top: dy, behavior: scrollBehavior() });
+  };
+  // the detent's height transition (styles.css): measured once it has ended, or been cut short by a drag
+  if (typeof d.getAnimations !== 'function') { setTimeout(go, 620); return; }
+  const moving = d.getAnimations().filter(a => a.transitionProperty === 'height');
+  Promise.all(moving.map(a => a.finished.catch(() => {}))).then(go);
 }
 
 // ------------------------------------------------------------ Links
@@ -767,6 +840,7 @@ async function renderOcc(ul, page = 20) {
     const start = ul.children.length; // rows of unknown books are dropped, so the new rows are counted, not `shown`
     ul.insertAdjacentHTML('beforeend', refs.map((r, i) => { const t = clip(texts[i], 150); return `<li><button class="cell" type="button" data-go="${r.b}.${r.c}.${r.v || 1}"><span class="cell-body"><span class="cell-title">${esc(r.v ? refLabel(r.b, r.c, r.v) : `${refLabel(r.b, r.c)} (title)`)}</span>${t ? `<span class="cell-sub serif">${esc(t)}</span>` : ''}</span>${icon('chev-right', 'chev')}</button></li>`; }).join(''));
     ul.dataset.shown = String(shown + next.length);
+    markSearchRows(); // the Search tab's own list (a person's or place's verses): its new rows
     const more = ul.parentElement?.querySelector('[data-more-occ]');
     if (more) {
       const done = shown + next.length >= occ.length;
@@ -1301,7 +1375,7 @@ function afterRender(opts) {
     if (opts.intro) setTimeout(() => { const ic = $('#intro-card', root); if (ic && ic.isConnected) scrollInSheet(ic, 'start'); }, 120);
     safe(art && art.attachDrawer, root);
   }
-  if (tab === 'search') { const occ = $('.occ', root); if (occ) renderOcc(occ); }
+  if (tab === 'search') { const occ = $('.occ', root); if (occ) renderOcc(occ); markSearchRows(root); }
   if (tab === 'orig') {
     const occ = $('.occ', root); if (occ) renderOcc(occ);
     if (origFocus && !origFocus.strong && origFocus.word != null) setTimeout(() => { const w = $('#' + wordId(origFocus.word), root); if (w) scrollInSheet(w, 'center'); }, 60);
@@ -1327,7 +1401,13 @@ function onBodyClick(e) {
     const sl = window.getSelection?.(); if (sl && !sl.isCollapsed && t.closest('[data-md]').contains(sl.anchorNode)) return; // selecting text to copy
     mdMode = 'write'; renderDrawer({ keepScroll: true, focus: true }); return;
   }
-  const go = t.closest('[data-go]'); if (go) { const p = go.dataset.go.split('.').map(Number); A.navigate(p[0], p[1], p[2] || 0); A.yieldToPage(); return; }
+  const go = t.closest('[data-go]');
+  if (go) {
+    const p = go.dataset.go.split('.').map(Number);
+    // a result: the reader goes to it while the list stays (main.js openResult); every other tab's row as before
+    if (state.drawerTab === 'search' && searchView(root)?.contains(go)) { searchPick = go.matches('.cell') ? go : null; A.openResult(p[0], p[1], p[2] || 0); return; }
+    A.navigate(p[0], p[1], p[2] || 0); A.yieldToPage(); return;
+  }
   const mk = t.closest('[data-mk-show], [data-mk-edit], [data-mk-del], [data-mk-go], [data-mk-more]'); if (mk) { if (mrk) onMarkAction(mk); return; }
   const sel = t.closest('[data-select]'); if (sel) { A.select(+sel.dataset.select); return; }
   const gr = t.closest('[data-graph]'); if (gr) { const p = gr.dataset.graph.split('.').map(Number); A.navigate(p[0], p[1], p[2] || 0, { panel: 'graph' }); A.yieldToPage(true); return; }

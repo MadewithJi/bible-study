@@ -65,7 +65,7 @@ const A = {
     if (fromHome) exitHome({ push: !opts.fromHash }); // a new history entry, so the browser's Back returns Home
     drawer.setOrigFocus(null);
     lnkCall('clearMineFocus'); // the Mine tab follows the reader again (links-spec §3.3)
-    if (state.selected && state.drawerTab === 'search') state.drawerTab = 'xref';
+    if (state.selected && state.drawerTab === 'search' && !opts.keepSearch) state.drawerTab = 'xref';
     if (opts.panel !== undefined) state.panel = opts.panel || null; // a name opens that panel; null closes the open one
     renderReader({ scroll: opts.panel ? 'top' : true });
     drawer.renderDrawer();
@@ -93,24 +93,25 @@ const A = {
     drawer.setOrigFocus(o.strong ? { strong: o.strong, word: o.word } : (o.word != null ? { word: +o.word } : null));
     let dx = 0;
     if (o.tab && o.tab !== state.drawerTab) { dx = TABS.indexOf(o.tab) > TABS.indexOf(state.drawerTab) ? 18 : -18; state.drawerTab = o.tab; }
-    else if (!o.tab && state.drawerTab === 'search') state.drawerTab = 'xref';
+    else if (!o.tab && state.drawerTab === 'search' && !o.keepSearch) state.drawerTab = 'xref';
     reader.updateSelection(); vizCall('markSelection'); updateBar(); updateHash();
     const ro = { focus: !!o.focus, expand: o.expand, dx };
     if (open && !state.drawerOpen) openDrawer(ro); else drawer.renderDrawer(ro);
     if (state.panel === 'graph') renderPanel();
     reader.ensureVisible(v);
   },
-  /** j/k and the sheet's verse stepper. Never opens a closed sheet. With nothing selected it starts where the reader is. */
+  /** j/k and the sheet's verse stepper. Never opens a closed sheet. With nothing selected it starts where the reader is.
+   *  Beside the Search tab's list the list stays and its current-row mark follows (topic-keep brief §3). */
   stepVerse(dir, o = {}) {
     const n = bookOf(state.book).chapters[state.chapter - 1];
     let v;
     if (state.selected) v = Math.min(n, Math.max(1, state.selected + dir));
     else v = Math.min(n, Math.max(1, verseInView()));
-    if (v !== state.selected) A.select(v, { open: false });
+    if (v !== state.selected) A.select(v, { open: false, keepSearch: true });
     // the page is inert while the sheet is modal, so focus stays in the sheet then
     if (!o.keepFocus && !document.body.classList.contains('sheet-modal')) document.getElementById('v' + v)?.focus({ preventScroll: true });
   },
-  refreshSelection() { reader.updateSelection(); vizCall('markSelection'); updateBar(); updateHash(); if (state.panel === 'graph') renderPanel(); },
+  refreshSelection() { reader.updateSelection(); vizCall('markSelection'); drawer.markSearchRows(); updateBar(); updateHash(); if (state.panel === 'graph') renderPanel(); },
   openTab(tab, o = {}) {
     if (tab === 'mine' && !mineReady()) { openDrawer(o); return; }
     const oi = TABS.indexOf(state.drawerTab), ni = TABS.indexOf(tab);
@@ -147,11 +148,21 @@ const A = {
   ensureVisible(v) { reader.ensureVisible(v); },
   /** After an in-sheet action moves the page: overlay closes; phone drops to the medium detent (or closes if hard). */
   yieldToPage(hard = false) { yieldToPage(hard); },
+  /** drawer.renderDrawer, after a tab change: the overlay's page push follows the Search tab (syncPush). */
+  syncPush() { syncPush(); },
+  /** A result in the Search tab (topic-keep brief): the reader goes to the verse and selects it while the panel keeps
+   *  the list as it is (its scroll, the focused row, now marked current). The side panel and the overlay stay open;
+   *  the phone sheet drops to its medium detent so the verse shows above it. */
+  openResult(b, c, v = 0) {
+    A.navigate(b, c, v, { keepSearch: true });
+    if (layoutMode() === 'sheet' && state.sheetFull) { setSheetFull(false); drawer.revealSearchRow(); }
+  },
 
   // ---- profiles, bookmarks, library, reading progress (profiles-spec §5.13)
-  /** Bookmark the selected verse, else the chapter (the Search tab bookmarks the chapter). */
+  /** Bookmark the selected verse, else the chapter (the Search tab bookmarks the chapter, unless its list marks the
+   *  reader's verse as the current result). */
   toggleBookmark(b = state.book, c = state.chapter, v) {
-    if (v === undefined) v = (state.drawerOpen && state.drawerTab === 'search') ? 0 : (state.selected || 0);
+    if (v === undefined) v = (state.drawerOpen && state.drawerTab === 'search' && !drawer.searchRowCurrent()) ? 0 : (state.selected || 0);
     if (guestBlocked()) return undefined; // a hosted site's guest: the sign-in prompt (hosting brief §2)
     if (!has(library, 'toggleBookmark')) { toast('Bookmarks are unavailable right now. Reload to try again.'); return undefined; }
     return libCall('toggleBookmark', b, c, v);
@@ -365,6 +376,20 @@ function syncDrawer() {
   const page = $('#page'), bar = $('#topbar');
   if (page) page.inert = modal;
   if (bar) bar.inert = modal;
+  syncPush();
+}
+/**
+ * The overlay layout pushes the page aside, as the side layout does, while the panel shows the Search tab, so a
+ * result's verse sits wholly beside the list (topic-keep brief §4); the panel stays modal. The push goes when the
+ * panel closes or leaves Search. The text reflows either way: the selected verse is kept in view.
+ */
+let pushed = false, pushT = 0;
+function syncPush() {
+  const on = !!state.drawerOpen && layoutMode() === 'overlay' && state.drawerTab === 'search';
+  document.body.classList.toggle('search-push', on);
+  if (on === pushed) return;
+  pushed = on; clearTimeout(pushT);
+  if (state.selected && layoutMode() === 'overlay') pushT = setTimeout(() => { if (state.selected) reader.ensureVisible(state.selected); }, 580);
 }
 /** The text reflows (side push) or gets covered (phone detent): keep the selected verse in view. */
 function afterSheetMove() {
@@ -922,7 +947,8 @@ function updateHits(s, append) {
     // the button went away under the keyboard: continue on the first row it added
     if (append && hadFocus && !more) ul.children[from]?.querySelector('.cell')?.focus({ preventScroll: true });
   }
-  drawer.setSearchResults(s.title, searchHtml(s));
+  drawer.setSearchResults(s.title, searchHtml(s), !!ul && state.drawerTab === 'search');
+  drawer.markSearchRows(); // the new rows: the current one marked
 }
 function bindSearchResults() {
   $('#drawer-body')?.addEventListener('click', e => {
