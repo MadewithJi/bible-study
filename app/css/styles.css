@@ -204,6 +204,7 @@ a:hover { text-decoration: underline; text-underline-offset: .16em; }
 .page { padding-top: var(--bar-h); transition: padding-right .56s var(--ease); }
 body:not(.drawer-open) .page { transition-duration: .42s; }
 body.mode-side.drawer-open .page { padding-right: calc(var(--sheet-w) + 24px); }
+body.mode-overlay.drawer-open.search-push .page { padding-right: calc(var(--sheet-w) + 24px); } /* the Search tab's list beside its verse (main.js syncPush) */
 body.sheet-modal { overflow: hidden; }
 #layout { display: block; }
 #reader:focus { outline: none; }
@@ -753,6 +754,10 @@ a.cell, a.cell:hover { text-decoration: none; } /* a row that leaves the app (Su
 .dist-t i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); transform-origin: left; animation: grow .9s var(--ease-out) both; }
 .dist-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--label); font-weight: 500; }
 .group.occ .cell-title { font-variant-numeric: tabular-nums; }
+/* the Search tab's current result (topic-keep brief §3): the verse the reader has selected, at light's --verse-cur in
+   both themes (dark's 18% puts the row's text under AA contrast) */
+.group .cell[aria-current="true"] { background: color-mix(in srgb, var(--accent) 11%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+.group .cell[aria-current="true"]:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 /* Notes tab */
 .card { border-radius: var(--r-md); background: var(--cell); box-shadow: var(--sh-1); }
 .note-card { padding: 14px 14px 12px; }
@@ -1091,6 +1096,8 @@ kbd.k { display: inline-grid; place-items: center; min-width: 26px; height: 26px
   .foot-tile.next:hover .i { transform: translateX(3px); }
   .cell:hover { background: var(--fill-3); }
   .cell:active { background: var(--fill-2); }
+  .group .cell[aria-current="true"]:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+  .group .cell[aria-current="true"]:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
   .intro-card > summary:hover { background: var(--fill-3); }
   .outline button:hover { background: var(--fill-2); }
   .ow:hover { background: var(--fill-2); }
@@ -1569,6 +1576,7 @@ body.mode-side.drawer-open dialog > .resume, body.mode-side.drawer-open dialog >
 @media (forced-colors: active) {
   .verse[aria-current="true"] { outline: 2px solid Highlight; }
   .verse[aria-current="true"]::before { display: none; }
+  .group .cell[aria-current="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
   .seg-ind { border: 2px solid Highlight; }
   .sw[aria-checked="true"] { outline: 2px solid Highlight; }
   .chip, .btn, .pill-select, .toggle, .pill-tog { border: 1px solid ButtonText; }
