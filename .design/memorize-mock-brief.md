@@ -1,0 +1,38 @@
+# Memorize: mock-ups for Ji's approval (round 1)
+
+Ji (2026-10-26): "a net new feature that allows you to bookmark text and select them to memorize under your profile library … a small selection that says memorize that allows it to be front and center until it's fully written on the heart." Then: "mock this up for me before I approve."
+
+These are **mock-ups only**: static, self-contained pages with sample data, nothing saved, nothing wired into the app. They must look exactly like Bible Lantern (they load `../css/styles.css` and `../css/home.css` and reuse its classes, icons, spacing and type), and Ji asked for things to be **simple**: one idea per screen, no clutter, nothing that nags.
+
+## The idea being mocked (Ji has not decided the two defaults; the mocks show them and say so in one ⓘ line each)
+
+- **Choose:** a **Memorize** action wherever a verse is marked: in the selection bar (beside the six highlight colours, Comment and Copy) and in a verse's bookmark menu. It saves the selected verse or verses (e.g. John 3:16–17) in the current translation; no bookmark or highlight needed first. A small mark by the verse number shows it is on the memory list.
+- **Front and centre:** one verse is **current** at a time (default; the alternative is up to three); Home's Today opens with a **Your memory verse** card above everything else; Library gets a **Memory** shelf.
+- **Practise (about a minute):** four steps, each a little harder: **Read** (whole) → **Fade** (a third, then two thirds of the words hidden; tap a gap to peek) → **First letters** (`F G s l t w, t h g h o b S…`, punctuation kept) → **Recall** (say it or, on a computer, type it; then **Show the verse** and mark yourself **Got it** or **Not yet**). Tap to check is the default everywhere; typing is optional on a computer.
+- **Until it is written on the heart:** reviews spread out 1, 2, 4, 7, 14, 30 days; **Got it** moves it on, **Not yet** brings it sooner. Recalled at the 30-day review → **Written on the heart**, acknowledged quietly (Proverbs 3:3, KJV: "write them upon the table of thine heart"). After that, a review about every three months.
+
+## Screens to build (each at 1440×900 desktop and 390×844 phone, light and dark)
+
+1. **`memorize-select.html` — choosing a verse.** The reader on John 3 (hero not needed; the verses as the reader draws them) with words of verse 16 selected and the real selection bar (`#mark-bubble` look: six colour dots, Comment, Copy) plus the new **Memorize** button. A second state (a toggle or a button in the mock): after Memorize, the toast "Added John 3:16 to your memory verses." with the action **Practise now**, and the verse's new small mark by its number. Also show, as an inset, the verse's bookmark menu with **Memorize this verse**. Icon: choose a simple glyph that is not the donate heart (`i-heart` is "Support Bible Lantern"); for example a small heart drawn inside text lines, or a seed/lamp; say which in the ⓘ.
+2. **`memorize-home.html` — Home, front and centre.** The real Home Today (dark cover with the search field, verse of the day) and, as the first section right after the cover, the **Your memory verse** card: the reference (John 3:16 · KJV), the first words faded ("For God so loved the world…"), where it stands ("Learning · review 3 of 6" with six small dots), when ("Due today"), one primary button **Practise** (about a minute) and a quiet secondary **Not today**. Also the card's other two states as small variants beside it: "Next review Thursday" (nothing due) and "Nothing to memorize yet. Select a verse and choose Memorize."
+3. **`memorize-practise.html` — the practice.** A sheet (desktop: a centred dialog like the app's modals; phone: a full sheet) for John 3:16: the reference, a four-step segmented control (Read · Fade · First letters · Recall) that works, the verse in the reading serif at a generous size, and per step: Fade with tappable gaps and a "Hide more" step; First letters; Recall with an empty space, "Say it aloud, or type it" (a text box only at desktop widths) and **Show the verse**, then **Got it** ("Next review in 4 days") / **Not yet** ("Again tomorrow"). End state: "Well done. Next review Thursday 29 October." Also the **Written on the heart** moment for Proverbs 3:5–6 (quiet: the verse, the line "Written on the heart", the date, the Proverbs 3:3 line in small serif; no confetti).
+4. **`memorize-library.html` — the Memory shelf.** The Library dialog (as `app/mock/library-study.html` frames it: the real `dialog.library` look) on a **Memory** view: the current verse pinned at top (with Practise), then three groups **Due**, **Learning**, **Written on the heart**; each row: reference · translation, the first words, six-step dots, the next review date, and a ⋯ with Make current, Pause, Remove. An empty state.
+5. **`memorize-all.html` — one gallery** to show Ji: a segmented control for the four screens, Desktop / Phone, Light / Dark, each screen shown in a frame (an iframe of the page with `?embed`, guarded so no link can navigate the gallery away: earlier mocks had that bug; or stills if iframes misbehave). A short title "Memorize — mock-ups" and one sentence of what to look at.
+
+## Sample data (exact KJV text, from app/data/bibles/kjv)
+
+- John 3:16 — current, due today, review 3 of 6: "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."
+- Psalm 119:11 — learning, due today: "Thy word have I hid in mine heart, that I might not sin against thee."
+- Philippians 4:6–7 — learning, next review Friday: "Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God. And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus."
+- Romans 8:28 — learning, next review in 9 days: "And we know that all things work together for good to them that love God, to them who are the called according to his purpose."
+- Proverbs 3:5–6 — written on the heart (12 October): "Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths."
+- Joshua 1:9 — written on the heart (2 September): "Have not I commanded thee? Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest."
+- Proverbs 3:3 (the line for the moment): "write them upon the table of thine heart".
+Show LORD in small capitals as the reader does.
+
+## Rules
+
+- Files: `app/mock/memorize-*.html` plus, if needed, one shared `app/mock/memorize-shell.css` and `memorize-shell.js`. Nothing else in the app changes. Served by `serve.py --dev` (it serves app/mock/ only with --dev).
+- Look: the app's own tokens and components (cards, `.group`, `.cell`, `.segmented`, `.btn`, `.chip`, `.toast`, dialogs), light and dark through the app's theme; Apple-like restraint. Copy: sentence case, curly quotes, British spelling except the feature's name "Memorize" as Ji wrote it (use "Practise" for the verb and "practice" for the noun, British), no exclamation marks. Reverence: never present God as a person among people; the mocks show only Scripture and the reader's own progress.
+- Accessible: real buttons, names, focus rings, the segmented control as a radiogroup; 44 px touch targets on phone; reduced motion respected.
+- Check every screen yourself at 1440×900 and 390×844 in light and dark, with screenshots, and the gallery's controls; no console errors; no link may navigate the gallery away.

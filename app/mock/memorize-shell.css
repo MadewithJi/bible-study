@@ -1,0 +1,86 @@
+/* =====================================================================
+   Memorize mock-ups: the shared shell (.design/memorize-mock-brief.md).
+   Mock only: nothing is saved and nothing in the app changes. Link after the app's own sheets:
+     <link rel="stylesheet" href="../css/styles.css">
+     <link rel="stylesheet" href="../css/home.css">
+     <link rel="stylesheet" href="memorize-shell.css">
+   The app's classes do the work (.btn .segmented .seg-ind .group .cell .lh .menu .toast .mark-bubble .modal-head
+   .modal-title .close-btn .lib-continue .lc-* .navbar .back .pc-title .pc-sub .tile-i, and Home's #home classes).
+   This file adds, prefixed mz-:
+     frame    .mz-strip (mock controls, standalone only) · .mz-behind · .mz-scrim
+              .mz-dlg (a dialog as a page element: + .mz-lib for the Library, + .mz-pr for the practice)
+     parts    .mz-steps (six review dots) · .mz-first (first words, faded) · .mz-note (an ⓘ line for Ji) · .sc
+   Embedded in the gallery (html.mz-embed, ?embed in the URL) the strip goes; ?theme=light|dark sets the theme.
+   ===================================================================== */
+:root { --mz-top: 0px; --lamp-tint: color-mix(in srgb, var(--lamp) 15%, var(--bg-elev)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --lamp-tint: color-mix(in srgb, var(--lamp) 16%, var(--bg-elev)); } }
+:root[data-theme="dark"] { --lamp-tint: color-mix(in srgb, var(--lamp) 16%, var(--bg-elev)); }
+html.mz-has-strip { --mz-top: 40px; }
+body.mz-body { padding-top: var(--mz-top); }
+.sc { font-variant-caps: small-caps; }
+
+/* ---------- the mock strip (standalone pages only): states, all screens, theme ---------- */
+.mz-strip { position: fixed; z-index: 100; inset: 0 0 auto; height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: var(--bg-2); border-bottom: .5px solid var(--sep-2); font: 500 12.5px/1 var(--sans); color: var(--label-2); white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
+.mz-strip::-webkit-scrollbar { display: none; }
+.mz-strip > b { font-weight: 600; color: var(--lamp-ink); }
+.mz-strip .segmented { flex: none; height: 28px; }
+.mz-strip .segmented > button { padding: 0 10px; font-size: 12px; }
+.mz-strip .mz-sp { flex: 1 0 8px; }
+.mz-strip a, .mz-strip .mz-th { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 9px; border-radius: 8px; color: var(--label); font: 500 12.5px/1 var(--sans); }
+.mz-strip a { color: var(--link); }
+.mz-strip a:hover, .mz-strip .mz-th:hover { background: var(--fill-2); text-decoration: none; }
+.mz-strip .mz-th .i { width: 15px; height: 15px; color: var(--label-2); }
+@media (max-width: 699px) {
+  /* a phone: the states, All screens and the theme (as its icon) all fit, so nothing hides off the edge */
+  .mz-strip .mz-say, .mz-strip > b, .mz-strip .mz-th span { display: none; }
+  .mz-strip { gap: 6px; padding: 0 8px; }
+  .mz-strip a { padding: 0 6px; }
+  .mz-strip .mz-th { padding: 0 6px; }
+}
+
+/* ---------- what sits behind a dialog: the reader, dimmed ---------- */
+.mz-behind { position: fixed; inset: var(--mz-top) 0 0; overflow: hidden; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.mz-behind-t { max-width: var(--measure); margin: 72px auto 0; padding: 0 24px; font: 400 var(--read-size)/1.75 var(--serif); color: var(--read); }
+.mz-behind-t h2 { margin: 0 0 18px; font: 700 44px/1.1 var(--display); letter-spacing: -.03em; color: var(--label); }
+.mz-scrim { position: fixed; z-index: 55; inset: var(--mz-top) 0 0; background: var(--scrim); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+
+/* ---------- a dialog as a page element (dialog.modal / dialog.library in styles.css) ---------- */
+.mz-dlg { position: fixed; z-index: 60; inset: var(--mz-top) 0 0; display: flex; flex-direction: column; width: calc(100% - 32px); max-width: 560px; height: fit-content; max-height: calc(100dvh - var(--mz-top) - 48px); margin: auto; border-radius: 24px; background: var(--bg-elev); color: var(--label); box-shadow: var(--sh-pop); overflow: hidden; animation: dlgIn .5s var(--spring); }
+.mz-dlg.mz-lib { max-width: 1040px; height: min(860px, calc(100dvh - var(--mz-top) - 48px)); background: var(--bg); }
+.mz-dlg .lib-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 699px) {
+  /* phones: a full sheet, as the Library is */
+  .mz-dlg, .mz-dlg.mz-lib { width: 100%; max-width: none; height: calc(100dvh - var(--mz-top) - 10px); max-height: none; margin: auto 0 0; border-radius: var(--r-2xl) var(--r-2xl) 0 0; }
+}
+
+/* ---------- review dots: six steps (1, 2, 4, 7, 14, 30 days); done = lamp, due now = a lamp ring ---------- */
+.mz-steps { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.mz-steps i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--label) 20%, transparent); }   /* --label here, so Home's night band gets light dots */
+.mz-steps i.d { background: var(--lamp); }
+.mz-steps i.n { background: none; box-shadow: inset 0 0 0 1.5px var(--lamp); }
+.mz-steps.off i.d { background: var(--label-3); }
+.mz-steps.off i.n { box-shadow: inset 0 0 0 1.5px var(--label-3); }
+
+/* ---------- the first words of a verse, fading as they go (a hint, not the whole text) ---------- */
+.mz-first { overflow: hidden; white-space: nowrap; text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); }
+
+/* ---------- an ⓘ line for Ji: what is a default still to be decided (mock-only, dashed) ---------- */
+.mz-note { display: flex; align-items: flex-start; gap: 7px; width: fit-content; max-width: 100%; margin: 12px 0 0; padding: 7px 12px 7px 9px; border: 1px dashed var(--sep-2); border-radius: 10px; font: 400 12.5px/1.45 var(--sans); letter-spacing: -.005em; color: var(--label-2); text-wrap: pretty; }
+.mz-note > .i { width: 15px; height: 15px; margin-top: 1px; color: var(--lamp-ink); stroke-width: 1.8; }
+.mz-note b { font-weight: 600; color: var(--label); }
+
+/* ---------- touch: 44 px targets for the toast's action, the close button and menu rows ---------- */
+@media (pointer: coarse) {
+  .toast button { min-height: 44px; }
+  .close-btn { position: relative; }
+  .close-btn::after { content: ''; position: absolute; inset: -7px; }
+  .bm-menu [role="menuitem"], .mz-menu [role="menuitem"] { min-height: 44px; }
+}
+
+/* ---------- small things ---------- */
+.mz-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (forced-colors: active) {
+  .mz-steps i { forced-color-adjust: none; border: 1px solid CanvasText; }
+  .mz-first { -webkit-mask-image: none; mask-image: none; }
+}
+@media print { .mz-strip, .mz-note { display: none !important; } }

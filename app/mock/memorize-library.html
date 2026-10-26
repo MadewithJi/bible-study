@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Memorize: the Memory shelf</title>
+<script>(function(){var q=location.search,m=q.match(/[?&]theme=(light|dark)\b/),t=m?m[1]:null,e=/[?&]embed\b/.test(q);if(!t&&!e)try{t=localStorage.getItem('mz-mock-theme')}catch(x){}if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;document.documentElement.classList.add(e?'mz-embed':'mz-has-strip')})()</script>
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/home.css">
+<link rel="stylesheet" href="memorize-shell.css">
+<style>
+  /* the Library dialog (dialog.library) on a new Memory view */
+  body.mz-body { overflow: hidden; }
+  .mz-vh { margin: 4px 0 16px; }
+  .mz-vh .pc-title { font-size: 28px; }
+  .mz-vh .pc-sub { margin-bottom: 0; }
+  /* the current verse, pinned at the top (the Library's Continue card) */
+  .mz-cur { grid-template-columns: minmax(0, 1fr) auto; }
+  .mz-cur .lc-t { font-size: 32px; }
+  .mz-cur .lc-q { display: block; -webkit-line-clamp: none; white-space: nowrap; font-size: 17px; }
+  .mz-cur .lc-s { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mz-cur .btn { height: 40px; padding: 0 22px; font-size: 15px; font-weight: 600; }
+  .mz-cur .btn .i { width: 16px; height: 16px; stroke-width: 2; }
+  .mz-when { font-weight: 500; color: var(--lamp-ink); }
+  .mz-when.calm { font-weight: 400; color: var(--label-2); }
+  /* the groups: Due, Learning, Written on the heart */
+  .mz-cols { margin-top: 6px; }
+  .mz-cols .lib-sec > .lh:first-child { margin-top: 20px; }
+  .mz-row { position: relative; }
+  /* a row opens the practice for its verse; ⋯ sits apart */
+  .mz-row .cell { align-items: flex-start; padding-right: 58px; cursor: pointer; }
+  .mz-row .cell-title .mz-tr { font-weight: 500; color: var(--label-2); }
+  .mz-row .cell-sub.serif.mz-first { display: block; font-size: 15.5px; }
+  .mz-meta { display: flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; line-height: 1.35; color: var(--label-2); font-variant-numeric: tabular-nums; }
+  .mz-meta > *, .mz-cur .lc-s > * { white-space: nowrap; }
+  .mz-dot { margin-right: 8px; }
+  .mz-cur .lc-s.mz-when-l { margin-top: 4px; }   /* when, on a line of its own, as on Home */   /* the separator travels with what follows it, so it never ends a line */
+  .mz-cols .mz-note { margin-top: 18px; }
+  .mz-row.paused .cell-title, .mz-row.paused .mz-first { opacity: .55; }
+  .mz-more { position: absolute; top: 10px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--label-2); transition: background-color var(--d-1), color var(--d-1); }
+  .mz-more .i { width: 18px; height: 18px; }
+  .mz-more:hover, .mz-more[aria-expanded="true"] { background: var(--fill-2); color: var(--label); }
+  .mz-more:focus-visible { outline-offset: -2px; }
+  .menu.mz-menu { min-width: 200px; }
+  /* empty */
+  .mz-none { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 48px auto 0; max-width: 360px; text-align: center; }
+  .mz-none .tile-i { width: 52px; height: 52px; border-radius: 16px; background: var(--lamp-tint); color: var(--lamp-ink); }
+  .mz-none .tile-i .i { width: 26px; height: 26px; }
+  .mz-none h3 { margin: 4px 0 0; font: 600 19px/1.25 var(--display); letter-spacing: -.02em; }
+  .mz-none p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--label-2); }
+  @media (max-width: 699px) {
+    .mz-vh .pc-title { font-size: 26px; }
+    .mz-cur { grid-template-columns: minmax(0, 1fr); }
+    .mz-cur .btn { width: 100%; height: 46px; }
+    .mz-cur .lc-t { font-size: 28px; }
+    .mz-more { top: 6px; right: 4px; width: 44px; height: 44px; }
+    .mz-row .cell { padding-right: 50px; }
+  }
+</style>
+</head>
+<body class="mz-body">
+<div class="mz-behind" aria-hidden="true">
+  <div class="mz-behind-t"><h2>John 3</h2><p>And as Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up: That whosoever believeth in him should not perish, but have eternal life. For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.</p></div>
+</div>
+<div class="mz-scrim" aria-hidden="true"></div>
+
+<div class="mz-dlg mz-lib library" role="dialog" aria-modal="true" aria-labelledby="library-title">
+  <header class="modal-head">
+    <div class="lib-titles"><h1 id="library-title" class="modal-title">Library</h1><p class="lib-sub">Sample profile · nothing is saved</p></div>
+    <button type="button" class="close-btn plain" aria-label="Library options (not part of this mock-up)" title="Not part of this mock-up" data-icon="ellipsis"></button>
+    <button type="button" class="close-btn" aria-label="Close (not part of this mock-up)" title="Not part of this mock-up" data-icon="xmark"></button>
+  </header>
+  <div class="lib-body" id="lib-body">
+    <nav class="navbar" aria-label="Library"><a class="back" href="#" title="Not part of this mock-up"><span data-icon="chev-left"></span>Library</a></nav>
+    <div class="mz-vh"><h2 class="pc-title">Memory</h2><p class="pc-sub">Verses you’re learning by heart</p></div>
+    <div id="mem"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initShell, icon, esc, scripture, toast, hideToast, params, embedded, go } from './memorize-shell.js';
+
+const EMPTY = params.get('state') === 'empty';
+let items = EMPTY ? [] : [
+  { id: 'john', ref: 'John 3:16', text: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.', done: 2, due: true, when: 'Due today' },
+  { id: 'ps', ref: 'Psalm 119:11', text: 'Thy word have I hid in mine heart, that I might not sin against thee.', done: 1, due: true, when: 'Due today' },
+  { id: 'phil', ref: 'Philippians 4:6–7', text: 'Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God. And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus.', done: 3, when: 'Next review Friday' },
+  { id: 'rom', ref: 'Romans 8:28', text: 'And we know that all things work together for good to them that love God, to them who are the called according to his purpose.', done: 4, when: 'Next review in 9 days' },
+  { id: 'prov', ref: 'Proverbs 3:5–6', text: 'Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.', done: 6, written: '12 October', when: 'Next review in January' },
+  { id: 'josh', ref: 'Joshua 1:9', text: 'Have not I commanded thee? Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest.', done: 6, written: '2 September', when: 'Next review in December' },
+];
+let current = EMPTY ? null : 'john';
+const $ = s => document.querySelector(s), host = $('#mem');
+const byId = id => items.find(x => x.id === id);
+const first = t => t.split(' ').slice(0, 7).join(' ').replace(/[,;:.]$/, '') + '…';
+// the dots carry the stage for a screen reader only where no words beside them say it
+const dots = (x, label = true) => `<span class="mz-steps${x.paused ? ' off' : ''}" ${label ? `role="img" aria-label="Review ${x.done + 1} of 6"` : 'aria-hidden="true"'}>${[0, 1, 2, 3, 4, 5].map(i => `<i class="${i < x.done ? 'd' : i === x.done ? 'n' : ''}"></i>`).join('')}</span>`;
+const tail = html => `<span><span class="mz-dot" aria-hidden="true">·</span>${html}</span>`;
+const when = x => x.paused ? '<span class="mz-when calm">Paused</span>' : `<span class="mz-when${x.due ? '' : ' calm'}">${esc(x.when)}</span>`;
+// a row's status: still learning, the dots and when (Due today); written on the heart, since when and the next review
+const meta = x => x.written
+  ? `<span>Since ${esc(x.written)}</span>${tail(x.paused ? when(x) : `<span class="mz-when calm">${esc(x.when[0].toLowerCase() + x.when.slice(1))}</span>`)}`
+  : `${dots(x)}${when(x)}`;
+
+function curHtml(x) {
+  return `<section class="lib-continue mz-cur" aria-labelledby="mz-cur-k">
+    <div><p class="lc-k" id="mz-cur-k">Your memory verse</p><p><span class="lc-t">${esc(x.ref)}</span></p>
+      <p class="lc-q mz-first">${scripture(first(x.text))}</p>
+      <p class="lc-s">${dots(x, false)}<span>KJV · ${x.written ? `since ${esc(x.written)}` : `Learning · review ${x.done + 1} of 6`}</span></p>
+      <p class="lc-s mz-when-l">${when(x)}</p></div>
+    <a class="btn btn-primary" href="#" data-go="practise" aria-label="Practise ${esc(x.ref)}">Practise${icon('arrow-right')}</a>
+  </section>
+  <p class="mz-note">${icon('info')}<span><b>Not decided yet:</b> one current verse at a time (shown, the default) or up to three.</span></p>`;
+}
+const rowHtml = x => `<li class="mz-row${x.paused ? ' paused' : ''}${x.written ? ' written' : ''}" data-id="${x.id}"><button type="button" class="cell" data-go="practise" aria-label="Practise ${esc(x.ref)}" aria-describedby="mz-m-${x.id}"><span class="cell-body">
+    <span class="cell-title">${esc(x.ref)}<span class="mz-tr"> · KJV</span></span>
+    <span class="cell-sub serif mz-first">${scripture(first(x.text))}</span>
+    <span class="mz-meta" id="mz-m-${x.id}">${meta(x)}</span></span></button>
+    <button type="button" class="mz-more" aria-haspopup="menu" aria-expanded="false" aria-label="More for ${esc(x.ref)}">${icon('ellipsis')}</button></li>`;
+const groupHtml = (title, list) => list.length ? `<section class="lib-sec" aria-label="${title}"><div class="lh"><h3>${title}</h3><span>${list.length}</span></div><ul class="group">${list.map(rowHtml).join('')}</ul></section>` : '';
+
+function render() {
+  const rest = items.filter(x => x.id !== current);
+  if (!items.length) {
+    host.innerHTML = `<div class="mz-none"><span class="tile-i">${icon('mz')}</span><h3>Nothing to memorize yet</h3><p>Select a verse and choose Memorize.</p></div>`;
+    return;
+  }
+  const due = rest.filter(x => !x.written && x.due), learning = rest.filter(x => !x.written && !x.due), written = rest.filter(x => x.written);
+  host.innerHTML = (current ? curHtml(byId(current)) : '')
+    + `<div class="lib-cols mz-cols"><div class="lib-col">${groupHtml('Due', due)}${groupHtml('Learning', learning)}`
+    + `<p class="mz-note">${icon('info')}<span><b>Not decided yet:</b> the other due verses and the three-monthly reviews are practised from here (tap a row; the mock-up opens John 3:16), or Home also lists them under its band, as “Also due: Psalm 119:11”.</span></p></div>`
+    + `<div class="lib-col">${groupHtml('Written on the heart', written)}</div></div>`;
+}
+
+// ------------------------------------------------------------ the ⋯ menu: Make current, Pause (Resume), Remove
+let menu = null, trigger = null;
+function closeMenu(focus = true) {
+  if (!menu) return;
+  menu.remove(); menu = null;
+  if (trigger) { trigger.setAttribute('aria-expanded', 'false'); if (focus && trigger.isConnected) trigger.focus(); }
+  trigger = null;
+}
+function openMenu(btn) {
+  closeMenu(false);
+  const x = byId(btn.closest('.mz-row').dataset.id);
+  trigger = btn; btn.setAttribute('aria-expanded', 'true');
+  menu = document.createElement('div');
+  menu.className = 'menu mz-menu'; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', x.ref);
+  menu.innerHTML = `<button type="button" role="menuitem" data-mi="practise" tabindex="-1">Practise${icon('arrow-right')}</button>`
+    + `<button type="button" role="menuitem" data-mi="current" tabindex="-1">Make current${icon('mz')}</button>`
+    + `<button type="button" role="menuitem" data-mi="pause" tabindex="-1">${x.paused ? `Resume${icon('play')}` : `Pause${icon('pause')}`}</button><hr>`
+    + `<button type="button" role="menuitem" class="danger" data-mi="remove" tabindex="-1">Remove${icon('trash')}</button>`;
+  menu.dataset.id = x.id;
+  document.body.append(menu);
+  const r = btn.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
+  const below = r.bottom + 6 + mh <= innerHeight - 8;
+  menu.style.left = `${Math.max(8, Math.min(r.right - mw, innerWidth - 8 - mw))}px`;
+  menu.style.top = `${below ? r.bottom + 6 : r.top - 6 - mh}px`;
+  menu.style.transformOrigin = below ? 'top right' : 'bottom right';
+  menu.querySelector('[role="menuitem"]').focus();
+}
+function act(mi, id) {
+  const x = byId(id); if (!x) return;
+  closeMenu(false);
+  if (mi === 'practise') { go('practise'); return; }
+  if (mi === 'current') {
+    current = id; render();
+    toast(`${x.ref} is now your current verse.`);
+    $('.mz-cur .btn')?.focus();
+  } else if (mi === 'pause') {
+    x.paused = !x.paused; render();
+    toast(x.paused ? `Paused ${x.ref}. It won’t come up for review until you resume it.` : `Resumed ${x.ref}.`);
+    document.querySelector(`.mz-row[data-id="${id}"] .mz-more`)?.focus();
+  } else if (mi === 'remove') {
+    const i = items.indexOf(x), row = document.querySelector(`.mz-row[data-id="${id}"]`), next = row && (row.nextElementSibling || row.previousElementSibling);
+    const nextId = next && next.dataset.id;
+    items.splice(i, 1); render();
+    toast(`Removed ${x.ref}.`, 'Undo', () => { items.splice(i, 0, x); render(); hideToast(); document.querySelector(`.mz-row[data-id="${id}"] .mz-more`)?.focus(); });
+    (nextId && document.querySelector(`.mz-row[data-id="${nextId}"] .mz-more`) || $('.mz-cur .btn') || $('.back'))?.focus();
+  }
+}
+document.addEventListener('click', e => {
+  const more = e.target.closest('.mz-more');
+  if (more) { if (trigger === more) closeMenu(); else openMenu(more); return; }
+  const mi = e.target.closest('.mz-menu [data-mi]');
+  if (mi) { act(mi.dataset.mi, menu.dataset.id); return; }
+  if (menu && !e.target.closest('.mz-menu')) closeMenu(false);
+  // Practise (the pinned card's link, or a row): embedded, the shell already sends a link's request to the gallery
+  const g = e.target.closest('[data-go]'); if (g && !(embedded && g.matches('a[href]'))) { e.preventDefault(); go(g.dataset.go); return; }
+  const a = e.target.closest('a[href="#"]'); if (a) e.preventDefault();
+});
+document.addEventListener('keydown', e => {
+  if (!menu) return;
+  const l = [...menu.querySelectorAll('[role="menuitem"]')], i = l.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(); }
+  else if (e.key === 'Tab') closeMenu(true);   // back to ⋯ first, so Tab moves on to the next row (APG menu button)
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); l[(i + (e.key === 'ArrowDown' ? 1 : -1) + l.length) % l.length].focus(); }
+  else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); l[e.key === 'Home' ? 0 : l.length - 1].focus(); }
+}, true);
+$('#lib-body').addEventListener('scroll', () => closeMenu(false), { passive: true });
+addEventListener('resize', () => closeMenu(false));
+
+render();
+initShell({ states: [['Memory', ''], ['Empty', 'empty']], state: EMPTY ? 'empty' : '', onState: () => location.reload() });
+</script>
+</body>
+</html>

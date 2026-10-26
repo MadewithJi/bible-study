@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Memorize: choosing a verse</title>
+<script>(function(){var q=location.search,m=q.match(/[?&]theme=(light|dark)\b/),t=m?m[1]:null,e=/[?&]embed\b/.test(q);if(!t&&!e)try{t=localStorage.getItem('mz-mock-theme')}catch(x){}if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;document.documentElement.classList.add(e?'mz-embed':'mz-has-strip')})()</script>
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/home.css">
+<link rel="stylesheet" href="memorize-shell.css">
+<style>
+  /* the reader on John 3 (no hero): the verses as reader.js draws them, the selection bar over verse 16 */
+  .mz-reader { padding-bottom: 140px; }
+  .mz-reader .verses { position: relative; }
+  .verse { cursor: default; }
+  /* the selection bar sits in the page here (the app places it fixed, over the words) */
+  .mark-bubble.mz-at { position: absolute; }
+  .mark-bubble .mz-new { position: relative; }
+  /* a memory verse's mark: one more of the verse's markers in the margin (.badges, 14 px), in the lamp's ink */
+  .badges .b-mz { color: var(--lamp-ink); animation: pop .5s var(--spring); }
+  /* the inset: a bookmarked verse's menu, with Memorize this verse */
+  .mz-inset { position: absolute; top: 0; left: calc(100% + 28px); width: 268px; font: 400 15px/1.47 var(--sans); letter-spacing: -.01em; color: var(--label); }
+  .mz-inset-k { margin: 0 0 8px 4px; font: 600 12px/1.3 var(--sans); color: var(--label-2); }
+  .mz-inset .menu { position: static; animation: none; }
+  .mz-inset .mz-note { margin-top: 14px; }
+  @media (max-width: 1399px) { .mz-inset { position: static; width: auto; max-width: 340px; margin: 44px 0 0 50px; } }
+  @media (max-width: 699px) {
+    .mz-inset { margin: 36px 0 0; max-width: none; }
+  }
+</style>
+</head>
+<body class="mz-body">
+<main class="reader mz-reader" id="reader">
+  <h1 class="mz-sr">John 3, from verse 14</h1>
+  <div class="verses" id="verses"></div>
+</main>
+
+<script type="module">
+import { initShell, icon, esc, toast, go, params } from './memorize-shell.js';
+
+const V = {
+  14: 'And as Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up:',
+  15: 'That whosoever believeth in him should not perish, but have eternal life.',
+  16: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.',
+  17: 'For God sent not his Son into the world to condemn the world; but that the world through him might be saved.',
+  18: 'He that believeth on him is not condemned: but he that believeth not is condemned already, because he hath not believed in the name of the only begotten Son of God.',
+  19: 'And this is the condemnation, that light is come into the world, and men loved darkness rather than light, because their deeds were evil.',
+  20: 'For every one that doeth evil hateth the light, neither cometh to the light, lest his deeds should be reproved.',
+  21: 'But he that doeth truth cometh to the light, that his deeds may be made manifest, that they are wrought in God.',
+};
+const XC = { 14: 12, 15: 33, 16: 23, 17: 28, 18: 15, 19: 24, 20: 12, 21: 29 };   // the margin's cross-reference counts, as the reader shows them (inert)
+const SEL = 'For God so loved the world, that he gave his only begotten Son';
+const COLORS = ['yellow', 'green', 'blue', 'pink', 'purple', 'orange'];
+const svg = inner => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
+const COMMENT = svg('<path d="M7 4.5h10A2.5 2.5 0 0119.5 7v6.5A2.5 2.5 0 0117 16h-5.5L7.5 19.5V16H7a2.5 2.5 0 01-2.5-2.5V7A2.5 2.5 0 017 4.5z"/>');
+const COPY = svg('<rect x="8.5" y="8.5" width="11" height="11" rx="2.2"/><path d="M15.5 8.5V6.7a2.2 2.2 0 00-2.2-2.2H6.7a2.2 2.2 0 00-2.2 2.2v6.6a2.2 2.2 0 002.2 2.2h1.8"/>');
+const cap = s => s[0].toUpperCase() + s.slice(1);
+
+// the verses (every verse of John 3:14–21 is in the words of Jesus, so the reader sets them as .woc)
+const text = v => v === 16 ? `<span class="mk-pend" id="sel">${esc(SEL)}</span>${esc(V[16].slice(SEL.length))}` : esc(V[v]);
+document.getElementById('verses').innerHTML = '<div role="list" aria-label="John 3, verses 14 to 21">' + Object.keys(V).map(Number).map(v =>
+  `<div class="verse" id="v${v}" data-v="${v}" role="listitem"><span class="vnum"><span>${v}</span></span>`
+  + `<span class="vtext"><span class="woc">${text(v)}</span></span>`
+  + `<span class="vmeta"><span class="xc" aria-hidden="true">${icon('link')}${XC[v]}</span></span></div>`).join('') + '</div>'
+  + `<div class="mark-bubble mz-at" id="mark-bubble" role="toolbar" aria-label="Selected words in John 3:16">`
+  + COLORS.map((c, i) => `<button type="button" class="mb-dot" data-mk-color="${c}" tabindex="${i ? -1 : 0}" aria-label="Highlight ${c}" title="Highlight ${c}" aria-pressed="false"><i></i></button>`).join('')
+  + `<span class="mb-sep" aria-hidden="true"></span>`
+  + `<button type="button" class="mb-btn" tabindex="-1" title="Not part of this mock-up">${COMMENT}<span class="mb-l">Comment</span></button>`
+  + `<button type="button" class="mb-btn" tabindex="-1" title="Not part of this mock-up">${COPY}<span class="mb-l">Copy</span></button>`
+  + `<button type="button" class="mb-btn mz-new" data-act="memorize" tabindex="-1" title="Memorize John 3:16">${icon('mz')}<span class="mb-l">Memorize</span></button>`
+  + `</div>`
+  + `<aside class="mz-inset" aria-labelledby="mz-inset-k">
+      <p class="mz-inset-k" id="mz-inset-k">Also: the menu of a bookmarked verse</p>
+      <div class="menu bm-menu" role="group" aria-label="Edit bookmark: John 3:16">
+        <div class="bm-menu-head" role="presentation">
+          <label class="field sm"><input placeholder="Add a label" maxlength="80" aria-label="Bookmark label" autocomplete="off" spellcheck="false"></label>
+          <div class="bm-colors" role="radiogroup" aria-label="Colour">${['red', 'orange', 'yellow', 'green', 'blue', 'purple'].map(c => `<button type="button" role="radio" class="bm-sw" data-bm-color="${c}" aria-checked="${c === 'blue'}" tabindex="${c === 'blue' ? 0 : -1}" aria-label="${cap(c)}" title="${cap(c)}">${icon('check')}</button>`).join('')}</div>
+        </div>
+        <hr>
+        <div role="menu" aria-label="Bookmark actions">
+          <button type="button" role="menuitem" title="Not part of this mock-up">Show in Library${icon('library')}</button>
+          <button type="button" role="menuitem" class="mz-mi" data-act="memorize"><span>Memorize this verse</span>${icon('mz')}</button>
+          <hr>
+          <button type="button" role="menuitem" class="danger" title="Not part of this mock-up">Remove bookmark${icon('trash')}</button>
+        </div>
+      </div>
+      <p class="mz-note">${icon('info')}<span><b>The Memorize icon</b> is lines of writing that end in a small heart (“write them upon the table of thine heart”, Proverbs 3:3), so it is never taken for the Support heart. The same glyph, small, joins the verse’s other markers in the margin. On a phone the selection bar shows icons only, so Memorize is this glyph, the last one.</span></p>
+    </aside>`;
+
+const verses = document.getElementById('verses'), bubble = document.getElementById('mark-bubble'), inset = verses.querySelector('.mz-inset');
+const phone = matchMedia('(max-width: 699px)'), wide = matchMedia('(min-width: 1400px)');
+
+/** Place the bar over the selected words (below them on a phone, where the system's own menu takes the space above). */
+function place() {
+  inset.style.top = wide.matches ? `${document.getElementById('v16').offsetTop - 26}px` : '';
+  const sel = document.getElementById('sel'); if (!sel || bubble.hidden) return;
+  const host = verses.getBoundingClientRect(), rects = [...sel.getClientRects()], first = rects[0], last = rects[rects.length - 1];
+  const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+  const below = phone.matches;
+  bubble.dataset.side = below ? 'below' : 'above';
+  const top = below ? last.bottom - host.top + 12 : first.top - host.top - bh - 10;
+  const cx = below ? innerWidth / 2 - host.left : (first.left + first.right) / 2 - host.left;
+  const left = Math.max(8 - host.left, Math.min(cx - bw / 2, innerWidth - 8 - host.left - bw));
+  bubble.style.top = `${Math.round(top)}px`; bubble.style.left = `${Math.round(left)}px`;
+}
+addEventListener('resize', place);
+document.fonts && document.fonts.ready.then(place);
+place();
+
+// the bar: a roving tab stop, arrow keys between its buttons
+const items = () => [...bubble.querySelectorAll('button')];
+bubble.addEventListener('keydown', e => {
+  const l = items(), i = l.indexOf(document.activeElement);
+  const j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? l.length - 1 : null;
+  if (j === null || i < 0) return;
+  e.preventDefault(); const n = l[(j + l.length) % l.length]; l.forEach(b => { b.tabIndex = b === n ? 0 : -1; }); n.focus();
+});
+// a colour highlights the selected words, as in the app (the mock keeps it on the page only)
+bubble.addEventListener('click', e => {
+  const dot = e.target.closest('.mb-dot'); if (!dot) return;
+  const on = dot.getAttribute('aria-pressed') !== 'true';
+  for (const d of bubble.querySelectorAll('.mb-dot')) d.setAttribute('aria-pressed', String(d === dot && on));
+  const sel = document.getElementById('sel'); if (sel) sel.className = on ? `mk mark-${dot.dataset.mkColor}` : 'mk-pend';
+});
+
+let done = false;
+function memorize(quiet = false) {
+  if (done) return; done = true;
+  const sel = document.getElementById('sel');
+  if (sel) { if (sel.classList.contains('mk')) sel.removeAttribute('id'); else sel.replaceWith(...sel.childNodes); }
+  const hadFocus = bubble.contains(document.activeElement);
+  bubble.hidden = true;
+  const v = document.getElementById('v16');
+  v.classList.add('mz-on');
+  // the mark joins the verse's markers in the margin (as reader.js adds a bookmark's ribbon)
+  v.querySelector('.vmeta').insertAdjacentHTML('beforeend', `<span class="badges"><span class="b-mz" role="img" aria-label="On your memory verses">${icon('mz')}</span></span>`);
+  // the bar has gone from under the keyboard: focus moves to the verse (the toast, role=status, is still announced)
+  if (hadFocus) { v.tabIndex = -1; v.focus({ preventScroll: true }); }
+  const mi = inset.querySelector('.mz-mi');
+  mi.dataset.act = 'practise'; mi.querySelector('span').textContent = 'Practise this verse';
+  if (!quiet) { v.classList.remove('flash'); void v.offsetWidth; v.classList.add('flash'); setTimeout(() => v.classList.remove('flash'), 2200); }   // as reader.js does
+  toast('Added John 3:16 to your memory verses.', 'Practise now', () => go('practise'));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  if (b.dataset.act === 'memorize') memorize();
+  else if (b.dataset.act === 'practise') go('practise');
+});
+
+const STATE = params.get('state') || '';
+initShell({ states: [['Selecting', ''], ['After Memorize', 'after']], state: STATE, onState: () => location.reload() });
+if (STATE === 'after') memorize(true);
+place();
+</script>
+</body>
+</html>

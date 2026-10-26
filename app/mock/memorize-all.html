@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Memorize mock-ups</title>
+<script>(function(){var m=location.hash.match(/\b(light|dark)\b/),t=m?m[1]:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t})()</script>
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/home.css">
+<link rel="stylesheet" href="memorize-shell.css">
+<style>
+  /* The gallery: one live frame at a time (sandboxed: nothing inside it can move this page), with the screen,
+     device, theme and state chosen below the title. Mock-only. */
+  body { background: var(--bg); }
+  .gl { max-width: 1520px; margin: 0 auto; padding: 28px 24px 56px; }
+  .gl h1 { margin: 0; font: 600 30px/1.15 var(--serif); letter-spacing: -.015em; }
+  .gl-dek { max-width: 62em; margin: 8px 0 22px; font-size: 15px; line-height: 1.5; color: var(--label-2); text-wrap: pretty; }
+  .gl-ctl { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 22px; margin-bottom: 18px; }
+  .gl-ctl > div { display: flex; flex-direction: column; gap: 6px; }
+  .gl-ctl > div > span { margin-left: 4px; font: 600 12px/1.2 var(--sans); color: var(--label-2); }
+  .gl-ctl .segmented > button { padding: 0 12px; }
+  #g-screen { width: 440px; } #g-device { width: 180px; } #g-theme { width: 160px; } #g-state { width: 300px; }
+  .gl-open { display: inline-flex; align-items: center; gap: 5px; height: 32px; margin-left: auto; padding: 0 10px; border-radius: 8px; font-size: 14px; }
+  .gl-open .i { width: 15px; height: 15px; }
+  .gl-open:hover { background: var(--fill-2); text-decoration: none; }
+  .gl-cap { max-width: 62em; margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: var(--label); text-wrap: pretty; }
+  .gl-cap b { font-weight: 600; }
+  .gl-stage { display: flex; justify-content: center; }
+  .gl-dev { position: relative; flex: none; overflow: hidden; border-radius: 14px; background: var(--bg); box-shadow: 0 0 0 1px var(--sep-2), 0 10px 30px rgba(0,0,0,.12); }
+  .gl-dev.phone { border-radius: 46px; box-shadow: 0 0 0 10px #1d1d1f, 0 0 0 11px #3a3a3c, 0 24px 60px rgba(0,0,0,.25); }
+  .gl-dev iframe { position: absolute; left: 0; top: 0; border: 0; display: block; transform-origin: 0 0; background: var(--bg); }
+  .gl-size { margin: 12px 0 0; text-align: center; font-size: 12.5px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+  @media (max-width: 899px) { #g-screen, #g-state { width: 100%; } .gl-ctl > div:has(#g-screen), .gl-ctl > div:has(#g-state) { flex: 1 1 100%; } .gl-open { margin-left: 0; } }
+  @media (max-width: 699px) {
+    .gl { padding: 20px 16px 40px; }
+    .gl h1 { font-size: 26px; }
+    .gl-ctl .segmented { height: 36px; }
+    .gl-ctl .segmented > button { padding: 0 6px; }
+    .gl-ctl .segmented > button::after { content: ""; position: absolute; inset: -4px 0; }
+    #g-device, #g-theme { width: 160px; }
+    .gl-open { height: 44px; }
+  }
+</style>
+</head>
+<body>
+<main class="gl">
+  <h1>Memorize — mock-ups</h1>
+  <p class="gl-dek">Four screens: choosing a verse, Home, the practice and the Library. Look at whether each feels simple and calm, and at the lines marked ⓘ, which are still to be decided.</p>
+  <div class="gl-ctl">
+    <div><span id="l-screen">Screen</span><div class="segmented" id="g-screen" role="radiogroup" aria-labelledby="l-screen">
+      <button type="button" role="radio" data-v="select" aria-checked="true" tabindex="0">Choosing</button>
+      <button type="button" role="radio" data-v="home" aria-checked="false" tabindex="-1">Home</button>
+      <button type="button" role="radio" data-v="practise" aria-checked="false" tabindex="-1">Practice</button>
+      <button type="button" role="radio" data-v="library" aria-checked="false" tabindex="-1">Library</button></div></div>
+    <div><span id="l-device">Device</span><div class="segmented" id="g-device" role="radiogroup" aria-labelledby="l-device">
+      <button type="button" role="radio" data-v="desktop" aria-checked="true" tabindex="0">Desktop</button>
+      <button type="button" role="radio" data-v="phone" aria-checked="false" tabindex="-1">Phone</button></div></div>
+    <div><span id="l-theme">Theme</span><div class="segmented" id="g-theme" role="radiogroup" aria-labelledby="l-theme">
+      <button type="button" role="radio" data-v="light" aria-checked="true" tabindex="0">Light</button>
+      <button type="button" role="radio" data-v="dark" aria-checked="false" tabindex="-1">Dark</button></div></div>
+    <div id="w-state"><span id="l-state">State</span><div class="segmented" id="g-state" role="radiogroup" aria-labelledby="l-state"></div></div>
+    <a class="gl-open" id="g-open" href="memorize-select.html" target="_blank" rel="noopener">Open on its own<span data-icon="external"></span></a>
+  </div>
+  <p class="gl-cap" id="g-cap"></p>
+  <div class="gl-stage" id="g-stage"><div class="gl-dev" id="g-dev"><iframe id="g-frame" title="Mock-up" sandbox="allow-scripts allow-same-origin allow-forms" src="about:blank"></iframe></div></div>
+  <p class="gl-size" id="g-size"></p>
+</main>
+
+<script type="module">
+import { icon, segmented, moveInd, esc, SCREENS } from './memorize-shell.js';
+for (const el of document.querySelectorAll('[data-icon]')) { el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon)); el.removeAttribute('data-icon'); }
+
+const INFO = {
+  select: { name: 'Choosing a verse', states: [['Selecting', ''], ['After Memorize', 'after']],
+    cap: '<b>Choosing.</b> Words of John 3:16 are selected: the selection bar gains <b>Memorize</b>. Tap it for the toast (with <b>Practise now</b>) and the small mark among the verse’s markers in the margin. Beside the verses, the same choice in a bookmarked verse’s menu.' },
+  home: { name: 'Home', states: [],
+    cap: '<b>Home.</b> <b>Your memory verse</b> comes straight after the cover, above everything else, in the same form as Continue reading: where it stands, when it is due, one <b>Practise</b> button and a quiet <b>Not today</b>. Below it, the band when nothing is due and before any verse is chosen. Scroll inside the frame.' },
+  practise: { name: 'Practice', states: [['John 3:16', ''], ['On the heart', 'heart']],
+    cap: '<b>Practice.</b> About a minute, in four steps that get harder: <b>Read</b>, <b>Fade</b> (tap a gap to peek, then <b>Hide more</b>), <b>First letters</b> and <b>Recall</b>, then <b>Got it</b> or <b>Not yet</b>. The other state, <b>On the heart</b>, is the quiet moment Proverbs 3:5–6 was written on the heart, as it looked on 12 October.' },
+  library: { name: 'Library', states: [['Memory', ''], ['Empty', 'empty']],
+    cap: '<b>Library.</b> A new <b>Memory</b> shelf: the current verse pinned at the top, then <b>Due</b>, <b>Learning</b> and <b>Written on the heart</b>. Tap a row to practise it; its ⋯ has Practise, Make current, Pause and Remove, and they work.' },
+};
+const SIZE = { desktop: [1440, 900], phone: [390, 844] };
+const frame = document.getElementById('g-frame'), dev = document.getElementById('g-dev'), stage = document.getElementById('g-stage');
+const stateWrap = document.getElementById('w-state'), stateSeg = document.getElementById('g-state');
+let S = { screen: 'select', device: 'desktop', theme: document.documentElement.dataset.theme || 'light', state: '' };
+let shown = '';
+
+// #screen/device/theme/state: a reload keeps the choice
+function readHash() {
+  const [sc, dv, th, st] = location.hash.slice(1).split('/');
+  if (INFO[sc]) S.screen = sc; if (SIZE[dv]) S.device = dv; if (th === 'light' || th === 'dark') S.theme = th;
+  S.state = st && INFO[S.screen].states.some(([, v]) => v === st) ? st : '';
+}
+readHash();
+const writeHash = () => history.replaceState(null, '', `#${S.screen}/${S.device}/${S.theme}${S.state ? '/' + S.state : ''}`);
+
+function fit() {
+  // a desktop frame fits the window below the controls; a phone is shown at full size (or the page width) and the page scrolls
+  const [w, h] = SIZE[S.device], pad = S.device === 'phone' ? 24 : 0, availW = stage.clientWidth - pad;
+  const availH = Math.max(360, innerHeight - (stage.getBoundingClientRect().top + scrollY) - 48 - pad);
+  const k = S.device === 'phone' ? Math.min(1, availW / w) : Math.min(1, availW / w, availH / h);
+  dev.classList.toggle('phone', S.device === 'phone');
+  dev.style.width = `${Math.round(w * k)}px`; dev.style.height = `${Math.round(h * k)}px`;
+  frame.style.width = `${w}px`; frame.style.height = `${h}px`; frame.style.transform = `scale(${k})`;
+  document.getElementById('g-size').textContent = `${INFO[S.screen].name} · ${S.device === 'phone' ? 'Phone' : 'Desktop'}, ${w} × ${h}${k < 1 ? `, shown at ${Math.round(k * 100)}%` : ''} · ${S.theme === 'dark' ? 'Dark' : 'Light'}`;
+}
+function load() {
+  const q = new URLSearchParams({ embed: '', theme: S.theme }); if (S.state) q.set('state', S.state);
+  const src = new URL(`${SCREENS[S.screen]}?${q.toString().replace('embed=', 'embed')}`, location.href).href;
+  if (src === shown) return; shown = src;
+  // replace, not push: the frame keeps no history of its own, so Back never moves it behind the controls
+  try { if (frame.contentWindow.location.href !== 'about:blank') { frame.contentWindow.location.replace(src); return; } } catch { /* not ours yet */ }
+  frame.src = src;
+}
+function renderStates() {
+  const list = INFO[S.screen].states;
+  stateWrap.hidden = !list.length;
+  stateSeg.innerHTML = '<span class="seg-ind" aria-hidden="true"></span>' + list.map(([label, v]) => `<button type="button" role="radio" data-v="${esc(v)}" aria-checked="${v === S.state}" tabindex="${v === S.state ? 0 : -1}">${esc(label)}</button>`).join('');
+  stateSeg.classList.add('no-anim'); requestAnimationFrame(() => { moveInd(stateSeg); requestAnimationFrame(() => stateSeg.classList.remove('no-anim')); });
+}
+function update({ reload = true } = {}) {
+  document.getElementById('g-cap').innerHTML = INFO[S.screen].cap;
+  frame.title = `Mock-up: ${INFO[S.screen].name}`;
+  document.getElementById('g-open').href = `${SCREENS[S.screen]}${S.state ? `?state=${S.state}` : ''}`;
+  fit(); writeHash();
+  if (reload) load();
+}
+
+const segScreen = segmented(document.getElementById('g-screen'), v => { S.screen = v; S.state = ''; renderStates(); update(); });
+segmented(document.getElementById('g-device'), v => { S.device = v; update({ reload: false }); });
+segmented(document.getElementById('g-theme'), v => {
+  S.theme = v; document.documentElement.dataset.theme = v;
+  // the frame follows at once, keeping whatever was tapped inside it; its address carries the theme for the next load
+  try { frame.contentDocument.documentElement.dataset.theme = v; } catch { /* not loaded yet */ }
+  shown = shown.replace(/theme=(light|dark)/, `theme=${v}`);
+  update({ reload: false });
+});
+renderStates();
+segmented(stateSeg, v => { S.state = v; update(); });   // wired once; its buttons change with the screen
+segScreen.set(S.screen);
+document.querySelector(`#g-device [data-v="${S.device}"]`).click();
+document.querySelector(`#g-theme [data-v="${S.theme}"]`).click();
+update();
+
+// a screen inside the frame asks for another (Practise now, Practise): switch to it here
+addEventListener('message', e => {
+  if (e.origin !== location.origin || e.source !== frame.contentWindow || !e.data || e.data.type !== 'mz-go' || !INFO[e.data.screen]) return;
+  S.screen = e.data.screen; S.state = ''; segScreen.set(S.screen); renderStates(); update();
+});
+addEventListener('resize', fit);
+// an address typed or pasted with another #screen/device/theme/state
+addEventListener('hashchange', () => {
+  readHash(); segScreen.set(S.screen);
+  for (const [id, v] of [['g-device', S.device], ['g-theme', S.theme]]) document.querySelector(`#${id} [data-v="${v}"]`).click();
+  renderStates(); update();
+});
+</script>
+</body>
+</html>
