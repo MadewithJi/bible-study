@@ -241,12 +241,27 @@ function renderMemorizeBtn() {
   const omitted = !!document.querySelector(`#reader .verses > .verse[data-v="${v}"] .vtext.omitted`);
   const hide = !mem || !v || state.drawerTab === 'search' || omitted;
   if (hide && document.activeElement === btn) document.getElementById('drawer-close')?.focus({ preventScroll: true });
-  btn.hidden = hide; if (hide) return;
+  btn.hidden = hide; if (hide) { fitTitle(); return; }
   const have = !!safe(mem.findByRef, `${b}.${c}.${v}`), name = refLabel(b, c, v);
   const label = `${have ? 'Practise' : 'Memorize'} ${name}`;
   if (btn.getAttribute('aria-label') !== label) btn.setAttribute('aria-label', label);
   btn.title = have ? 'Practise this memory verse' : 'Memorize this verse';
   btn.classList.toggle('have', have);
+  fitTitle();
+}
+/**
+ * A phone's header (styles.css @max-width 699px) has five buttons beside the reference: a long one ('2 Thessalonians
+ * 3:18' at 375 px) shrinks to fit, as an iOS title does, down to 16 px; then it ends in an ellipsis. Never a search title.
+ */
+const PHONE = typeof matchMedia === 'function' ? matchMedia('(max-width: 699px)') : null;
+function fitTitle() {
+  const t = document.getElementById('drawer-title'); if (!t) return;
+  if (t.style.fontSize) t.style.fontSize = '';
+  if (!PHONE || !PHONE.matches || state.drawerTab === 'search') return;
+  const w = t.clientWidth; if (!w || t.scrollWidth <= w) return;
+  let fs = parseFloat(getComputedStyle(t).fontSize) * (w - 1) / t.scrollWidth;
+  // the width is not quite proportional to the size (rounding, letter spacing): a step down until it fits
+  for (let i = 0; i < 6; i++) { fs = Math.max(16, Math.floor(fs * 10) / 10); t.style.fontSize = fs + 'px'; if (fs === 16 || t.scrollWidth <= t.clientWidth) break; fs -= .3; }
 }
 function memorizeSelected() {
   const btn = document.getElementById('btn-memorize'), b = state.book, c = state.chapter, v = state.selected || 0;
@@ -1619,6 +1634,7 @@ export function bindDrawer() {
   document.getElementById('btn-memorize')?.addEventListener('click', memorizeSelected);
   document.addEventListener('bs:library-changed', () => { const { b, c, v } = bookmarkTarget(); if (bookOf(b)) renderBookmarkBtn(b, c, v); });
   document.addEventListener('bs:memory-changed', renderMemorizeBtn);
+  window.addEventListener('resize', fitTitle, { passive: true }); // a phone turned: the reference's room changes
   document.addEventListener('bs:chapter-rendered', renderMemorizeBtn); // a translation that leaves the verse out is known once it is drawn
   document.addEventListener('bs:links-changed', () => { renderMineCount(); paintNoteVerses(); }); // links.js redraws an open Mine body itself
   ['bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soonNoteVerses)); // a save elsewhere, a sync
