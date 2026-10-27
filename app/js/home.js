@@ -2,9 +2,10 @@
 // Doré's engravings). Today for a profile, and for a guest when the app runs locally (local guests can save);
 // Welcome for a hosted site's guest. main.js imports this module the first time Home shows, then calls show(),
 // hide() and refresh(). The personal parts come from the app's own modules (getMods), never from sample data.
-import { state, data, bookOf, refLabel, esc, smart, clip, trInfo, yearLabel, DONATE_URL, PAUSE_MSG, signupPaused } from './store.js';
+import { state, data, bookOf, refLabel, esc, smart, clip, trInfo, yearLabel, DONATE_URL, PAUSE_MSG, signupPaused, DRY } from './store.js';
 import { icon } from './icons.js';
 import { relTime, dayLabel, localDay } from './ui.js';
+import { reviewLabel, STEPS } from './memsched.js';
 
 // ---- Brand: the name, the domain and the Psalm 119:105 line (KJV)
 const BRAND = { name: 'Bible Lantern', domain: 'biblelantern.com', motto: 'Thy word is a lamp unto my feet, and a light unto my path.', mottoRef: 'Psalm 119:105' };
@@ -91,6 +92,7 @@ function todayHtml() {
       </div>
       <button class="plate-cap" type="button" data-cap="vod" hidden>${icon('photo')}<span><b></b><br>Gustave Doré, 1866</span></button>
     </section>
+    <section class="cont dk mz-mem" aria-labelledby="hm-h-mem" id="hm-mem" hidden></section>
     <section class="cont dk" aria-labelledby="hm-h-cont" id="hm-cont"></section>
   </div>`;
 }
@@ -259,6 +261,71 @@ async function renderCont(my) {
     + `<div class="cont-b"><div class="cprog"><span>Chapter progress</span><span class="prog-n">${read ? 'Read' : `${pct}%`}</span>`
     + `<span class="prog-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${esc(`${lab} progress`)}"><span style="width:${pct}%"></span></span></div>`
     + `<a class="lbtn btn-fill" href="${hrefOf(b, c)}" data-resume aria-label="${esc(`Resume ${refLabel(b, c, v)}`)}">Resume${hic('arrow')}</a></div></div>`;
+}
+
+// ------------------------------------------------------------ Your memory verse (memorize-brief §6)
+// A second Continue band straight after the cover: the current verse (or, with none, a heart verse due for review),
+// where it stands and Practise. Not today says so in the band itself, with Undo, until Undo or Home is left.
+let later = null;     // { id, oldDue }: the verse put off here (memory.js notToday), for its Undo
+let memFocus = '';    // what takes focus when the band is next drawn (Not today -> Undo, Undo -> Not today)
+let memLost = false;  // the band went while it had focus: Continue reading's button takes it once Home is drawn
+const mzDots = (done, now = -1) => `<span class="mz-steps" aria-hidden="true">${range(0, STEPS - 1).map(i => `<i${i < done ? ' class="d"' : i === now ? ' class="n"' : ''}></i>`).join('')}</span>`;
+/** The first words of a verse, for a hint: 'For God so loved the world…'. */
+function firstWords(s, n = 6) {
+  const w = String(s || '').trim().split(/\s+/).filter(Boolean);
+  return w.length > n ? `${w.slice(0, n).join(' ').replace(/[,;:.!?—–-]+$/, '')}…` : w.join(' ');
+}
+/** 'Next review tomorrow', 'Next review Thursday', 'Next review Thursday 12 November', 'Next review in January'. */
+function nextReview(w) {
+  if (!w || /^Next review/.test(w)) return w;
+  return `Next review ${w === 'Tomorrow' ? 'tomorrow' : w}`;
+}
+async function renderMem(my) {
+  const host = $('#hm-mem'), M = getMods().mem, label = x => call(M, 'memoryLabel', x) || '';
+  const o = call(M, 'organizedMemory');
+  const held = later && call(M, 'getMemory', later.id);
+  if (!held || call(M, 'memoryDue', held)) later = null;   // undone elsewhere, removed, or due again: the band as usual
+  const x = held && later ? held : o ? o.current || o.dueHeart[0] || null : null;
+  const first = x ? await call(M, 'memoryPreview', x) : '';
+  if (my !== seq) return;
+  // a redraw keeps keyboard focus on the button it was on (or the one an action named), wherever the band has it now
+  const ae = document.activeElement, had = !!ae && ae !== host && host.contains(ae);
+  const want = memFocus || (had ? (ae.dataset.practise ? `[data-practise="${CSS.escape(ae.dataset.practise)}"]` : ae.dataset.mz ? `[data-mz="${ae.dataset.mz}"]` : '') : '');
+  memFocus = '';
+  if (!x) {
+    host.hidden = true; host.innerHTML = ''; delete host.dataset.id;
+    if (had) { memLost = true; $('#hm-cont .lbtn')?.focus({ preventScroll: true }); }
+    return;
+  }
+  const put = !!later, due = !put && !!call(M, 'memoryDue', x), heart = !!x.heart, tr = trInfo(x.tr).abbr;
+  const step = Math.min(STEPS, Math.max(0, Math.floor(+x.step || 0)));
+  const where = heart ? `${tr} · Written on the heart${due ? ' · review due' : ''}` : `${tr} · Learning · ${reviewLabel(x)}`;
+  const when = put ? '' : due ? '<span class="mz-due">Due today</span> · about a minute' : esc(nextReview(call(M, 'memoryWhen', x)));
+  const id = esc(x.id), also = o ? o.dueHeart.find(h => h.id !== x.id) : null;
+  const act = put
+    ? `<div class="cont-b two mz-later"><span id="hm-mem-put">${esc(`Moved to tomorrow.${DRY ? ' Dry run: nothing is saved.' : ''}`)}</span><button type="button" class="mz-quiet" data-mz="undo" aria-describedby="hm-mem-put">Undo</button></div>`
+    : due
+      ? `<div class="cont-b two mz-act"><button type="button" class="lbtn btn-fill mz-go" data-practise="${id}" aria-label="${esc(`Practise ${label(x)}`)}" aria-describedby="hm-mem-when">Practise${hic('arrow')}</button><button type="button" class="mz-quiet" data-mz="later">Not today</button></div>`
+      : `<div class="cont-b two mz-act"><button type="button" class="mz-quiet mz-go" data-practise="${id}" aria-label="${esc(`Practise ${label(x)}`)}" aria-describedby="hm-mem-when">Practise</button></div>`;
+  host.innerHTML = `<div class="wrap cont-in${first ? '' : ' no-first'}"><div><h2 id="hm-h-mem" class="kick">${heart ? 'A verse on your heart' : 'Your memory verse'}</h2>`
+    + `<p class="cont-t">${esc(label(x))}</p><p class="cont-at mz-where">${mzDots(heart ? STEPS : step, heart ? -1 : step)}${esc(where)}</p>`
+    + `${when ? `<p class="cont-at mz-when" id="hm-mem-when">${when}</p>` : ''}</div>`
+    + `${first ? `<p class="cont-q mz-first">${scripture(firstWords(first))}</p>` : ''}<div class="mz-side">${act}`
+    + `${also ? `<p class="mz-also"><button type="button" data-practise="${esc(also.id)}">Also due for review: <span>${esc(label(also))}</span></button></p>` : ''}</div></div>`;
+  host.dataset.id = x.id; host.hidden = false;
+  if (want) (host.querySelector(want) || (had ? host.querySelector('.mz-go, [data-mz]') : null))?.focus({ preventScroll: true });
+}
+/** The band's own buttons: Not today (the verse waits until tomorrow) and its Undo. */
+function memAct(what) {
+  const M = getMods().mem, id = $('#hm-mem')?.dataset.id;
+  if (what === 'later' && id) {
+    const r = call(M, 'notToday', id, { toast: false });
+    if (r) { later = { id, oldDue: r.oldDue }; memFocus = '[data-mz="undo"]'; }
+  } else if (what === 'undo' && later) {
+    call(M, 'undoNotToday', later.id, later.oldDue);
+    later = null; memFocus = '[data-mz="later"]';
+  }
+  renderMem(seq).catch(e => console.error(e));
 }
 
 /** The latest notes, highlights, comments and links (up to FEED_MAX), newest first. */
@@ -631,7 +698,14 @@ async function render() {
   if (changed) { closeBooks(false); settleFocus(); }
   renderAtlas(); renderCredit(); renderPause();
   if (next === 'welcome') renderWelcome();
-  else { renderDate(); await Promise.all([renderVod(my), renderCont(my), renderStudy(my)]); }
+  else {
+    renderDate(); await Promise.all([renderVod(my), renderMem(my), renderCont(my), renderStudy(my)]);
+    if (memLost && my === seq) {   // the band went while it had focus: Continue reading's button, drawn now, takes it
+      memLost = false;
+      const ae = document.activeElement;
+      if (!ae || ae === document.body || !ae.isConnected) $('#hm-cont .lbtn')?.focus({ preventScroll: true });
+    }
+  }
   if (my === seq) requestAnimationFrame(placeAll);
 }
 /** Signed in from Welcome (or out from Today): the button that had focus is gone, so the heading takes it. */
@@ -651,6 +725,10 @@ function bind() {
       const pos = call(getMods().library, 'currentPosition'); if (!pos) return;
       e.preventDefault(); A?.resume?.(pos, { focus: true }); return;
     }
+    const pr = t.closest('#hm-mem [data-practise]');
+    if (pr) { const id = pr.dataset.practise; call(getMods().mem, 'practise', id, { returnFocus: () => (pr.isConnected ? pr : $(`#hm-mem [data-practise="${CSS.escape(id)}"]`) || $('#hm-mem .mz-go') || $('#hm-cont .lbtn')) }); return; }
+    const mz = t.closest('#hm-mem [data-mz]');
+    if (mz) { memAct(mz.dataset.mz); return; }
     const act = t.closest('[data-act]');
     if (act) { A?.openAuth?.(act.dataset.act === 'signup' ? 'signup' : 'signin'); return; }
     const pl = t.closest('#hm-tiles .pl-b[data-plate]');
@@ -683,7 +761,7 @@ function bind() {
     const q = $('#hm-q').value.trim(); if (q) A?.search?.(q);
   });
   const soon = () => refresh();
-  ['bs:auth-changed', 'bs:library-changed', 'bs:links-changed', 'bs:marks-changed', 'bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soon));
+  ['bs:auth-changed', 'bs:library-changed', 'bs:links-changed', 'bs:marks-changed', 'bs:memory-changed', 'bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soon));
   document.addEventListener('bs:signup-changed', () => renderPause()); // paused or reopened (account.js): shown or not
   let rz = 0;
   addEventListener('resize', () => {
@@ -704,7 +782,7 @@ export async function show({ focus = false } = {}) {
   return true;
 }
 /** Home is hidden (the reader is back). Its state (an open book) stays for Back. */
-export function hide() { shown = false; clearTimeout(refreshT); clearTimeout(focusT); }
+export function hide() { shown = false; later = null; clearTimeout(refreshT); clearTimeout(focusT); }
 /** New data (a note, a mark, a link, the library, a sign-in): redraw shortly, or on the next show. */
 export function refresh() {
   clearTimeout(refreshT);

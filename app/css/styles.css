@@ -1721,18 +1721,18 @@ body.link-picking #reader .verse.link-anchor { background: var(--accent-tint-2);
   #drawer-tabs.scroll::-webkit-scrollbar { display: none; }
 }
 @media (min-width: 700px) {
-  /* the 50px gutter column: with a link or comment badge the icons wrap onto more rows instead of running into the
-     text (two icons and a two-digit badge fit on a row; three icons always wrap, five make three rows, seven four; a
-     link and a comment badge side by side wrap once either count has two digits) */
-  .vmeta > .badges:has(> .b-link, > .b-ann) { flex-wrap: wrap; justify-content: flex-end; row-gap: 3px; }
-  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { --lk-rows: 17px; }
-  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(5):not(.art-badge)) { --lk-rows: 34px; }
-  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(7):not(.art-badge)) { --lk-rows: 51px; }
+  /* the 50px gutter column: with a link, comment or memory verse badge the icons wrap onto more rows instead of running
+     into the text (two icons and a two-digit badge fit on a row; three icons always wrap, five make three rows, seven
+     four; a link and a comment badge side by side wrap once either count has two digits) */
+  .vmeta > .badges:has(> .b-link, > .b-ann, > .b-mz) { flex-wrap: wrap; justify-content: flex-end; row-gap: 3px; }
+  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { --lk-rows: 17px; }
+  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(5):not(.art-badge)) { --lk-rows: 34px; }
+  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(7):not(.art-badge)) { --lk-rows: 51px; }
   /* single-line verses: room for the extra rows (17px each) under art.css's column (L/2 terms: (1.72 × size) / 2) */
-  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 19px + var(--lk-rows)); }
-  .verse:has(> .vmeta > .xc):has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 39px + var(--lk-rows)); }
-  .verse:has(> .vmeta .art-badge):has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 48px + var(--lk-rows)); }
-  .verse:has(> .vmeta > .xc):has(> .vmeta .art-badge):has(> .vmeta > .badges > :is(.b-link, .b-ann) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 68px + var(--lk-rows)); }
+  .verse:has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 19px + var(--lk-rows)); }
+  .verse:has(> .vmeta > .xc):has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 39px + var(--lk-rows)); }
+  .verse:has(> .vmeta .art-badge):has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 48px + var(--lk-rows)); }
+  .verse:has(> .vmeta > .xc):has(> .vmeta .art-badge):has(> .vmeta > .badges > :is(.b-link, .b-ann, .b-mz) ~ :nth-child(3):not(.art-badge), > .vmeta > .badges > .b-link + .b-ann) { min-height: calc(var(--read-size) * .86 + 68px + var(--lk-rows)); }
 }
 
 /* the Mine tab body: header, list of links */
@@ -2093,7 +2093,13 @@ html.mk-pend-on #reader .vtext::selection, html.mk-pend-on #reader .vtext *::sel
   .verse[aria-current="true"]::before { left: -6px; }
   .mb-l { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .mb-btn { width: 36px; padding: 0; justify-content: center; }
+  /* with Memorize and Remove highlight the bar can outgrow a small phone: it stays on the screen, its buttons narrowing */
+  .mark-bubble { max-width: calc(100vw - 16px); }
+  .mb-dot { flex-shrink: 1; min-width: 26px; }
+  .mb-btn { flex-shrink: 1; min-width: 30px; }
 }
+/* below 360 px a highlighted memory verse's bar (six dots, four buttons) fits only with tighter dots and separators */
+@media (max-width: 359px) { .mb-sep { margin: 0 2px; } .mb-dot { min-width: 24px; } }
 @media (pointer: coarse) {
   .mb-dot { width: 34px; height: 40px; }
   .mb-btn { height: 40px; }
@@ -2196,6 +2202,18 @@ button.mk-quote:focus-visible { outline: 2px solid var(--focus); outline-offset:
 @media print {
   .mark-pop, .badges .b-ann { display: none !important; }
 }
+
+/* ------------------------------------------------------------ Memorize in the reader (memorize-brief §4): a memory
+   verse's mark in the gutter (the Memorize glyph in the lamp's ink, right after the bookmark ribbon; it opens the
+   practice) pops in when it is added in place. The selection bar's Memorize is one more .mb-btn (.mb-mz). */
+.badges .b-mz { display: inline-grid; place-items: center; color: var(--lamp-ink); border-radius: 4px; transition: transform var(--d-2) var(--ease-out); }
+.badges .b-mz.in { animation: pop .5s var(--spring); }
+@media (hover: hover) { .badges .b-mz:hover { transform: scale(1.12); } }
+.badges .b-mz:active { transform: scale(.94); }
+.badges .b-mz:focus-visible { outline-offset: 1px; }
+@media (pointer: coarse) { .badges .b-mz { position: relative; } .badges .b-mz::after { content: ''; position: absolute; inset: -5px; } }
+@media (forced-colors: active) { .badges .b-mz { color: LinkText; } }
+@media print { .badges .b-mz { display: none !important; } }
 
 /* ------------------------------------------------------------ Study (study-build-brief §1.1): reference chips, the [[ picker, Mentioned in */
 /* a reference to a highlight or comment in a note: [[John 1:4 · “the light of men”]] → the colour dot, the reference, the words */

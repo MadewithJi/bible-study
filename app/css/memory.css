@@ -135,3 +135,78 @@ dialog.practice .mz-blank textarea { width: 100%; min-height: 152px; padding: 14
   .mz-steps i.d { background: Highlight; }
   .mz-miss { text-decoration-color: Highlight; }
 }
+
+/* =====================================================================
+   Library (memorize-brief §6, library.js memoryCard / memoryView): the home's Memory card and Library › Memory, the
+   memory verse pinned (the Continue card's look), then Up next and Written on the heart. Ported from
+   app/mock/memorize-library.html; the app's .lib-card, .lib-continue, .lc-*, .lib-cols, .lib-sec, .lh, .group, .cell,
+   .navbar, .pc-title, .tile-i and .menu do the rest. Scoped to the Library dialog, so Home's rules stay its own.
+   ===================================================================== */
+dialog.library { --lamp-tint: color-mix(in srgb, var(--lamp) 15%, var(--bg-elev)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) dialog.library { --lamp-tint: color-mix(in srgb, var(--lamp) 16%, var(--bg-elev)); } }
+:root[data-theme="dark"] dialog.library { --lamp-tint: color-mix(in srgb, var(--lamp) 16%, var(--bg-elev)); }
+.library .sc { font-variant-caps: small-caps; }
+.library .mz-when { font-weight: 500; color: var(--lamp-ink); }
+.library .mz-when.calm { font-weight: 400; color: var(--label-2); }
+/* the first words of a verse, fading as they go (a hint, not the whole text) */
+.library .mz-first { overflow: hidden; white-space: nowrap; text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); }
+
+/* ---------- the home's card (after Study's, and laid out as it is) ---------- */
+.lib-mem-card .lh > span:empty { display: none; }
+.lib-mem-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+.lib-mem-card p { flex: 1 1 260px; margin: 0; font-size: 14px; line-height: 1.5; color: var(--label-2); max-width: 60ch; font-variant-numeric: tabular-nums; }
+.lib-mem-card p b { font-weight: 600; color: var(--label); }
+.lib-mem-card .btn { flex: none; }
+
+/* ---------- Library › Memory: the title, and the memory verse pinned at the top ---------- */
+.mz-vh { margin: 4px 0 16px; }
+.mz-vh .pc-title { font-size: 28px; }
+.mz-vh .pc-sub { margin-bottom: 0; }
+.mz-cur { position: relative; grid-template-columns: minmax(0, 1fr) auto; }
+.mz-cur .lc-t { font-size: 32px; }
+.mz-cur .lc-q { display: block; -webkit-line-clamp: none; white-space: nowrap; font-size: 17px; min-height: 1.5em; }
+.mz-cur .lc-s { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mz-cur .lc-s > * { white-space: nowrap; }
+.mz-cur .lc-s.mz-when-l { margin-top: 4px; }   /* when, on a line of its own, as on Home */
+.mz-cur .lc-s.mz-when-l:has(> .mz-when:empty) { display: none; }
+.mz-cur .btn { height: 40px; padding: 0 22px; font-size: 15px; font-weight: 600; }
+.mz-cur .btn .i { width: 16px; height: 16px; stroke-width: 2; }
+
+/* ---------- the groups: Up next and Written on the heart; a row opens its practice, ⋯ sits apart ---------- */
+.mz-cols { margin-top: 6px; }
+.mz-cols .lib-sec > .lh:first-child { margin-top: 20px; }
+.mz-row { position: relative; }
+.mz-row .cell { align-items: flex-start; padding-right: 58px; cursor: pointer; }
+.mz-row .cell-title .mz-tr { font-weight: 500; color: var(--label-2); }
+.mz-row .cell-sub.serif.mz-first { display: block; font-size: 15.5px; }
+.mz-meta { display: flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; line-height: 1.35; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.mz-meta > * { white-space: nowrap; }   /* the separator travels with what follows it, so it never ends a line */
+.mz-dot { margin-right: 8px; }
+.mz-more { position: absolute; top: 10px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--label-2); transition: background-color var(--d-1), color var(--d-1); }
+.mz-more .i { width: 18px; height: 18px; }
+.mz-more:hover, .mz-more[aria-expanded="true"] { background: var(--fill-2); color: var(--label); }
+.mz-more:focus-visible { outline-offset: -2px; }
+.menu.mz-menu { min-width: 200px; }
+
+/* ---------- nothing memorized yet ---------- */
+.mz-none { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 48px auto 0; max-width: 360px; text-align: center; }
+.mz-none .tile-i { width: 52px; height: 52px; border-radius: 16px; background: var(--lamp-tint); color: var(--lamp-ink); }
+.mz-none .tile-i .i { width: 26px; height: 26px; }
+.mz-none h3 { margin: 4px 0 0; font: 600 19px/1.25 var(--display); letter-spacing: -.02em; }
+.mz-none p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--label-2); }
+
+@media (max-width: 699px) {
+  .mz-vh .pc-title { font-size: 26px; }
+  .mz-cur { grid-template-columns: minmax(0, 1fr); }
+  .mz-cur .btn { width: 100%; height: 46px; }
+  .mz-cur .lc-t { font-size: 28px; }
+  .mz-more { top: 6px; right: 4px; width: 44px; height: 44px; }
+  .mz-row .cell { padding-right: 50px; }
+}
+@media (pointer: coarse) {
+  .mz-menu [role="menuitem"] { min-height: 44px; }
+  /* Open Memory stays 28 px to look at; its tap area grows to 44 (alone on its row, so it overlaps nothing) */
+  .lib-mem-card .btn { position: relative; }
+  .lib-mem-card .btn::after { content: ""; position: absolute; inset: -8px 0; }
+}
+@media (forced-colors: active) { .library .mz-first { -webkit-mask-image: none; mask-image: none; } }

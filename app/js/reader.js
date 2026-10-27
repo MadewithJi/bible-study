@@ -8,15 +8,16 @@ import * as viz from './viz.js';
 let A;                        // actions injected by main.js
 export function init(actions) { A = actions; }
 
-// library.js, art.js, media.js, links.js and marks.js are optional (main.js loads all but media.js guarded too): imported at run time
+// library.js, art.js, media.js, links.js, marks.js and memory.js are optional (main.js loads all but media.js guarded too): imported at run time
 // so that a missing or broken one can never stop this module, and with it the whole app, from loading. Same module instances.
 const optional = (p, name) => p.then(m => m, e => { console.error(`${name} failed to load`, e); return null; });
-let library = null, art = null, media = null, lnk = null, mrk = null;
+let library = null, art = null, media = null, lnk = null, mrk = null, mz = null;
 const libraryP = optional(import('./library.js'), 'library.js').then(m => (library = m));
 const artModP = optional(import('./art.js'), 'art.js').then(m => (art = m));
 const mediaModP = optional(import('./media.js'), 'media.js').then(m => (media = m));
 optional(import('./links.js'), 'links.js').then(m => (lnk = m)); // loaded before the first render (main.js boot awaits loadLinks)
 optional(import('./marks.js'), 'marks.js').then(m => { mrk = m; if (m) refreshAnnBadges(); }); // likewise (loadMarks)
+optional(import('./memory.js'), 'memory.js').then(m => { mz = m; if (m) refreshMemoryBadges(); }); // likewise (loadMemory)
 
 /**
  * FUMS v3, API.Bible's fair-use count (translations brief §2): its script loads the first time an NIV, NKJV or NASB
@@ -81,6 +82,14 @@ function annBadgeHtml(b, c, v) {
   const n = annCount(b, c, v); if (!n) return '';
   const ic = safeCall(mrk && mrk.commentIcon) || icon('note');
   return `<button class="b-ann" type="button" data-ann-v="${v}" tabindex="-1" aria-label="${mrk.annLabel(n)}" title="${plural(n, 'comment')}">${ic}<span>${n}</span></button>`;
+}
+/** The memory verse whose first verse this is (memorize-brief §4), or null (also while memory.js is missing). */
+const mzEntry = (b, c, v) => safeCall(mz && mz.memoryFor, b, c, v) || null;
+const mzBadgeLabel = x => `Memory verse: ${safeCall(mz && mz.memoryLabel, x) || 'this verse'}. Practise`;
+/** The gutter badge of a memory verse's first verse (the Memorize glyph, in the lamp's ink): '' with none. pop: added in place. */
+function mzBadgeHtml(b, c, v, { pop = false } = {}) {
+  const x = mzEntry(b, c, v); if (!x) return '';
+  return `<button class="b-mz${pop ? ' in' : ''}" type="button" data-practise="${esc(x.id)}" tabindex="-1" aria-label="${esc(mzBadgeLabel(x))}" title="Memory verse">${icon('memorize')}</button>`;
 }
 let lastFocusedV = null;      // roving tabindex memory within the current chapter
 let PEOPLE = null;            // people.json once loaded (hero monograms)
@@ -190,7 +199,7 @@ const peopleCountHtml = k => `<b>${k}</b> ${k === 1 ? 'person' : 'people'}`;
  * (stable data-* attributes, never positions: the interlinear adds and removes buttons), plus the verse to fall
  * back on (an interlinear word disappears when the interlinear is turned off).
  */
-const FOCUS_ATTRS = ['data-v', 'data-i', 'data-bm-v', 'data-bm-chapter', 'data-mark-read', 'data-nav', 'data-art', 'data-art-open', 'data-art-step', 'data-art-range', 'data-art-go', 'data-media', 'data-link-v', 'data-ann-v', 'data-open-settings', 'data-dismiss-notice'];
+const FOCUS_ATTRS = ['data-v', 'data-i', 'data-bm-v', 'data-bm-chapter', 'data-mark-read', 'data-nav', 'data-art', 'data-art-open', 'data-art-step', 'data-art-range', 'data-art-go', 'data-media', 'data-link-v', 'data-ann-v', 'data-practise', 'data-open-settings', 'data-dismiss-notice'];
 function captureFocus(el) {
   const ae = document.activeElement;
   if (!ae || ae === el || !el.contains(ae)) return null;
@@ -346,7 +355,7 @@ export async function renderReader(opts = {}) {
     const text = tr2
       ? `<div class="vcols"><div data-tr="${ab1}"><span class="sr">${ab1}: </span>${t1}</div><div class="alt" data-tr="${ab2}"><span class="sr">${ab2}: </span>${verseTextHtml(parallel.verses, v, n, tr2, rl2[`${c}:${v}`], kjv)}</div></div>`
       : t1;
-    const meta = `<span class="vmeta">${xc ? `<button class="xc" type="button" data-v="${v}" tabindex="-1" aria-label="${xl}" title="${xl}">${icon('link')}${xc}</button>` : ''}${badgesHtml(note, bms.get(v), v, artReady ? artHtml('verseBadgeHtml', b, c, v) : '', mediaReady ? mediaHtml(b, c, v) : '', linkBadgeHtml(b, c, v), annBadgeHtml(b, c, v))}</span>`;
+    const meta = `<span class="vmeta">${xc ? `<button class="xc" type="button" data-v="${v}" tabindex="-1" aria-label="${xl}" title="${xl}">${icon('link')}${xc}</button>` : ''}${badgesHtml(note, bms.get(v), v, artReady ? artHtml('verseBadgeHtml', b, c, v) : '', mediaReady ? mediaHtml(b, c, v) : '', linkBadgeHtml(b, c, v), annBadgeHtml(b, c, v), mzBadgeHtml(b, c, v))}</span>`;
     let inter = '';
     if (orig) { const words = orig[`${c}:${v}`]; if (words && words.length) inter = interlinear(words, heb, v); }
     if (b === 19) {
@@ -450,11 +459,13 @@ function interlinear(words, heb, v, title = false) {
 
 /**
  * Verse gutter badges: bookmark ribbon first, then note, videos, tags, the study-video icons (media.js) and the Doré
- * plate thumbnail last. My links' badge goes right after the bookmark ribbon, then the comments' (marks.js).
+ * plate thumbnail last. A memory verse's mark (memory.js) goes right after the bookmark ribbon, then My links' badge,
+ * then the comments' (marks.js).
  */
-function badgesHtml(note, bm, v, artBadge = '', mediaBadge = '', linkBadge = '', annBadge = '') {
+function badgesHtml(note, bm, v, artBadge = '', mediaBadge = '', linkBadge = '', annBadge = '', mzBadge = '') {
   const bs = [];
   if (bm) bs.push(bmBadgeHtml(bm, v));
+  if (mzBadge) bs.push(mzBadge);
   if (linkBadge) bs.push(linkBadge);
   if (annBadge) bs.push(annBadge);
   if (note) noteBadges(note, bs);
@@ -647,9 +658,9 @@ export function refreshVerseMarker(v) {
   const bmNode = bm && old && old.querySelector('.b-bm');    // keep the node: a bookmark menu may be anchored on it
   const medNodes = old ? [...old.querySelectorAll('.b-media')] : []; // keep the nodes: the video player returns the focus to one
   const hadFocus = old && old.contains(document.activeElement) ? document.activeElement.className : '';
-  const mh = medNodes.length ? '' : mediaHtml(state.book, state.chapter, v), lh = linkBadgeHtml(state.book, state.chapter, v), ah = annBadgeHtml(state.book, state.chapter, v);
-  if (old) old.outerHTML = badgesHtml(note, bm, v, '', mh, lh, ah);
-  else el.querySelector('.vmeta')?.insertAdjacentHTML('beforeend', badgesHtml(note, bm, v, '', mh, lh, ah));
+  const mh = medNodes.length ? '' : mediaHtml(state.book, state.chapter, v), lh = linkBadgeHtml(state.book, state.chapter, v), ah = annBadgeHtml(state.book, state.chapter, v), zh = mzBadgeHtml(state.book, state.chapter, v);
+  if (old) old.outerHTML = badgesHtml(note, bm, v, '', mh, lh, ah, zh);
+  else el.querySelector('.vmeta')?.insertAdjacentHTML('beforeend', badgesHtml(note, bm, v, '', mh, lh, ah, zh));
   const nb = el.querySelector('.badges');
   if (medNodes.length && nb) nb.append(...medNodes);
   if (artNode && nb) nb.appendChild(artNode);
@@ -699,7 +710,8 @@ export function refreshLibraryMarks() {
 
 /**
  * My links changed (bs:links-changed): add, update or remove the gutter badges that differ, in place, in the chapter
- * shown. An edit can move a link's end, so every verse is compared rather than only the ends of the changed ids.
+ * shown (after the memory verse's mark, else the bookmark ribbon). An edit can move a link's end, so every verse is
+ * compared rather than only the ends of the changed ids.
  */
 export function refreshLinkBadges() {
   const el = readerEl(); if (!el) return;
@@ -720,7 +732,7 @@ export function refreshLinkBadges() {
       if (had) { setRoving(verse); verse.focus({ preventScroll: true }); }
       return;
     }
-    const h = linkBadgeHtml(b, c, v), bs = verse.querySelector('.vmeta .badges'), bm = bs && bs.querySelector(':scope > .b-bm');
+    const h = linkBadgeHtml(b, c, v), bs = verse.querySelector('.vmeta .badges'), bm = bs && (bs.querySelector(':scope > .b-mz') || bs.querySelector(':scope > .b-bm'));
     if (bm) bm.insertAdjacentHTML('afterend', h);
     else if (bs) bs.insertAdjacentHTML('afterbegin', h);
     else verse.querySelector('.vmeta')?.insertAdjacentHTML('beforeend', `<span class="badges">${h}</span>`);
@@ -729,7 +741,8 @@ export function refreshLinkBadges() {
 
 /**
  * Comments changed (bs:marks-changed): add, update or remove the .b-ann badges that differ, in place, in the chapter
- * shown (after the link badge, else the bookmark ribbon). Every verse is compared: an edit can add or clear a comment.
+ * shown (after the link badge, else the memory verse's mark, else the bookmark ribbon). Every verse is compared: an
+ * edit can add or clear a comment.
  */
 export function refreshAnnBadges() {
   const el = readerEl(); if (!el) return;
@@ -749,8 +762,38 @@ export function refreshAnnBadges() {
       if (had) { setRoving(verse); verse.focus({ preventScroll: true }); }
       return;
     }
-    const h = annBadgeHtml(b, c, v), bs = verse.querySelector('.vmeta .badges'), prev = bs && (bs.querySelector(':scope > .b-link') || bs.querySelector(':scope > .b-bm'));
+    const h = annBadgeHtml(b, c, v), bs = verse.querySelector('.vmeta .badges'), prev = bs && (bs.querySelector(':scope > .b-link') || bs.querySelector(':scope > .b-mz') || bs.querySelector(':scope > .b-bm'));
     if (prev) prev.insertAdjacentHTML('afterend', h);
+    else if (bs) bs.insertAdjacentHTML('afterbegin', h);
+    else verse.querySelector('.vmeta')?.insertAdjacentHTML('beforeend', `<span class="badges">${h}</span>`);
+  });
+}
+
+/**
+ * Memory verses changed (bs:memory-changed): add, update or remove the .b-mz marks that differ, in place, in the chapter
+ * shown (right after the bookmark ribbon), never by re-rendering it. Every verse is compared: one can be added, removed
+ * or (two starting at a verse) take the other's place.
+ */
+export function refreshMemoryBadges() {
+  const el = readerEl(); if (!el) return;
+  const [b, c] = String(el.dataset.ch || '').split('.').map(Number);
+  if (!b || !c || !bookOf(b)) return;
+  el.querySelectorAll('.verse').forEach(verse => {
+    const v = +verse.dataset.v, x = mzEntry(b, c, v), cur = verse.querySelector('.vmeta .b-mz');
+    if (!x && !cur) return;
+    if (cur && x) {
+      if (cur.dataset.practise !== x.id) cur.dataset.practise = x.id;
+      const lab = mzBadgeLabel(x); if (cur.getAttribute('aria-label') !== lab) cur.setAttribute('aria-label', lab);
+      return;
+    }
+    if (cur) { // removed: a focused mark hands the focus to its verse
+      const had = cur.contains(document.activeElement);
+      cur.remove();
+      if (had) { setRoving(verse); verse.focus({ preventScroll: true }); }
+      return;
+    }
+    const h = mzBadgeHtml(b, c, v, { pop: true }), bs = verse.querySelector('.vmeta .badges'), bm = bs && bs.querySelector(':scope > .b-bm');
+    if (bm) bm.insertAdjacentHTML('afterend', h);
     else if (bs) bs.insertAdjacentHTML('afterbegin', h);
     else verse.querySelector('.vmeta')?.insertAdjacentHTML('beforeend', `<span class="badges">${h}</span>`);
   });
@@ -809,6 +852,11 @@ export function bindReader() {
     const w = t.closest('.iw'); if (w) { A.select(+w.dataset.v, { tab: 'orig', word: +w.dataset.i }); return; }
     const xc = t.closest('.xc'); if (xc) { A.select(+xc.dataset.v, { tab: 'xref' }); return; }
     const lb = t.closest('.b-link'); if (lb) { A.select(+lb.dataset.linkV, { tab: 'mine' }); return; } // My links
+    const zb = t.closest('.b-mz'); // a memory verse (memory.js): its practice, the focus back on the mark after
+    if (zb) {
+      if (!(mz && safeCall(mz.practise, zb.dataset.practise, { returnFocus: zb }))) A.toast?.('The practice is unavailable right now. Reload to try again.');
+      return;
+    }
     const ab = t.closest('.b-ann'); // comments (marks.js): the margin popover
     if (ab) {
       if (!(mrk && safeCall(mrk.openMarkPop, { v: +ab.dataset.annV, from: 'badge', origin: ab }))) A.toast?.('Comments are unavailable right now. Reload to try again.');
@@ -890,4 +938,5 @@ export function bindReader() {
   document.addEventListener('bs:library-changed', () => refreshLibraryMarks());
   document.addEventListener('bs:links-changed', () => refreshLinkBadges());
   document.addEventListener('bs:marks-changed', () => refreshAnnBadges());
+  document.addEventListener('bs:memory-changed', () => refreshMemoryBadges());
 }

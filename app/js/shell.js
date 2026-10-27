@@ -53,7 +53,7 @@ const closeOverlays = () => {
     if (x) x.click(); else A.closeDialog(d);
   });
 };
-/** The Library (study-build-brief §2): the Study views or the Library home, through the page's own action (its guards). */
+/** The Library (study-build-brief §2): the Study views, Memory or the Library home, through the page's own action (its guards). */
 function openLib(opts) { closeOverlays(); A.openLibrary(opts); return true; }
 /** '43/3/16', '#43/3' or a typed reference ('John 3:16') → the chapter, clamped to the Bible like a hash. */
 function openRef(text) {
@@ -75,13 +75,14 @@ export const BL = {
    *  reader), 'api' (ESV and NLT: disabled for everyone but the hosted site's owner, hosting brief §2) or 'external' (a
    *  website, as the NIV, NKJV and NASB are when serve.py cannot serve them). */
   translations: () => state.translations.map(t => ({ id: t.id, abbr: t.abbr, name: t.name || t.abbr, kind: t.kind, disabled: !!$(`#tr option[value="${CSS.escape(t.id)}"]`)?.disabled })),
-  /** 'home' | 'read' | 'study' | 'library' | 'profile' | 'settings' | 'picker', a hash '43/3/16' or a reference 'John 3:16'. */
+  /** 'home' | 'read' | 'study' | 'memory' | 'library' | 'profile' | 'settings' | 'picker', a hash '43/3/16' or a reference 'John 3:16'. */
   open(where) {
     const w = String(where || '').trim();
     switch (w) {
       case 'home': closeOverlays(); A.goHome(); return done(true);
       case 'read': closeOverlays(); if (state.home) A.navigate(state.book, state.chapter, state.selected || 0); return done(true);
       case 'study': return done(openLib({ view: 'study' }));
+      case 'memory': return done(openLib({ view: 'memory' }));
       case 'library': return done(openLib({}));
       case 'profile': closeOverlays(); if (state.auth.signedIn) H.openProfile(); else A.openAuth('signin'); return done(true);
       case 'settings': closeOverlays(); A.openSettings(); return done(true);

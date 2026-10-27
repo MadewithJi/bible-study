@@ -152,6 +152,45 @@ body.at-home #progress { display: none; }
 #home .prog-bar { grid-column: 1 / -1; position: relative; height: 4px; border-radius: 2px; background: rgba(255,255,255,.14); overflow: hidden; }
 #home .prog-bar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, color-mix(in srgb, var(--lamp) 55%, transparent), var(--lamp)); box-shadow: 0 0 10px var(--lamp); }
 
+/* ---------- your memory verse (memorize-brief §6): a second continue band, its hairline keeping the two apart; the
+   lamp's glow stays Continue's. The dots are memory.css's .mz-steps. ---------- */
+#home .mz-mem::before { content: none; }
+#home .mz-mem .mz-where { display: flex; align-items: center; gap: 9px; }
+#home .mz-mem .mz-when { margin-top: 4px; }
+#home .mz-mem .mz-due { font-weight: 500; color: var(--lamp-ink); }
+#home .mz-mem .mz-first { overflow: hidden; white-space: nowrap; text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); }
+#home .mz-quiet { height: 46px; padding: 0 16px; border-radius: var(--r-pill); font: 500 15px/1 var(--sans); color: var(--label-2); white-space: nowrap; transition: background-color var(--d-1), color var(--d-1); }
+#home .mz-quiet:hover { color: var(--label); background: rgba(255,255,255,.08); }
+#home .mz-later { color: var(--label-2); font-size: 15px; }
+#home .mz-also button { display: inline-flex; align-items: center; min-height: 32px; font: 400 14px/1.35 var(--sans); color: var(--label-2); text-align: left; border-radius: 6px; transition: color var(--d-1); }
+#home .mz-also button span { color: var(--label); text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); text-underline-offset: 3px; margin-left: .3em; }
+#home .mz-also button:hover, #home .mz-also button:hover span { color: var(--label); text-decoration-color: currentColor; }
+/* the buttons and the line under them: the third column when wide (a passage translation has no first words) */
+#home .mz-side { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+@media (min-width: 900px) { #home .mz-mem .mz-side { grid-column: 3; } }
+@media (max-width: 899px) {
+  #home .mz-mem .mz-side { grid-column: 1 / -1; grid-row: 3; }
+  #home .mz-mem .no-first .mz-side { grid-row: 2; }
+}
+/* a phone: the cover stays as it is, so the band is compact to keep Practise above the fold. Rows 1–2: the kicker and
+   the reference, Practise beside them; row 3: where it stands; row 4: when, and Not today; row 5: also due */
+@media (max-width: 599px) {
+  #home .mz-mem .cont-in { grid-template-columns: minmax(0, 1fr) auto; gap: 0 16px; padding-block: 26px 28px; }
+  #home .mz-mem .cont-in > div:first-child, #home .mz-mem :is(.mz-side, .mz-act) { display: contents; }
+  #home .mz-mem .kick { grid-area: 1 / 1; }
+  #home .mz-mem .cont-t { grid-area: 2 / 1; }
+  #home .mz-mem .mz-where { grid-area: 3 / 1 / auto / -1; }
+  #home .mz-mem .mz-when { grid-area: 4 / 1; align-self: center; margin-top: 0; }
+  #home .mz-mem .mz-first { display: none; }
+  #home .mz-mem .mz-act .mz-go { grid-area: 1 / 2 / 3; align-self: end; width: auto; }
+  #home .mz-mem .mz-act .mz-quiet.mz-go { margin-right: -12px; padding: 0 12px; }
+  #home .mz-mem .mz-act [data-mz] { grid-area: 4 / 2; justify-self: end; height: 44px; margin-right: -12px; padding: 0 12px; }
+  #home .mz-mem .mz-later { grid-area: 4 / 1 / auto / -1; margin-top: 8px; }
+  #home .mz-mem .mz-later .mz-quiet { height: 44px; }
+  #home .mz-mem .mz-also { grid-area: 5 / 1 / auto / -1; margin-top: 6px; }
+  #home .mz-also button { min-height: 44px; }
+}
+
 /* ---------- paper: the light sections, with a faint lit path down the left ---------- */
 #home .paper { position: relative; }
 #home .paper::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(max(0px, (100% - var(--wrap) - 2 * var(--gutter)) / 2) + var(--gutter) - 30px); width: 1px; background: linear-gradient(180deg, color-mix(in srgb, var(--lamp) 60%, transparent) 0, color-mix(in srgb, var(--lamp) 22%, transparent) 40%, color-mix(in srgb, var(--lamp) 10%, transparent) 80%, transparent 100%); pointer-events: none; }
@@ -431,6 +470,7 @@ body.at-home #progress { display: none; }
   #home .wd.lit .wo { text-shadow: none; } #home .ws { color: LinkText; }
   #home .pl-b { border: 1px solid ButtonText; box-shadow: none; } #home .pl-b span { background: Canvas; padding-top: 6px; }
   #home .pause { border: 1px solid CanvasText; } #home .pause-t::before { display: none; }
+  #home .mz-quiet { border: 1px solid ButtonText; } #home .mz-mem .mz-first { -webkit-mask-image: none; mask-image: none; }
 }
 
 /* ---------- print: the verse of the day, and nothing heavy ---------- */
