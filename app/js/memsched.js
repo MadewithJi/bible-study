@@ -140,14 +140,29 @@ const TYPED_MAX = 3000;
 /**
  * What was typed against the verse's words (from tokenize): { right, total, missed, extra, typed }. An LCS alignment on
  * normalised words; a word of 5+ letters one edit away still counts (a typo is not a lapse of memory). missed: indexes
- * of verse words not matched; typed: the typed words (tokenize); extra: indexes of typed words not matched. Words with
- * no letters, and verse numbers typed along (digits the verse doesn't have), are not counted either way.
+ * of verse words not matched; typed: the typed words (tokenize, with 'LORD--you' parted); extra: indexes of typed words
+ * not matched. Words with no letters, and verse numbers typed along (digits the verse doesn't have), are not counted
+ * either way.
  */
 export function compareTyped(verseWords, typed) {
   const vw = Array.isArray(verseWords) ? verseWords : [];
   const V = [], vi = [];
   vw.forEach((w, i) => { const n = normWord(w); if (n) { V.push(n); vi.push(i); } });
-  const have = new Set(V), tw = tokenize(typed), T = [], ti = [];
+  const have = new Set(V), T = [], ti = [];
+  // a dash typed as '--' or '-' ('LORD--you', "land'--He") parts two words when a part is a verse word, unless the
+  // joined word is a verse word or a typo of a hyphenated one: 'Beth-el', and 'Beth-al' or 'Jehovah-jirah', stay one
+  const dash = /[\p{L}\p{N}][^\s\p{L}\p{N}]*-[^\s\p{L}\p{N}]*[\p{L}\p{N}]/u;
+  const H = vw.filter(w => dash.test(w)).map(normWord);
+  const whole = w => have.has(w) || H.some(v => letters(v) >= 5 && oneEdit(v, w));
+  const tw = tokenize(typed).flatMap(t => {
+    if (!dash.test(t) || whole(normWord(t))) return [t];
+    const p = t.replace(/-+(?=[^\s\p{L}\p{N}]*[\p{L}\p{N}])/gu, '$& ').split(' '), parts = [];
+    for (let i = 0, j; i < p.length; i = j + 1) {   // rejoin the longest run that is whole ('people--God-fearing')
+      for (j = Math.min(p.length - 1, i + 5); j > i && !whole(normWord(p.slice(i, j + 1).join(''))); j--);
+      parts.push(p.slice(i, j + 1).join(''));
+    }
+    return parts.some(x => have.has(normWord(x))) ? parts : [t];
+  });
   for (let i = 0; i < tw.length && T.length < TYPED_MAX; i++) {
     const n = normWord(tw[i]);
     if (n && !(/^\d+$/.test(n) && !have.has(n))) { T.push(n); ti.push(i); }

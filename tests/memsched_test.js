@@ -101,5 +101,26 @@ r = compareTyped(jw, '');
 eq([r.right, r.total, r.missed.length, r.extra, r.typed], [0, 25, 25, [], []], 'compareTyped: nothing typed');
 r = compareTyped(tokenize('he said — come'), 'he said come');
 eq([r.right, r.total], [3, 3], 'compareTyped: a lone dash is not a word');
+const EX241 = tokenize('Then the LORD said to Moses, “Come up to the LORD—you and Aaron, Nadab and Abihu, and seventy of Israel’s elders—and you are to worship at a distance.');
+for (const d of ['--', '-']) {
+  r = compareTyped(EX241, `Then the LORD said to Moses, "Come up to the LORD${d}you and Aaron, Nadab and Abihu, and seventy of Israel's elders${d}and you are to worship at a distance.`);
+  eq([r.right, r.total, r.missed, r.extra, r.typed[10], r.typed[11]], [30, 30, [], [], `LORD${d}`, 'you'], `compareTyped: a dash typed as '${d}'`);
+}
+r = compareTyped(tokenize('And he called the name of that place Beth-el: but the name of that city was called Luz at the first.'), 'And he called the name of that place Beth-el but the name of that city was called Luz at the first');
+eq([r.right, r.total, r.extra], [21, 21, []], 'compareTyped: a hyphenated name stays one word');
+r = compareTyped(tokenize('Moses kept the flock of Jethro his father-in-law'), 'Moses kept the flock of Jethro his father-in-law');
+eq([r.right, r.total, r.typed.length], [8, 8, 8], 'compareTyped: father-in-law stays one word');
+r = compareTyped(tokenize('Then Abraham called the name of that place Jehovah-jireh'), 'Then Abraham called the name of that place Jehovah-jirah');
+eq([r.right, r.total, r.extra], [9, 9, []], 'compareTyped: a typo in a hyphenated name still counts');
+r = compareTyped(tokenize('Then Abraham called the name of that place Jehovah-jireh'), 'Then Abraham called the name of that place Jehova-jireh');
+eq([r.right, r.total, r.extra], [9, 9, []], 'compareTyped: a typo before the hyphen still counts');
+r = compareTyped(tokenize('And he called the name of that place Beth-el: but the name of that city was called Luz at the first.'), 'And he called the name of that place Beth-al but the name of that city was called Luz at the first');
+eq([r.right, r.total, r.extra], [21, 21, []], 'compareTyped: Beth-al is a typo of Beth-el, not two words');
+r = compareTyped(tokenize('and Moses went in to his father-in-law in the land'), 'and Moses went in to his father-in-lax in the land');
+eq([r.right, r.total, r.extra], [10, 10, []], 'compareTyped: a typo of father-in-law stays one word though the verse has “in”');
+r = compareTyped(tokenize('select capable men from among the people—God-fearing, trustworthy men'), 'select capable men from among the people--God-fearing, trustworthy men');
+eq([r.right, r.total, r.extra], [10, 10, []], 'compareTyped: a typed dash beside a hyphenated word');
+r = compareTyped(tokenize('saying, ‘To your offspring I will give this land’—He will send His angel'), "saying, 'To your offspring I will give this land'--He will send His angel");
+eq([r.right, r.total, r.extra], [14, 14, []], 'compareTyped: a typed dash after a quote');
 
 print(`ok ${n}`);

@@ -31,7 +31,11 @@ let practiceP = null;
 export function practise(id, opts = {}) {
   if (!practiceP) practiceP = import('./practice.js').catch(e => { practiceP = null; console.error('practice.js failed to load', e); return null; });
   return practiceP.then(m => {
-    if (m && typeof m.openPractice === 'function') return safe(m.openPractice, id, opts);
+    if (m && typeof m.openPractice === 'function') {
+      const ok = safe(m.openPractice, id, opts);
+      if (ok === false) toast('This verse is no longer one of your memory verses.');   // removed in another window meanwhile
+      return ok;
+    }
     toast('The practice is unavailable right now. Reload to try again.');
     return undefined;
   });
@@ -146,26 +150,30 @@ async function chapterVerses(tr, b, c) {
   return bk[c] || [];
 }
 /**
- * The words of a memory verse: { tr, text, verses: [{v, t}], credit: {copyright, fumsToken}, fallback }. tr is the
- * text's translation; fallback is 'kjv' when the verse's own (entry.tr) can't be had here (not available, or offline)
- * and the KJV is shown instead, else ''. credit is the text's copyright line (an NIV, NKJV or NASB chapter's, or the
- * ESV's or NLT's from store.js COPYRIGHT; '' for the KJV and BSB) and an NIV, NKJV or NASB chapter's FUMS token
- * (practice.js calls reader.js fumsView with it once per practice opened).
+ * The words of a memory verse: { tr, text, verses: [{v, t}], credit: {copyright, fumsToken}, fallback, omitted }. tr is
+ * the text's translation; fallback is 'kjv' when the verse's own (entry.tr) can't be had here (not available, offline,
+ * or a verse it leaves out) and the KJV is shown instead, else ''; omitted is true when its chapter loaded but has no
+ * text for the verse (the BSB's 16 textual variants, ESV/NLT gaps), so the practice doesn't call the translation
+ * unavailable. credit is the text's copyright line (an NIV, NKJV or NASB chapter's, or the ESV's or NLT's from store.js
+ * COPYRIGHT; '' for the KJV and BSB) and an NIV, NKJV or NASB chapter's FUMS token (practice.js calls reader.js
+ * fumsView with it once per practice opened).
  * Null when not even the KJV loads.
  */
 export async function memoryText(entry) {
   const p = parseRef(entry && entry.ref); if (!p) return null;
   const pick = vs => { const out = []; for (let v = p.v; v <= p.w; v++) { const t = String((vs && vs[v - 1]) ?? '').trim(); if (t) out.push({ v, t }); } return out; };
   const want = TRS.includes(entry.tr) ? entry.tr : 'kjv';
-  let tr = want, verses = [];
-  if (trUsable(want) || want === 'kjv') { try { verses = pick(await chapterVerses(want, p.b, p.c)); } catch (e) { verses = []; } }
+  let tr = want, verses = [], omitted = false;
+  if (trUsable(want) || want === 'kjv') {
+    try { const vs = await chapterVerses(want, p.b, p.c); verses = pick(vs); omitted = !verses.length && Array.isArray(vs) && vs.length > 0; } catch (e) { verses = []; }
+  }
   if (!verses.length && want !== 'kjv') {
     tr = 'kjv';
     try { verses = pick(await chapterVerses('kjv', p.b, p.c)); } catch (e) { verses = []; }
   }
   if (!verses.length) return null;
   const cr = LICENSED_IDS.includes(tr) ? data.passageCredit(tr, p.b, p.c) : null;
-  return { tr, text: verses.map(x => x.t).join(' '), verses, credit: { copyright: (cr && cr.copyright) || COPYRIGHT[tr] || '', fumsToken: (cr && cr.fumsToken) || '' }, fallback: tr !== want ? 'kjv' : '' };
+  return { tr, text: verses.map(x => x.t).join(' '), verses, credit: { copyright: (cr && cr.copyright) || COPYRIGHT[tr] || '', fumsToken: (cr && cr.fumsToken) || '' }, fallback: tr !== want ? 'kjv' : '', omitted: tr !== want && omitted };
 }
 /** A KJV or BSB memory verse's text for a list (Home, the Library); '' for the others (no API calls for a list). */
 export async function memoryPreview(entry) {
