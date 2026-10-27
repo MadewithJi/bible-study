@@ -754,8 +754,9 @@ export function flashMark(id, { scroll = true } = {}) {
 }
 
 // ------------------------------------------------------------ the selection bubble and the comment card (§3.2)
-let pending = null;   // { draft, range, ranges, mark, origin, touch, b, c, at? } while the bubble or the card is open (range: to place by; ranges: what is painted)
+let pending = null;   // { draft, range, ranges, mark, origin, touch, b, c, at?, whole? } while the bubble or the card is open (range: to place by; ranges: what is painted; whole: a clicked verse)
 let bubbleShown = false, cardShown = false;
+let reclick = null;   // the clicked verse whose bubble this press closed: its click then leaves it closed
 let card = null;      // { text0, color }
 let lastPointer = 'mouse', selT = 0, keyT = 0, moveRaf = 0;
 /** The bubble or the comment card is open. */
@@ -837,7 +838,7 @@ function repaintPending() {
   }
   const root = readerEl(); if (!root) return;
   unwrap(root, 'span.mk-pend');
-  const rs = pending ? anchorRanges(pending.draft, root) : [];
+  const rs = pending && !pending.whole ? anchorRanges(pending.draft, root) : [];
   if (rs.length) wrap([{ ranges: rs, cls: 'mk-pend' }]);
 }
 const sameDraft = (x, y) => !!x && !!y && x.tr === y.tr && x.start === y.start && x.so === y.so && x.end === y.end && x.eo === y.eo;
@@ -896,14 +897,16 @@ function rove(el, i) {
   items.forEach((b, k) => { b.tabIndex = k === i ? 0 : -1; });
   return items[i];
 }
-function showBubble(draft, range, how) {
+function showBubble(draft, range, how, { whole = null } = {}) {
   const el = bubbleEl(), root = readerEl(); if (!el || !root) return;
   const [b, c] = root.dataset.ch.split('.').map(Number);
   const a = document.activeElement;
   const origin = a && a !== root && root.contains(a) ? a : (pending && pending.origin) || document.getElementById('v' + vOf(draft.start));
-  pending = { draft, range: range.cloneRange(), ranges: anchorRanges(draft, root), mark: containing(draft), origin, touch: how === 'touch', b, c };
+  // a clicked verse is shown by its selected-verse frame, so its words are not tinted as well
+  pending = { draft, range: range.cloneRange(), ranges: whole ? [] : anchorRanges(draft, root), mark: containing(draft), origin, touch: how === 'touch', b, c };
+  if (whole) { pending.whole = true; pending.at = whole; }
   el.innerHTML = bubbleHtml(pending.mark, draft);
-  el.setAttribute('aria-label', `Selected words in ${markLabel(draft)}`);
+  el.setAttribute('aria-label', whole ? markLabel(draft) : `Selected words in ${markLabel(draft)}`);
   rove(el);
   el.classList.toggle('touch', pending.touch);
   el.hidden = false; bubbleShown = true;
@@ -925,11 +928,29 @@ export function closeBubble({ restore = false } = {}) {
   const o = (restore || hadFocus) && p ? live(p.origin) : null; if (o) o.focus({ preventScroll: true });
   return true;
 }
+/**
+ * A click on a verse (reader.js): the bubble for the whole verse, so its colours, Comment, Copy and Memorize are one
+ * click away (Ji, 2026-10-27: "a single click on the verse doesn't do anything"). `col`: the parallel column clicked.
+ * A second click on the same verse closes it. false when nothing opened (pick mode, Original, an omitted verse).
+ */
+export function openVerseBubble(verse, { col = 0 } = {}) {
+  const again = reclick; reclick = null;
+  if (cardShown || blocked() || !verse || !verse.isConnected) return false;
+  const vt = vtextOf(verse, col); if (!vt || vt.classList.contains('omitted')) return false;
+  const info = textInfo(vt), p = domPoint(info, 0, false), q = domPoint(info, info.len, true); if (!p || !q) return false;
+  const r = document.createRange();
+  try { r.setStart(p[0], p[1]); r.setEnd(q[0], q[1]); } catch (e) { return false; }
+  const d = rangeToDraft(r); if (!d) return false;
+  if (again && sameDraft(again, d)) return false;
+  showBubble(d, r, lastPointer === 'touch' ? 'touch' : 'mouse', { whole: vt });
+  return bubbleShown;
+}
 function considerSelection(how) {
   if (cardShown) return;
   const sel = window.getSelection?.();
   const d = selectionToDraft(sel);
-  if (!d) { if (bubbleShown && !bubbleEl()?.contains(document.activeElement)) closeBubble(); return; }
+  // no words selected: a clicked verse's bubble stays (the click that opened it collapses the selection too)
+  if (!d) { if (bubbleShown && !(pending && pending.whole) && !bubbleEl()?.contains(document.activeElement)) closeBubble(); return; }
   if (bubbleShown && pending && sameDraft(pending.draft, d)) { place(bubbleEl()); return; }
   showBubble(d, sel.getRangeAt(0), how === 'touch' || lastPointer === 'touch' ? 'touch' : how);
 }
@@ -1003,9 +1024,10 @@ function memorizePending() {
 }
 async function copyPending() {
   const p = pending; if (!p) return;
-  const ok = await clip(copyText(p.draft));
+  // a clicked verse is copied with its reference, as several selected verses are
+  const ok = await clip(p.whole ? `${p.draft.quote.replace(/\s+/g, ' ').trim()}\n${markLabel(p.draft)} (${trInfo(p.draft.tr).abbr})` : copyText(p.draft));
   closeBubble({ restore: true });
-  toast(ok ? 'Copied the words.' : 'Couldn’t copy. The browser blocked the clipboard.');
+  toast(ok ? (p.whole ? `Copied ${markLabel(p.draft)}.` : 'Copied the words.') : 'Couldn’t copy. The browser blocked the clipboard.');
 }
 
 function cardHtml(p, m) {
@@ -1477,6 +1499,7 @@ export function initMarks(actions) {
   document.addEventListener('pointerdown', e => {
     lastPointer = e.pointerType || 'mouse';
     const t = e.target;
+    reclick = bubbleShown && pending && pending.whole && t instanceof Element && t.closest('#reader .verse') ? pending.draft : null;
     if (bubbleShown && !bubbleEl()?.contains(t)) closeBubble();
     if (cardShown && !cardEl()?.contains(t) && !cardDirty()) closeCard({ restore: false }); // typed words wait for Cancel or Save
   }, true);

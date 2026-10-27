@@ -34,6 +34,9 @@ optional(import('./marks.js'), 'marks.js').then(m => { if (!m || typeof m.marksF
 // a reference to a highlight or comment renders as a plain verse link
 let study = null;
 optional(import('./study.js'), 'study.js').then(m => { if (!m || typeof m.attachPicker !== 'function') return; study = m; refreshNoteMarks(); paintNoteVerses(); });
+// memory.js (the header's Memorize: memorize-brief §4) likewise: the button shows once it has loaded
+let mem = null;
+optional(import('./memory.js'), 'memory.js').then(m => { if (!m || typeof m.memorize !== 'function') return; mem = m; renderMemorizeBtn(); });
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const bodyEl = () => document.getElementById('drawer-body');
@@ -171,6 +174,7 @@ export function renderHead() {
   bodyEl()?.setAttribute('aria-labelledby', 'tab-' + tab);
 
   renderBookmarkBtn(b, c, search ? 0 : (v || 0));
+  renderMemorizeBtn();
 
   // tab badges
   const note = noteFor(refKey(b, c, v));
@@ -226,6 +230,31 @@ function renderBookmarkBtn(b, c, v) {
   hb.querySelector('svg')?.classList.toggle('f', on);
 }
 const bookmarkTarget = () => ({ b: state.book, c: state.chapter, v: state.drawerTab === 'search' ? 0 : (state.selected || 0) });
+/**
+ * #btn-memorize (Ji, 2026-10-27): blue beside the bookmark, so Memorize is plain to see once a verse is open; Practise
+ * when the verse already is a memory verse. Hidden for a chapter, beside a search, for a verse the translation leaves
+ * out, and without memory.js.
+ */
+function renderMemorizeBtn() {
+  const btn = document.getElementById('btn-memorize'); if (!btn) return;
+  const b = state.book, c = state.chapter, v = state.selected || 0;
+  const omitted = !!document.querySelector(`#reader .verses > .verse[data-v="${v}"] .vtext.omitted`);
+  const hide = !mem || !v || state.drawerTab === 'search' || omitted;
+  if (hide && document.activeElement === btn) document.getElementById('drawer-close')?.focus({ preventScroll: true });
+  btn.hidden = hide; if (hide) return;
+  const have = !!safe(mem.findByRef, `${b}.${c}.${v}`), name = refLabel(b, c, v);
+  const label = `${have ? 'Practise' : 'Memorize'} ${name}`;
+  if (btn.getAttribute('aria-label') !== label) btn.setAttribute('aria-label', label);
+  btn.title = have ? 'Practise this memory verse' : 'Memorize this verse';
+  btn.classList.toggle('have', have);
+}
+function memorizeSelected() {
+  const btn = document.getElementById('btn-memorize'), b = state.book, c = state.chapter, v = state.selected || 0;
+  if (!mem || !v) return;
+  const have = safe(mem.findByRef, `${b}.${c}.${v}`);
+  if (have) { safe(mem.practise, have.id, { returnFocus: btn }); return; }
+  if (safe(mem.memorize, { b, c, v, tr: state.tr })) A.flash([v], { scroll: false });
+}
 
 /** Study signals for tracker.js (§5.14). */
 function wordStudied(strong, word) {
@@ -989,7 +1018,7 @@ function markSecHtml(b, c, v) {
   const list = safe(mrk.marksFor, b, c, v) || [];
   if (S.readOnlyGuest() && !list.length) return ''; // a hosted guest has the sign-in card above instead
   return `<section class="mk-sec" id="mk-sec" aria-labelledby="mk-h" tabindex="-1"><div class="lh"><h3 id="mk-h">Highlights and comments</h3><span>${list.length || ''}</span></div>
-    ${list.length ? `<ul class="group mk-list">${list.map(m => safe(mrk.markCardHtml, m) || '').join('')}</ul>` : '<p class="foot-note mk-empty">Select words in the verse to highlight them or add a comment.</p>'}</section>`;
+    ${list.length ? `<ul class="group mk-list">${list.map(m => safe(mrk.markCardHtml, m) || '').join('')}</ul>` : '<p class="foot-note mk-empty">Click or tap the verse, or select words in it, to highlight them or add a comment.</p>'}</section>`;
 }
 /** Marks changed (or were drawn again, or marks.js loaded): the Notes tab's count, its verse group and its lists, in place. */
 let nmQueued = false;
@@ -1587,7 +1616,10 @@ export function bindDrawer() {
     const { b, c, v } = bookmarkTarget();
     if (typeof A.toggleBookmark === 'function') A.toggleBookmark(b, c, v); else safe(libFn('toggleBookmark'), b, c, v);
   });
+  document.getElementById('btn-memorize')?.addEventListener('click', memorizeSelected);
   document.addEventListener('bs:library-changed', () => { const { b, c, v } = bookmarkTarget(); if (bookOf(b)) renderBookmarkBtn(b, c, v); });
+  document.addEventListener('bs:memory-changed', renderMemorizeBtn);
+  document.addEventListener('bs:chapter-rendered', renderMemorizeBtn); // a translation that leaves the verse out is known once it is drawn
   document.addEventListener('bs:links-changed', () => { renderMineCount(); paintNoteVerses(); }); // links.js redraws an open Mine body itself
   ['bs:note-saved', 'bs:notes-replaced'].forEach(n => document.addEventListener(n, soonNoteVerses)); // a save elsewhere, a sync
   // highlights and comments (marks.js): drawn again after each change and chapter render ('Text moved' is known then)
