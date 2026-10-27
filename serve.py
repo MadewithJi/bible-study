@@ -23,6 +23,7 @@ Profiles (local email + password, no email is ever sent), per-scope library and 
   POST /api/notes/changes (per-key merge)   GET /api/library   POST /api/library/events
   GET  /api/links   POST /api/links/changes (My links: user-made verse connections, per-key merge)
   GET  /api/marks   POST /api/marks/changes (highlights and comments on words of the text, per-key merge)
+  GET  /api/memory  POST /api/memory/changes (Memorize: memory verses and their practice schedule, per-key merge)
   POST /api/library/bookmarks   PATCH|DELETE /api/library/bookmarks/{id}
   POST /api/library/chapters | /api/library/reset   POST /api/profile/import-guest
   GET  /api/export/profile   POST /api/profile/import (that file, merged into the signed-in profile)
@@ -37,10 +38,11 @@ BS_PROFILE_QUOTA_MB (default 25) and a free-space guard bound what strangers can
 feed GET /api/admin/traffic (owners only, 404 for anyone else) and '[alert]' lines on stderr.
 The donation link (.design/donate-brief.md): GET or HEAD /donate and /support answer 302 to BS_DONATE_URL (default
 https://buymeacoffee.com/biblelantern), never a permanent redirect, so it can be re-pointed without changing a link.
-Data layout (DATA = --data-dir, default notes/): notes.json, guest-library.json, guest-links.json and
-guest-marks.json (guest), config.json, cache/ (cache/apibible/: bibles.json, usage.json), users.json, sessions.json (hashed tokens only),
-profiles/<uid>/{notes,library,links,marks}.json, deleted/, owner-claims.json and metrics.json (hosted). Full contract:
-.design/profiles-spec.md, .design/links-spec.md and .design/annotations-brief.md
+Data layout (DATA = --data-dir, default notes/): notes.json, guest-library.json, guest-links.json, guest-marks.json
+and guest-memory.json (guest), config.json, cache/ (cache/apibible/: bibles.json, usage.json), users.json,
+sessions.json (hashed tokens only), profiles/<uid>/{notes,library,links,marks,memory}.json, deleted/, owner-claims.json
+and metrics.json (hosted). Full contract: .design/profiles-spec.md, .design/links-spec.md, .design/annotations-brief.md
+and .design/memorize-brief.md
 """
 import argparse, contextlib, datetime, getpass, hashlib, hmac, http.client, ipaddress, json, math, os, re, secrets, shutil
 import signal, socket, sys, threading, time, traceback, urllib.parse, urllib.request
@@ -769,6 +771,7 @@ EVENTS_WINDOW = Window(120, 60)     # per scope
 NOTES_WINDOW = Window(300, 60)      # per scope
 LINKS_WINDOW = Window(300, 60)      # per scope
 MARKS_WINDOW = Window(300, 60)      # per scope
+MEMORY_WINDOW = Window(300, 60)     # per scope
 UPSTREAM_WINDOW = Window(50, 60)    # ESV/NLT API calls, per translation (ESV throttles a key past 60 a minute)
 APIBIBLE_CLIENT_WINDOW = Window(30, 600)  # API.Bible calls (cache misses) per client, hosted: no one spends the month
 IMPORT_WINDOW = Window(30, 60)      # profile imports, per scope
@@ -1101,6 +1104,7 @@ MESSAGES = {
     "invalid_themes": "Those theme choices could not be saved.",
     "invalid_link": "That link could not be saved.",
     "invalid_mark": "That highlight could not be saved.",
+    "invalid_memory_verse": "That memory verse could not be saved.",
     "invalid_ref": "That is not a valid Bible reference.",
     "invalid_label": "Labels can be up to 80 characters.",
     "invalid_color": "Choose red, orange, yellow, green, blue or purple.",
@@ -1121,6 +1125,7 @@ MESSAGES = {
     "bookmark_limit": "You’ve reached the limit of 2,000 bookmarks.",
     "link_limit": "You’ve reached the limit of 10,000 links.",
     "mark_limit": "You’ve reached the limit of 20,000 highlights and comments.",
+    "memory_verse_limit": "You’ve reached the limit of 1,000 memory verses.",
     "length_required": "Content-Length is required.",
     "too_large": "The request is too large.",
     "unsupported_media_type": "Send JSON with Content-Type: application/json.",
@@ -1688,10 +1693,11 @@ class Handler(SimpleHTTPRequestHandler):
 
     def me_body(self):
         if HOSTED:  # the hosted guest store is shared by every visitor and never imported (h_import_guest)
-            g = A.guest_summary(A.empty_notes(), A.new_library(), A.empty_links(), A.empty_marks())
+            g = A.guest_summary(A.empty_notes(), A.new_library(), A.empty_links(), A.empty_marks(), A.empty_memory())
         else:
             with A.lock_for("guest"):
-                g = A.guest_summary(A.load_notes("guest"), A.load_library("guest"), A.load_links("guest"), A.load_marks("guest"))
+                g = A.guest_summary(A.load_notes("guest"), A.load_library("guest"), A.load_links("guest"), A.load_marks("guest"),
+                                    A.load_memory("guest"))
         with A.auth_lock():
             users = A.load_users()
             user = users["users"].get(self._uid) if self._uid else None
@@ -1768,25 +1774,29 @@ class Handler(SimpleHTTPRequestHandler):
             os.mkdir(pdir, 0o700)
             created_dir = True
             notes, lib, links, marks = A.empty_notes(), A.new_library(now), A.empty_links(), A.empty_marks()
-            notes["rev"], lib["rev"], links["rev"], marks["rev"] = 1, 1, 1, 1
+            memory = A.empty_memory()
+            notes["rev"], lib["rev"], links["rev"], marks["rev"], memory["rev"] = 1, 1, 1, 1, 1
             if import_guest:
                 with A.lock_for("guest"):
                     g_notes, g_lib, g_links = A.load_notes("guest"), A.load_library("guest"), A.load_links("guest")
-                    g_marks = A.load_marks("guest")
-                if A.guest_summary(g_notes, g_lib, g_links, g_marks)["hasData"]:
+                    g_marks, g_memory = A.load_marks("guest"), A.load_memory("guest")
+                if A.guest_summary(g_notes, g_lib, g_links, g_marks, g_memory)["hasData"]:
                     notes = {"refs": g_notes["refs"], "studies": g_notes["studies"], "themes": g_notes["themes"],
                              "rev": 1, "deleted": {}}
                     links["links"] = g_links["links"]  # copied (rev 1, no tombstones); the guest file is left as it is
                     marks["marks"] = g_marks["marks"]  # likewise
+                    memory["memory"] = g_memory["memory"]  # likewise
                     counts = A.merge_library(lib, g_lib, "copy", now)
                     imported = {"notes": len(notes["refs"]), "bookmarks": counts["bookmarks"], "chapters": counts["chapters"],
-                                "links": len(links["links"]), "marks": len(marks["marks"]), "studies": len(notes["studies"]),
+                                "links": len(links["links"]), "marks": len(marks["marks"]), "memory": len(memory["memory"]),
+                                "studies": len(notes["studies"]),
                                 "themes": len(set(notes["themes"]["accepted"]) | set(notes["themes"]["removed"])  # names, as merge_themes counts them
                                               | set(notes["themes"]["renamed"]) | set(notes["themes"]["merged"]))}
             A.add_activity(lib, {"t": now, "type": "profile.create", "ref": None})
             if imported: A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
-            with A.lock_for(uid):  # links, then marks, then library (the lock order at A.lock_for)
-                A.save_notes(uid, notes); A.save_links(uid, links); A.save_marks(uid, marks); A.save_library(uid, lib)
+            with A.lock_for(uid):  # links, then marks, then memory, then library (the lock order at A.lock_for)
+                A.save_notes(uid, notes); A.save_links(uid, links); A.save_marks(uid, marks); A.save_memory(uid, memory)
+                A.save_library(uid, lib)
             with A.auth_lock():
                 users = A.load_users()
                 self.registry_or_503(users, email)
@@ -2079,20 +2089,22 @@ class Handler(SimpleHTTPRequestHandler):
                         "conflicts": conflicts, "versions": versions, "saved": time.strftime("%H:%M:%S")})
 
     # ------------------------------------------------------------ 24-27 links and marks (links-spec §2, annotations §2)
-    # One handler pair serves both per-key collections. The accounts helpers are looked up by name on every call
-    # (A.load_<many>, A.save_<many>, A.clean_<one>, A.apply_<one>_changes, A.<one>_versions, A.add_<one>_activity,
-    # A.<ONE>_ID_RE, A.MAX_<MANY>), so the two can never drift apart, and the error codes are invalid_<one> and
-    # <one>_limit. `noun` is the word the messages use.
-    KEYED = {"links": ("link", "link", LINKS_WINDOW), "marks": ("mark", "highlight", MARKS_WINDOW)}
+    # and memory verses (Memorize brief §2). One handler pair serves the three per-key collections. The accounts helpers are
+    # looked up by name on every call (A.load_<many>, A.save_<many>, A.clean_<one>, A.apply_<one>_changes,
+    # A.<one>_versions, A.add_<one>_activity, A.<ONE>_ID_RE, A.MAX_<MANY>), so they can never drift apart, and the
+    # error codes are invalid_<one> and <one>_limit. `noun` is the word the messages use.
+    KEYED = {"links": ("link", "link", LINKS_WINDOW), "marks": ("mark", "highlight", MARKS_WINDOW),
+             "memory": ("memory_verse", "memory verse", MEMORY_WINDOW)}
 
     def _keyed_get(self, many):
         d = getattr(A, f"load_{many}")(self._scope)
         self.send_json({many: d[many], "rev": d["rev"], "scope": self._scope}, headers=[("ETag", f'"{d["rev"]}"')])
 
     def _keyed_changes(self, body, many):
-        """The notes rules (PS §2.4 #10) for links and marks: compare-and-set on `base`, stale, versions, conflicts.
-        Validation is atomic; new records add `<one>.add` activity and studied verses to the library (the collection's
-        file, then the library file: the lock order at A.lock_for)."""
+        """The notes rules (PS §2.4 #10) for links, marks and memory verses: compare-and-set on `base`, stale,
+        versions, conflicts. Validation is atomic; new links and marks add `<one>.add` activity and studied verses to
+        the library (the collection's file, then the library file: the lock order at A.lock_for); memory verses add
+        none."""
         one, noun, window = self.KEYED[many]
         wait = window.check(self._scope)
         if wait: raise rate_limited(wait, self._uid or "guest")
@@ -2141,7 +2153,7 @@ class Handler(SimpleHTTPRequestHandler):
                 doc["rev"] = before + 1
                 getattr(A, f"save_{many}")(self._scope, doc, quota=True)  # its activity below is small and capped
             versions = getattr(A, f"{one}_versions")(doc, list(clean_set) + list(clean_del), conflicts)
-            if created:
+            if created and many != "memory":  # memory verses add no activity: no read of the library
                 lib = A.load_library(self._scope)
                 if getattr(A, f"add_{one}_activity")(lib, [doc[many][k] for k in created], day, now):
                     lib["rev"] += 1
@@ -2154,6 +2166,8 @@ class Handler(SimpleHTTPRequestHandler):
     def h_links_changes(self, body, q, arg): self._keyed_changes(body, "links")
     def h_marks_get(self, body, q, arg): self._keyed_get("marks")
     def h_marks_changes(self, body, q, arg): self._keyed_changes(body, "marks")
+    def h_memory_get(self, body, q, arg): self._keyed_get("memory")
+    def h_memory_changes(self, body, q, arg): self._keyed_changes(body, "memory")
 
     # ------------------------------------------------------------ 11-17 library
     def h_library_get(self, body, q, arg):
@@ -2315,17 +2329,18 @@ class Handler(SimpleHTTPRequestHandler):
         if HOSTED:  # the guest store is every visitor's and guests are read-only: there is never anything to import
             with A.lock_for(uid):
                 rev = {"notes": A.load_notes(uid)["rev"], "library": A.load_library(uid)["rev"],
-                       "links": A.load_links(uid)["rev"], "marks": A.load_marks(uid)["rev"]}
+                       "links": A.load_links(uid)["rev"], "marks": A.load_marks(uid)["rev"], "memory": A.load_memory(uid)["rev"]}
             return self.send_json({"ok": True, "imported": {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0,
-                                                            "studies": 0, "themes": 0}, "changed": False, "rev": rev})
+                                                            "memory": 0, "studies": 0, "themes": 0}, "changed": False, "rev": rev})
         with A.lock_for("guest"):
             g_notes, g_lib, g_links = A.load_notes("guest"), A.load_library("guest"), A.load_links("guest")
-            g_marks = A.load_marks("guest")
+            g_marks, g_memory = A.load_marks("guest"), A.load_memory("guest")
             with A.lock_for(uid):
                 notes, lib, links, marks = A.load_notes(uid), A.load_library(uid), A.load_links(uid), A.load_marks(uid)
+                memory = A.load_memory(uid)
                 n_notes = A.merge_notes(notes, g_notes)
                 n_studies, n_themes = A.merge_studies(notes, g_notes, room=A.MAX_STUDIES - len(notes["studies"])), A.merge_themes(notes, g_notes)
-                if n_notes or n_studies or n_themes:  # notes, then links, then marks, then library (the lock order at A.lock_for)
+                if n_notes or n_studies or n_themes:  # notes, links, marks, memory, then library (the lock order at A.lock_for)
                     notes["rev"] += 1
                     A.save_notes(uid, notes)
                 n_links = A.merge_links(links, g_links)
@@ -2336,24 +2351,29 @@ class Handler(SimpleHTTPRequestHandler):
                 if n_marks:
                     marks["rev"] += 1
                     A.save_marks(uid, marks)
+                n_memory = A.merge_memory(memory, g_memory)
+                if n_memory:
+                    memory["rev"] += 1
+                    A.save_memory(uid, memory)
                 counts = A.merge_library(lib, g_lib, "merge", now)
                 imported = {"notes": n_notes, "bookmarks": counts["bookmarks"], "chapters": counts["chapters"], "links": n_links,
-                            "marks": n_marks, "studies": n_studies, "themes": n_themes}
+                            "marks": n_marks, "memory": n_memory, "studies": n_studies, "themes": n_themes}
                 # also guest study days, activity or last position alone
-                changed = bool(counts["changed"] or n_notes or n_links or n_marks or n_studies or n_themes)
+                changed = bool(counts["changed"] or n_notes or n_links or n_marks or n_memory or n_studies or n_themes)
                 if changed:  # only when something was imported: a repeat changes nothing (§1.8)
                     lib["imports"] = (lib["imports"] + [{"source": "guest", "t": now, "mode": "merge"}])[-A.MAX_IMPORTS:]
                     A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
                     lib["rev"] += 1; lib["updated"] = now
                     A.save_library(uid, lib)
         self.send_json({"ok": True, "imported": imported, "changed": changed,
-                        "rev": {"notes": notes["rev"], "library": lib["rev"], "links": links["rev"], "marks": marks["rev"]}})
+                        "rev": {"notes": notes["rev"], "library": lib["rev"], "links": links["rev"], "marks": marks["rev"],
+                                "memory": memory["rev"]}})
 
     def h_profile_import(self, body, q, arg):
-        """A GET /api/export/profile file merged into the signed-in profile (hosting brief §1): notes, links and marks by
-        the per-key rule (the newer record wins, a tombstone at or after it keeps it deleted), studies by id (the newer
-        wins), theme choices by name (the profile's own kept, A.merge_themes), the library as the guest import merges
-        it. Idempotent: a second import of the same file changes nothing."""
+        """A GET /api/export/profile file merged into the signed-in profile (hosting brief §1): notes, links, marks and
+        memory verses by the per-key rule (the newer record wins, a tombstone at or after it keeps it deleted), studies
+        by id (the newer wins), theme choices by name (the profile's own kept, A.merge_themes), the library as the guest
+        import merges it. Idempotent: a second import of the same file changes nothing."""
         wait = IMPORT_WINDOW.check(self._scope)
         if wait: raise rate_limited(wait, self._uid)
         uid, now = self._uid, A.now_ms()
@@ -2361,33 +2381,38 @@ class Handler(SimpleHTTPRequestHandler):
         except ValueError: raise ApiError(400, "invalid_import")
         with A.lock_for(uid):
             notes, lib, links, marks = A.load_notes(uid), A.load_library(uid), A.load_links(uid), A.load_marks(uid)
+            memory = A.load_memory(uid)
             n_notes = A.merge_notes(notes, {"refs": src["notes"]}, room=A.MAX_REFS - len(notes["refs"]))
             n_studies = A.merge_studies(notes, {"studies": src["studies"]}, room=A.MAX_STUDIES - len(notes["studies"]))
             n_themes = A.merge_themes(notes, {"themes": src["themes"]})
             n_links = A.merge_links(links, {"links": src["links"]})
             n_marks = A.merge_marks(marks, {"marks": src["marks"]})
+            n_memory = A.merge_memory(memory, {"memory": src["memory"]})
             counts = A.merge_library(lib, src["library"], "merge", now)
             imported = {"notes": n_notes, "bookmarks": counts["bookmarks"], "chapters": counts["chapters"], "links": n_links,
-                        "marks": n_marks, "studies": n_studies, "themes": n_themes}
-            changed = bool(counts["changed"] or n_notes or n_links or n_marks or n_studies or n_themes)
+                        "marks": n_marks, "memory": n_memory, "studies": n_studies, "themes": n_themes}
+            changed = bool(counts["changed"] or n_notes or n_links or n_marks or n_memory or n_studies or n_themes)
             if changed:
                 lib["imports"] = (lib["imports"] + [{"source": "file", "t": now, "mode": "merge"}])[-A.MAX_IMPORTS:]
                 A.add_activity(lib, {"t": now, "type": "profile.import", "ref": None, "x": dict(imported)})
                 lib["rev"] += 1; lib["updated"] = now
                 if lib.get("created") is None: lib["created"] = now
             n_notes_doc = n_notes or n_studies or n_themes  # the notes file holds all three
-            for n, doc in ((n_notes_doc, notes), (n_links, links), (n_marks, marks)):
+            for n, doc in ((n_notes_doc, notes), (n_links, links), (n_marks, marks), (n_memory, memory)):
                 if n: doc["rev"] += 1
             # the whole import against the quota first: all of it is written, or none
             A.check_quota(uid, [(path(uid), doc) for n, path, doc in ((n_notes_doc, A.notes_path, notes), (n_links, A.links_path, links),
-                                                                       (n_marks, A.marks_path, marks), (changed, A.library_path, lib)) if n])
+                                                                       (n_marks, A.marks_path, marks), (n_memory, A.memory_path, memory),
+                                                                       (changed, A.library_path, lib)) if n])
             if n_notes_doc: A.save_notes(uid, notes)
-            if n_links: A.save_links(uid, links)  # links, then marks, then library (the lock order at A.lock_for)
+            if n_links: A.save_links(uid, links)  # links, marks, memory, then library (the lock order at A.lock_for)
             if n_marks: A.save_marks(uid, marks)
+            if n_memory: A.save_memory(uid, memory)
             if changed: A.save_library(uid, lib)
         A.log("profile-import", uid, changed=int(changed))
         self.send_json({"ok": True, "imported": imported, "changed": changed, "skipped": skipped,
-                        "rev": {"notes": notes["rev"], "library": lib["rev"], "links": links["rev"], "marks": marks["rev"]}})
+                        "rev": {"notes": notes["rev"], "library": lib["rev"], "links": links["rev"], "marks": marks["rev"],
+                                "memory": memory["rev"]}})
 
     def h_export_profile(self, body, q, arg):
         user = self.load_user(self._uid) if self._uid else None
@@ -2530,6 +2555,8 @@ ROUTES = {
     "/api/links/changes": {"POST": Route(H.h_links_changes, 1 * MIB, scope=True, write=True)},
     "/api/marks": {"GET": Route(H.h_marks_get)},
     "/api/marks/changes": {"POST": Route(H.h_marks_changes, 1 * MIB, scope=True, write=True)},
+    "/api/memory": {"GET": Route(H.h_memory_get)},
+    "/api/memory/changes": {"POST": Route(H.h_memory_changes, 1 * MIB, scope=True, write=True)},
     "/api/library": {"GET": Route(H.h_library_get)},
     "/api/library/events": {"POST": Route(H.h_events, 128 * KIB, scope=True, write=True)},
     "/api/library/bookmarks": {"POST": Route(H.h_bookmark_add, 8 * KIB, scope=True, write=True)},

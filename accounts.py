@@ -4,11 +4,11 @@ accounts.py: profiles, sessions and per-scope storage for serve.py (standard lib
 Importing this module has no side effects. Call configure(data_dir, port, ...) first.
 
 A "scope" is whose data a request acts on: "guest" (DATA/notes.json, DATA/guest-library.json, DATA/guest-links.json,
-DATA/guest-marks.json) or a uid like "u3f9a0c1d2e4b5a69" (DATA/profiles/<uid>/notes.json, library.json, links.json,
-marks.json). See .design/profiles-spec.md for the full contract, .design/links-spec.md for My links and
-.design/annotations-brief.md for marks (highlights and comments). Hosted mode adds DATA/owner-claims.json, profile
-import from an export file (.design/hosting-brief.md §1) and a per-profile storage quota (.design/open-signup-brief.md
-§1.3).
+DATA/guest-marks.json, DATA/guest-memory.json) or a uid like "u3f9a0c1d2e4b5a69" (DATA/profiles/<uid>/notes.json,
+library.json, links.json, marks.json, memory.json). See .design/profiles-spec.md for the full contract,
+.design/links-spec.md for My links, .design/annotations-brief.md for marks (highlights and comments) and
+.design/memorize-brief.md for memory verses. Hosted mode adds DATA/owner-claims.json, profile import from an export
+file (.design/hosting-brief.md §1) and a per-profile storage quota (.design/open-signup-brief.md §1.3).
 """
 import base64, binascii, bisect, collections, copy, datetime, fcntl, hashlib, hmac, io, json, math, os, re
 import secrets, shutil, sys, threading, time, unicodedata, zipfile
@@ -20,7 +20,8 @@ META_PATH = os.path.join(APP, "data", "meta.json")
 
 # ------------------------------------------------------------------ configuration (set by configure())
 DATA = PROFILES = DELETED = USERS = SESSIONS = None
-AUTH_LOCKFILE = SERVER_LOCKFILE = GUEST_NOTES = GUEST_LIBRARY = GUEST_LINKS = GUEST_MARKS = CONFIG = CACHE = None
+AUTH_LOCKFILE = SERVER_LOCKFILE = GUEST_NOTES = GUEST_LIBRARY = GUEST_LINKS = GUEST_MARKS = GUEST_MEMORY = None
+CONFIG = CACHE = None
 OWNER_CLAIMS = None
 PORT = 8765
 ALLOWED_HOSTS = ()
@@ -31,7 +32,8 @@ COOKIE = "bs_sid_8765"
 def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     """Point the module at a data directory. Does not create anything on disk."""
     global DATA, PROFILES, DELETED, USERS, SESSIONS, AUTH_LOCKFILE, SERVER_LOCKFILE
-    global GUEST_NOTES, GUEST_LIBRARY, GUEST_LINKS, GUEST_MARKS, CONFIG, CACHE, PORT, ALLOWED_HOSTS, MAX_USERS, COOKIE
+    global GUEST_NOTES, GUEST_LIBRARY, GUEST_LINKS, GUEST_MARKS, GUEST_MEMORY, CONFIG, CACHE, PORT, ALLOWED_HOSTS
+    global MAX_USERS, COOKIE
     global OWNER_CLAIMS
     DATA = os.path.realpath(os.path.expanduser(data_dir))
     PROFILES = os.path.join(DATA, "profiles")
@@ -44,6 +46,7 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     GUEST_LIBRARY = os.path.join(DATA, "guest-library.json")
     GUEST_LINKS = os.path.join(DATA, "guest-links.json")
     GUEST_MARKS = os.path.join(DATA, "guest-marks.json")
+    GUEST_MEMORY = os.path.join(DATA, "guest-memory.json")
     CONFIG = os.path.join(DATA, "config.json")
     CACHE = os.path.join(DATA, "cache")
     OWNER_CLAIMS = os.path.join(DATA, "owner-claims.json")
@@ -469,8 +472,8 @@ def read_json_strict(path, default, expect=dict):
 
 
 def _daily_backup(path):
-    """Before overwriting notes.json / links.json / marks.json / library.json / users.json: copy it to <file>.bak (0600)
-    once a day."""
+    """Before overwriting notes.json / links.json / marks.json / memory.json / library.json / users.json: copy it to
+    <file>.bak (0600) once a day."""
     if not os.path.exists(path):
         return
     bak = path + ".bak"
@@ -546,15 +549,17 @@ def auth_lock():
 
 
 def lock_for(scope):
-    """The scope lock. One lock covers all of a scope's files: notes.json, links.json, marks.json and library.json.
+    """The scope lock. One lock covers all of a scope's files: notes.json, links.json, marks.json, memory.json and
+    library.json.
 
-    Lock order (links-spec §2, annotations brief §1): notes file -> links file -> marks file -> library file. POST
-    /api/notes/changes, /api/links/changes and /api/marks/changes each write their own file and then library.json (a
-    saved study adds `study.save` activity; a new link or mark `link.add` / `mark.add` and studied verses), under
-    this one lock; sign-up with import and
-    guest import save links.json, then marks.json, then library.json. No code path takes them in another order, so
-    if these files ever get locks of their own, take the links lock, then the marks lock, then the library lock.
-    (Guest -> profile import takes the guest scope lock before the profile's, §2.6.)"""
+    Lock order (links-spec §2, annotations brief §1, Memorize brief §2): notes file -> links file -> marks file ->
+    memory file -> library file. POST /api/notes/changes, /api/links/changes and /api/marks/changes each write their
+    own file and then library.json (a saved study adds `study.save` activity; a new link or mark `link.add` /
+    `mark.add` and studied verses), under this one lock; POST /api/memory/changes writes memory.json only (memory
+    verses add no activity). Sign-up with import and guest import save links.json, then marks.json, then memory.json,
+    then library.json. No code path takes them in another order, so if these files ever get locks of their own, take
+    the links lock, then the marks lock, then the memory lock, then the library lock. (Guest -> profile import takes
+    the guest scope lock before the profile's, §2.6.)"""
     with _SCOPE_GUARD:
         lk = _SCOPE_LOCKS.get(scope)
         if lk is None:
@@ -865,6 +870,10 @@ def links_path(scope):
 
 def marks_path(scope):
     return GUEST_MARKS if scope == "guest" else os.path.join(profile_dir(scope), "marks.json")
+
+
+def memory_path(scope):
+    return GUEST_MEMORY if scope == "guest" else os.path.join(profile_dir(scope), "memory.json")
 
 
 def _prepare_write(scope):
@@ -1194,9 +1203,9 @@ def note_versions(notes, keys, conflicts):
 
 
 def _merge_keyed(drefs, dtomb, srefs, room=None):
-    """Guest -> profile merge of keyed records (§1.8), shared by notes, links and marks: take the guest record when
-    the profile has none and no tombstone at or after it, or when the guest's is newer. Mutates drefs/dtomb.
-    `room` caps how many new keys may be added. -> the keys taken."""
+    """Guest -> profile merge of keyed records (§1.8), shared by notes, links, marks and memory verses: take the guest
+    record when the profile has none and no tombstone at or after it, or when the guest's is newer. Mutates
+    drefs/dtomb. `room` caps how many new keys may be added. -> the keys taken."""
     taken = []
     for k, sn in (srefs or {}).items():
         if not isinstance(sn, dict):
@@ -1631,12 +1640,12 @@ def _empty_keyed(field):
 
 
 def _load_keyed(scope, path, field, id_re, clean, salvage):
-    """The loader shared by links and marks: {version, rev, <field>: {id: record}, deleted: {id: ms}}. Missing -> empty
-    (rev 0). Unparseable, or <field> not an object -> moved aside (PS §1.7). Otherwise repaired entry by entry and
-    persisted by the next save: a stored record that no longer validates is repaired field by field (`salvage`) and
-    dropped only when `clean` still rejects it (both logged as '<field>-repaired'), and a timestamp more than 5
-    minutes after the file's mtime becomes that mtime (as for notes: stable until the next write, so a
-    compare-and-set base taken from the GET still matches)."""
+    """The loader shared by links, marks and memory verses: {version, rev, <field>: {id: record}, deleted: {id: ms}}.
+    Missing -> empty (rev 0). Unparseable, or <field> not an object -> moved aside (PS §1.7). Otherwise repaired
+    entry by entry and persisted by the next save: a stored record that no longer validates is repaired field by
+    field (`salvage`) and dropped only when `clean` still rejects it (both logged as '<field>-repaired'), and a
+    timestamp more than 5 minutes after the file's mtime becomes that mtime (as for notes: stable until the next
+    write, so a compare-and-set base taken from the GET still matches)."""
     d = read_json_strict(path, _empty_keyed(field))
     if field in d and not isinstance(d[field], dict):
         _move_aside(path)
@@ -1679,9 +1688,9 @@ def _save_keyed(scope, path, doc, quota=False):
 
 
 def _apply_keyed(doc, field, set_map, del_map, base):
-    """Per-key merge of a links or marks document: exactly the notes rules (PS §2.4 #10, _apply_changes), on cleaned
-    records. Mutates `doc`. -> (changed, conflicts, created_ids): created_ids are the ids that did not exist before
-    this request, in request order (a retried create is not new, so it never adds a second activity entry)."""
+    """Per-key merge of a links, marks or memory document: exactly the notes rules (PS §2.4 #10, _apply_changes), on
+    cleaned records. Mutates `doc`. -> (changed, conflicts, created_ids): created_ids are the ids that did not exist
+    before this request, in request order (a retried create is not new, so it never adds a second activity entry)."""
     recs = doc.setdefault(field, {})
     before = set(recs)
     changed, conflicts = _apply_changes(recs, doc.setdefault("deleted", {}), set_map, del_map, base)
@@ -1872,6 +1881,139 @@ def merge_marks(dst, src):
     the 20,000-mark limit. -> number of marks taken from src."""
     marks = dst.setdefault("marks", {})
     return len(_merge_keyed(marks, dst.setdefault("deleted", {}), src.get("marks") or {}, room=MAX_MARKS - len(marks)))
+
+
+# ------------------------------------------------------------------ memory verses (Memorize brief §1, §2)
+MEMORY_VERSE_ID_RE = re.compile(r"mv_[0-9a-f]{12}", re.ASCII)
+MAX_MEMORY = 1_000
+MEMORY_VERSE_MAX_BYTES = 2 * 1024
+MEMORY_PASSAGE_MAX, MEMORY_STEPS, MEMORY_POS_MAX = 12, 6, 1e12
+
+
+def _memory_day(x):
+    """'' or a real day 'YYYY-MM-DD' -> itself, else None."""
+    return x if x == "" or parse_day(x) else None
+
+
+def clean_memory_verse(raw, now=None, check_size=True):
+    """Validate one incoming memory verse (brief §1). -> a new dict with exactly the memory verse fields, a canonical
+    ref and defaults filled in (pos 0, step 0, due and heart '', last 0); raises ValueError(message naming the
+    problem). The ref is one verse or a passage of at most 12 verses in one chapter; a verse written on the heart has
+    step 6. Unknown fields are dropped, and times more than 5 minutes ahead of `now` become `now` (the clock guard of
+    links and marks). Every field is small, so the 2 KiB check is on the record as sent; check_size=False skips it
+    (load-time repair)."""
+    now = now or now_ms()
+    if not isinstance(raw, dict):
+        raise ValueError("A memory verse must be an object.")
+    if check_size:
+        try:
+            big = len(json.dumps(raw, ensure_ascii=False).encode("utf-8")) > MEMORY_VERSE_MAX_BYTES
+        except (TypeError, ValueError, RecursionError):
+            big = True
+        if big:
+            raise ValueError("That memory verse is too large to save (2 KB at most).")
+    vid = raw.get("id")
+    if not isinstance(vid, str) or not MEMORY_VERSE_ID_RE.fullmatch(vid):
+        raise ValueError("A memory verse id is “mv_” followed by 12 hex digits.")
+    p = parse_link_ref(raw.get("ref"))
+    if p is None:
+        raise ValueError("“ref” must be a verse in this Bible, like 43.3.16, or verses in one chapter, like 19.23.1-6.")
+    if p[3] - p[2] + 1 > MEMORY_PASSAGE_MAX:
+        raise ValueError(f"A memory verse can be up to {MEMORY_PASSAGE_MAX} verses long.")
+    tr = raw.get("tr")
+    if tr not in MARK_TRS:
+        raise ValueError("The translation must be kjv, bsb, esv, nlt, niv, nkjv or nasb.")
+    pos = 0 if raw.get("pos") is None else raw["pos"]
+    if not _is_num(pos) or abs(pos) > MEMORY_POS_MAX:
+        raise ValueError("“pos” must be a number from -1e12 to 1e12.")
+    step = 0 if raw.get("step") is None else raw["step"]
+    if not _is_int(step) or not 0 <= step <= MEMORY_STEPS:
+        raise ValueError(f"“step” must be a whole number from 0 to {MEMORY_STEPS}.")
+    days = {}
+    for f in ("due", "heart"):
+        days[f] = _memory_day("" if raw.get(f) is None else raw[f])
+        if days[f] is None:
+            raise ValueError(f"“{f}” must be empty or a day like 2026-10-26.")
+    if days["heart"] and step != MEMORY_STEPS:
+        raise ValueError(f"A verse written on the heart has step {MEMORY_STEPS}.")
+    last = 0 if raw.get("last") is None else clamp_ts(raw["last"], now)
+    if last is None:
+        raise ValueError("“last” must be a time in milliseconds.")
+    upd = now if raw.get("updated") is None else clamp_ts(raw["updated"], now)
+    if upd is None:
+        raise ValueError("“updated” must be a time in milliseconds.")
+    created = upd if raw.get("created") is None else clamp_ts(raw["created"], now)
+    if created is None:
+        raise ValueError("“created” must be a time in milliseconds.")
+    return {"id": vid, "ref": link_ref_str(*p), "tr": tr, "pos": pos, "step": step, "due": days["due"],
+            "heart": days["heart"], "last": last, "created": created, "updated": upd}
+
+
+def _salvage_memory_verse(raw, cap):
+    """Load-time repair of a stored memory verse that failed clean_memory_verse, field by field (PS §1.7), so a verse
+    and its progress are never lost for one bad field: -> a copy of raw with each bad optional field reset
+    (translation -> kjv; pos -> 0; due -> '' (due at once); a bad heart day -> ''; a real heart day keeps the verse
+    written on the heart (step 6), else a bad step -> 0; a bad time -> the load time, a bad `last` -> 0). A bad id or
+    ref is left as it is: clean_memory_verse still rejects it, and only then is the verse dropped."""
+    if not isinstance(raw, dict):
+        return raw
+    out = dict(raw)
+    if raw.get("tr") not in MARK_TRS:
+        out["tr"] = "kjv"
+    if raw.get("pos") is not None and not (_is_num(raw["pos"]) and abs(raw["pos"]) <= MEMORY_POS_MAX):
+        out["pos"] = 0
+    for f in ("due", "heart"):
+        if raw.get(f) is not None and _memory_day(raw[f]) is None:
+            out[f] = ""
+    if out.get("heart"):
+        out["step"] = MEMORY_STEPS
+    elif raw.get("step") is not None and not (_is_int(raw["step"]) and 0 <= raw["step"] <= MEMORY_STEPS):
+        out["step"] = 0
+    if raw.get("last") is not None and clamp_ts(raw["last"], cap) is None:
+        out["last"] = 0
+    for f in ("created", "updated"):
+        if clamp_ts(raw.get(f), cap) is None:
+            out[f] = None
+    return out
+
+
+def empty_memory():
+    return _empty_keyed("memory")
+
+
+def load_memory(scope):
+    """memory.json through _load_keyed (the links rules): a memory verse is dropped only when its id or ref is bad
+    (_salvage_memory_verse)."""
+    return _load_keyed(scope, memory_path(scope), "memory", MEMORY_VERSE_ID_RE, clean_memory_verse,
+                       _salvage_memory_verse)
+
+
+def save_memory(scope, doc, quota=False):
+    _save_keyed(scope, memory_path(scope), doc, quota)
+
+
+def apply_memory_verse_changes(doc, set_map, del_map, base=None):
+    """Per-key merge of memory verses (_apply_keyed): a review on one device and a Make current on another are two
+    edits of one id, so the second is a conflict the browser shows. -> (changed, conflicts, created_ids)."""
+    return _apply_keyed(doc, "memory", set_map, del_map, base)
+
+
+def memory_verse_versions(doc, keys, conflicts):
+    """{id: stored updated | None when deleted} for the ids of a request that did not conflict (as note_versions)."""
+    return _versions(doc.get("memory") or {}, keys, conflicts)
+
+
+def merge_memory(dst, src):
+    """Guest -> profile merge (the notes rule of PS §1.8, as merge_marks; idempotent). Mutates dst. New ids stop at
+    the 1,000-verse limit. -> number of memory verses taken from src."""
+    mem = dst.setdefault("memory", {})
+    return len(_merge_keyed(mem, dst.setdefault("deleted", {}), src.get("memory") or {}, room=MAX_MEMORY - len(mem)))
+
+
+def add_memory_verse_activity(lib, new_verses, day, now):
+    """Memory verses write no activity (brief §2: nothing new in the Library's activity feed) and mark no verse as
+    studied. -> False (the library is not changed)."""
+    return False
 
 
 # ------------------------------------------------------------------ library (§1.5, §4.6)
@@ -2438,17 +2580,18 @@ def merge_library(dst, src, mode, now=None):
     return {"bookmarks": nb, "chapters": nc, "changed": bool(changed or nb or nc)}
 
 
-def guest_summary(notes, lib, links=None, marks=None):
+def guest_summary(notes, lib, links=None, marks=None, memory=None):
     refs = notes.get("refs") or {}
     bms = lib.get("bookmarks") or []
     chs = lib.get("chapters") or {}
     lns = (links or {}).get("links") or {}
     mks = (marks or {}).get("marks") or {}
+    mvs = (memory or {}).get("memory") or {}
     sts = _list(notes.get("studies"))
     # chapters: every chapter with any progress, as the import counts them ("reading progress for N chapters")
     return {"notes": len(refs), "bookmarks": len(bms), "chapters": len(chs),
             "chaptersRead": sum(1 for c in chs.values() if c.get("read")), "links": len(lns), "marks": len(mks),
-            "studies": len(sts), "hasData": bool(refs or bms or chs or lns or mks or sts)}
+            "memory": len(mvs), "studies": len(sts), "hasData": bool(refs or bms or chs or lns or mks or mvs or sts)}
 
 
 # ------------------------------------------------------------------ export (§1.9)
@@ -2462,6 +2605,7 @@ def export_profile(scope, user=None):
     lib = load_library(scope)
     links = load_links(scope)
     marks = load_marks(scope)
+    memory = load_memory(scope)
     return {
         "format": "bible-study-profile",
         "version": 1,
@@ -2472,15 +2616,16 @@ def export_profile(scope, user=None):
         "library": {k: lib.get(k) for k in ("version", "rev", "bookmarks", "lastPosition", "chapters", "days", "activity", "imports")},
         "links": {"links": links["links"]},
         "marks": {"marks": marks["marks"]},
+        "memory": {"memory": memory["memory"]},
     }
 
 
 def clean_import(data, now=None):
-    """A GET /api/export/profile file (a profile's or a guest's) -> ({"notes", "links", "marks": {key: record},
-    "studies": [study], "themes": choices, "library": dict}, skipped). Each record is checked as if it were saved
-    one by one (clean_note / clean_link / clean_mark / clean_study); one that fails is skipped and counted, never
-    stored. The theme choices keep what clean_themes would (_norm_themes); the library is normalised by
-    merge_library. Raises ValueError when the file is not an export at all (hosting brief §1)."""
+    """A GET /api/export/profile file (a profile's or a guest's) -> ({"notes", "links", "marks", "memory": {key:
+    record}, "studies": [study], "themes": choices, "library": dict}, skipped). Each record is checked as if it were
+    saved one by one (clean_note / clean_link / clean_mark / clean_memory_verse / clean_study); one that fails is
+    skipped and counted, never stored. The theme choices keep what clean_themes would (_norm_themes); the library is
+    normalised by merge_library. Raises ValueError when the file is not an export at all (hosting brief §1)."""
     now = now or now_ms()
     if not isinstance(data, dict) or data.get("format") != "bible-study-profile" or not (_is_int(data.get("version")) and data["version"] == 1):
         raise ValueError("not a profile export")
@@ -2493,6 +2638,7 @@ def clean_import(data, now=None):
         return recs or {}
 
     notes, links, marks = section("notes", "refs"), section("links", "links"), section("marks", "marks")
+    memory = section("memory", "memory")  # an export made before Memorize has none
     lib = data.get("library")
     if lib is not None and not isinstance(lib, dict):
         raise ValueError("library is not an object")
@@ -2500,7 +2646,8 @@ def clean_import(data, now=None):
     studies, themes = sec.get("studies"), sec.get("themes")
     if (studies is not None and not isinstance(studies, list)) or (themes is not None and not isinstance(themes, dict)):
         raise ValueError("notes.studies is not a list or notes.themes is not an object")
-    out = {"notes": {}, "links": {}, "marks": {}, "studies": [], "themes": _norm_themes(themes), "library": lib or {}}
+    out = {"notes": {}, "links": {}, "marks": {}, "memory": {}, "studies": [], "themes": _norm_themes(themes),
+           "library": lib or {}}
     skipped = 0
 
     def stable(raw):  # never stamp a record with `now`: a second import would see it as newer and take it again
@@ -2515,7 +2662,8 @@ def clean_import(data, now=None):
             skipped += 1
         else:
             out["notes"][k] = c
-    for field, recs, id_re, clean in (("links", links, LINK_ID_RE, clean_link), ("marks", marks, MARK_ID_RE, clean_mark)):
+    for field, recs, id_re, clean in (("links", links, LINK_ID_RE, clean_link), ("marks", marks, MARK_ID_RE, clean_mark),
+                                      ("memory", memory, MEMORY_VERSE_ID_RE, clean_memory_verse)):
         for k, raw in recs.items():
             try:
                 c = clean(stable(raw), now) if id_re.fullmatch(k) else None

@@ -1,6 +1,6 @@
 // The reading page: chapter hero, verses (parallel columns, inline interlinear, markers), footer.
 // The document scrolls on the window (not on #reader).
-import { state, data, bookOf, refKey, noteFor, yearLabel, esc, isHebrewBook, isDivine, smart, nobreak, plural, initials, testamentName, divSlug, trInfo, layoutMode, RM, isAramaicWord, aramaicVerses, morphNoLang, DRY, isPassageTr, LICENSED_IDS } from './store.js';
+import { state, data, bookOf, refKey, noteFor, yearLabel, esc, isHebrewBook, isDivine, smart, nobreak, plural, initials, testamentName, divSlug, trInfo, layoutMode, RM, isAramaicWord, aramaicVerses, morphNoLang, DRY, isPassageTr, LICENSED_IDS, COPYRIGHT } from './store.js';
 import { decodeMorph, wordTypeLabel, isVariantWord, variantShort } from './morph.js';
 import { icon } from './icons.js';
 import * as viz from './viz.js';
@@ -18,11 +18,6 @@ const mediaModP = optional(import('./media.js'), 'media.js').then(m => (media = 
 optional(import('./links.js'), 'links.js').then(m => (lnk = m)); // loaded before the first render (main.js boot awaits loadLinks)
 optional(import('./marks.js'), 'marks.js').then(m => { mrk = m; if (m) refreshAnnBadges(); }); // likewise (loadMarks)
 
-const COPYRIGHT = {
-  esv: 'Scripture quotations marked ESV are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.',
-  // Tyndale's required credit line for a project that uses more than one translation (tyndale.com permissions)
-  nlt: 'Scripture quotations marked (NLT) are taken from the Holy Bible, New Living Translation, copyright ©1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.',
-};
 /**
  * FUMS v3, API.Bible's fair-use count (translations brief §2): its script loads the first time an NIV, NKJV or NASB
  * chapter is shown, behind the queueing stub its docs give, and each display of one (the main text or the parallel
@@ -30,7 +25,7 @@ const COPYRIGHT = {
  * script itself, or a check's stub that records the calls) is used as it is.
  */
 const FUMS_SRC = 'https://pkg.api.bible/fumsV3.min.js';
-function fumsView(token) {
+export function fumsView(token) {
   if (DRY || !token) return;
   if (typeof window.fums !== 'function') {
     window.fumsData = window.fumsData || [];
