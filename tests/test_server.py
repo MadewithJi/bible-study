@@ -3823,7 +3823,7 @@ class T22_Hosted(Base):
     """BS_HOSTED=1 with Turnstile (a fake Cloudflare): open sign-up behind the bot check, read-only guests, owner-only
     ESV/NLT and keys and Site activity, a Secure cookie, the Host and Origin lists."""
     restart = False
-    msg_sign_in = "Sign in to save your notes, links and highlights."
+    msg_sign_in = "Sign in to save your notes, links, highlights and memory verses."
     invites_json = b'{"0000": {"id": "iv_000000000000", "uses": 1}}\n'  # left by the invite-only release
 
     @classmethod

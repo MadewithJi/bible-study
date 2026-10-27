@@ -336,7 +336,7 @@ const view = () => (cur.host ? $('#dc-view', cur.host) : null);
 
 function guestHtml() {
   const au = state.auth || {}, signup = !(au.features && au.features.signup === false);
-  return `<div class="notice lib-guest" role="note">${icon('person')}<p>Sign in to make studies<small>${esc(S.SIGN_IN_MSG)} A study gathers them into a document of your own.</small></p>${signup ? '<button class="btn btn-tinted sm" type="button" data-lib-auth="signup">Create profile</button>' : ''}<button class="btn btn-plain sm" type="button" data-lib-auth="signin">Sign in</button></div>`;
+  return `<div class="notice lib-guest" role="note">${icon('person')}<p>Sign in to make studies<small>Sign in to save your notes, links and highlights. A study gathers them into a document of your own.</small></p>${signup ? '<button class="btn btn-tinted sm" type="button" data-lib-auth="signup">Create profile</button>' : ''}<button class="btn btn-plain sm" type="button" data-lib-auth="signin">Sign in</button></div>`;
 }
 
 function barHtml() {

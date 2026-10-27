@@ -1132,7 +1132,7 @@ MESSAGES = {
     "rate_limited": "Too many attempts. Try again in a moment.",
     "server_error": "Something went wrong on the server.",
     "busy": "The server is busy. Try again in a moment.",
-    "sign_in_required": "Sign in to save your notes, links and highlights.",
+    "sign_in_required": "Sign in to save your notes, links, highlights and memory verses.",
     "owner_only": "Only the owner of this site can do that.",
     "signup_closed": MSG_SIGNUP_PAUSED,  # signup_closed and storage_full only ever happen on the site
     "bot_check_failed": "We couldn’t confirm you’re not a bot. Try the check again.",

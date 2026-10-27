@@ -339,7 +339,7 @@ export function onBroadcast(fn) { if (chan) chan.addEventListener('message', e =
 /** A hosted site's guest reads everything and saves nothing (serve.py answers its writes with 401 sign_in_required).
  *  Locally never: there the guest saves as always. */
 export const readOnlyGuest = () => !!(state.auth.hosted && !state.auth.signedIn);
-export const SIGN_IN_MSG = 'Sign in to save your notes, links and highlights.';
+export const SIGN_IN_MSG = 'Sign in to save your notes, links, highlights and memory verses.';
 export const QUOTA_MSG = 'Your profile has reached its storage limit. Delete some notes or highlights to make room.';
 // ------------------------------------------------------------ donations and a sign-up pause (donate brief §1–2)
 /** The permanent donation link: vercel.json and serve.py redirect it (302) to the page that takes gifts. */
