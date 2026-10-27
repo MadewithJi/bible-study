@@ -18,6 +18,9 @@ import('./links.js').then(m => { lnk = m; linksVer++; if (libOpen()) scheduleRen
 // Highlights and comments (annotations-brief §3.4): the activity rows' words and the stats tile. Optional likewise.
 let mrk = null;
 import('./marks.js').then(m => { mrk = m; if (libOpen()) scheduleRender(); }, e => { console.error('marks.js failed to load', e); });
+// Memorize (memorize-brief §4, §6): the bookmark menu's item, the home's Memory card and Library › Memory. Optional likewise.
+let mem = null, memFailed = false;
+import('./memory.js').then(m => { mem = m; if (libOpen()) scheduleRender(); }, e => { memFailed = true; console.error('memory.js failed to load', e); if (libOpen()) scheduleRender(); });
 const LOCAL_TAB = Math.random().toString(16).slice(2, 18);
 /** This tab's id on 'bs-sync' (tracker.js's when it is loaded, so both modules tag messages alike). */
 const tabId = () => (tracker && typeof tracker.TAB_ID === 'string' ? tracker.TAB_ID : LOCAL_TAB);
@@ -614,6 +617,7 @@ export function openBookmarkMenu(anchor, bookmark) {
     <div role="menu" aria-label="Bookmark actions">
     ${here && !inLib ? '' : `<button type="button" role="menuitem" data-bmi="go">Go to passage${icon('arrow-right')}</button>`}
     ${inLib ? '' : `<button type="button" role="menuitem" data-bmi="library">Show in Library${icon('library')}</button>`}
+    ${bm.v && mem ? `<button type="button" role="menuitem" data-bmi="memorize">${memOfBm(bm) ? 'Practise this verse' : 'Memorize this verse'}${icon('memorize')}</button>` : ''}
     <hr>
     <button type="button" role="menuitem" class="danger" data-bmi="remove">Remove bookmark${icon('trash')}</button>
     </div>`;
@@ -633,11 +637,12 @@ export function openBookmarkMenu(anchor, bookmark) {
       const sw = e.target.closest('.bm-sw'); if (sw) { pick(sw); return; }
       const it = e.target.closest('[data-bmi]'); if (!it) return;
       const act = it.dataset.bmi;
-      closeMenuSafe(act === 'remove');   // focus back on the opener; the Library then moves it to the next row
+      closeMenuSafe(act === 'remove' || act === 'memorize');   // focus back on the opener; the Library then moves it to the next row
       const x = cur() || bm;
       if (act === 'go') { if (libOpen()) closeLib(); A?.navigate?.(x.b, x.c, x.v || 0); A?.yieldToPage?.(); }
       else if (act === 'library') openLibrary({ bookmark: x.id });
       else if (act === 'remove' && cur()) removeBookmark(x.id);
+      else if (act === 'memorize') memorizeBm(x, anchor);
     },
     onKeydown: (e, m) => {
       const t = e.target;
@@ -664,6 +669,16 @@ export function openBookmarkMenu(anchor, bookmark) {
   return m;
 }
 function closeMenuSafe(restore) { if (fn('closeMenu')) ui.closeMenu(restore); }
+/** The memory verse a verse bookmark is (that verse, or a passage starting there, as the gutter's badge), or null. */
+const memOfBm = bm => (mem && bm && bm.v ? mem.findByRef(`${bm.b}.${bm.c}.${bm.v}`) || mem.memoryFor(bm.b, bm.c, bm.v) : null);
+/** The bookmark menu's Memorize this verse (memorize-brief §4), in the reader's translation; Practise when it is one. */
+function memorizeBm(bm, anchor) {
+  if (!mem) return;
+  const have = memOfBm(bm);
+  // the Library may redraw the row under the practice: its ⋯ again, by the bookmark's id
+  if (have) mem.practise(have.id, { returnFocus: () => (anchor.isConnected ? anchor : $(`#library-body li[data-bm="${cssEsc(bm.id)}"] [data-bm-menu]`)) });
+  else mem.memorize({ b: bm.b, c: bm.c, v: bm.v, tr: state.tr });
+}
 
 // ------------------------------------------------------------ read marks
 /** Mark chapters read or unread by hand (optimistic). Toasts with Undo unless opts.quiet. */
@@ -714,7 +729,8 @@ export function openLibrary({ book = null, bookmark = null, view: name = null, t
   const d = libDialog(); if (!d) return;
   fn('closeMenu') && ui.closeMenu(false);
   closeCard({ restore: false });
-  view = book && bookOf(+book) ? { name: 'book', b: +book } : name === 'map' ? { name: 'map' } : name === 'study' ? { ...stDefaults(), ...(study || {}) } : { name: 'home' };
+  view = book && bookOf(+book) ? { name: 'book', b: +book } : name === 'map' ? { name: 'map' } : name === 'study' ? { ...stDefaults(), ...(study || {}) } : name === 'memory' ? { name: 'memory' } : { name: 'home' };
+  if (view.name === 'memory') homeScroll = 0;
   if (view.name === 'map') { // a tag chip on a link card: My map showing that tag only
     Object.assign(mapF, { type: '', tag: typeof tag === 'string' ? tag : '', q: '' });
     mapAllRows = false; NET.auto = true; homeScroll = 0;
@@ -750,7 +766,7 @@ export function renderLibrary(opts = {}) {
   const alt = body.contains(ae) ? focusAlt(ae) : null;
   const prevScroll = body.scrollTop;
   let html = '';
-  try { html = view.name === 'book' ? bookView(view.b) : view.name === 'map' && lkOk() ? mapView() : view.name === 'study' ? studyView() : homeView(); }
+  try { html = view.name === 'book' ? bookView(view.b) : view.name === 'map' && lkOk() ? mapView() : view.name === 'study' ? studyView() : view.name === 'memory' ? memoryView() : homeView(); }
   catch (e) { console.error(e); html = empty('info', 'Something went wrong', esc(e.message)); }
   const cls = opts.push ? 'view push' : opts.pop ? 'view pop' : 'view';
   body.innerHTML = `<div class="${cls}"${opts.still ? ' style="animation:none"' : ''}>${html}</div>`;
@@ -765,13 +781,17 @@ function focusSel(el) {
   const li = el.closest('li[data-bm]');
   if (li && el.matches('[data-bm-menu]')) return `li[data-bm="${cssEsc(li.dataset.bm)}"] [data-bm-menu]`;
   if (li && el.matches('[data-lib-go]')) return `li[data-bm="${cssEsc(li.dataset.bm)}"] [data-lib-go]`;
+  // Library › Memory: a row's cell or ⋯ (by the verse's id), the pinned card's Practise or ⋯ (whichever verse is current)
+  const mz = el.closest('li[data-mz]'), mzSub = el.matches('[data-mz-menu]') ? '[data-mz-menu]' : '[data-practise]';
+  if (mz && el.matches('[data-mz-menu], [data-practise]')) return `li[data-mz="${cssEsc(mz.dataset.mz)}"] ${mzSub}`;
+  if (el.closest('.mz-cur') && el.matches('[data-mz-menu], [data-practise]')) return `.mz-cur ${mzSub}`;
   const lk = el.closest('li[data-lk]');
   if (lk && el.matches('[data-lk-menu], [data-lib-link]')) return `li[data-lk="${cssEsc(lk.dataset.lk)}"] ${el.matches('[data-lk-menu]') ? '[data-lk-menu]' : '[data-lib-link]'}`;
   for (const a of ['data-lib-go', 'data-lib-book', 'data-lib-markbook', 'data-lib-mode', 'data-lib-auth', 'data-lm-type', 'data-lm-tag', 'data-lm-mode', 'data-lm-zoom', 'data-st-tab', 'data-key', 'data-st-f']) if (el.hasAttribute(a)) return `[${a}="${cssEsc(el.getAttribute(a))}"]`;
   if (el.matches('.pch[data-c]')) return `.pch[data-c="${cssEsc(el.dataset.c)}"]`;
-  for (const a of ['data-lib-resume', 'data-lib-back', 'data-more-activity', 'data-more-bms', 'data-lib-links', 'data-lib-study', 'data-lm-moretags', 'data-lm-allrows', 'data-lm-clear']) if (el.hasAttribute(a)) return `[${a}]`;
+  for (const a of ['data-lib-resume', 'data-lib-back', 'data-more-activity', 'data-more-bms', 'data-lib-links', 'data-lib-study', 'data-lib-memory', 'data-lm-moretags', 'data-lm-allrows', 'data-lm-clear']) if (el.hasAttribute(a)) return `[${a}]`;
   // a heading that focusAlt or refocusAfterConfirm moved focus to (a bookmark removed, then Undo): the same heading
-  for (const s of ['#lib-bookmarks h3', '#lib-activity h3', '.pc-title']) if (el.matches(s)) return s;
+  for (const s of ['#lib-bookmarks h3', '#lib-activity h3', '#lib-mem-h', '.pc-title']) if (el.matches(s)) return s;
   return null;
 }
 /**
@@ -792,7 +812,14 @@ function focusAlt(el) {
     const near = [lk.nextElementSibling, lk.previousElementSibling].filter(x => x && x.dataset && x.dataset.lk).map(x => `li[data-lk="${cssEsc(x.dataset.lk)}"] .cell`);
     return pick(...near, '#lib-links li[data-lk] .cell', '#lm-main li[data-lk] .cell', '#lib-links h3', '[data-lm-type=""]', '[data-lib-back]');
   }
-  if (el.matches('[data-lib-book], [data-lib-links], [data-lib-study]')) return pick('[data-lib-back]');
+  const mz = el.closest('li[data-mz]');
+  if (mz) { // a memory verse made current (the pinned card now), or removed: the row after it, else before it (the mock's order)
+    const sub = el.matches('[data-mz-menu]') ? '[data-mz-menu]' : '[data-practise]';
+    const near = [mz.nextElementSibling, mz.previousElementSibling].filter(x => x && x.dataset && x.dataset.mz).map(x => `li[data-mz="${cssEsc(x.dataset.mz)}"] ${sub}`);
+    return pick(`.mz-cur [data-practise="${cssEsc(mz.dataset.mz)}"]`, ...near, '.mz-cur [data-practise]', `li[data-mz] ${sub}`, '[data-lib-back]');
+  }
+  if (el.closest('.mz-cur')) return pick('.mz-cur [data-practise]', 'li[data-mz] [data-mz-menu]', '[data-lib-back]');
+  if (el.matches('[data-lib-book], [data-lib-links], [data-lib-study], [data-lib-memory]')) return pick('[data-lib-back]', '#lib-mem-h');
   if (el.matches('[data-lm-tag], [data-lm-type], [data-lm-moretags], [data-lm-allrows], [data-lm-clear]')) return pick('[data-lm-tag=""]', '[data-lm-type=""]', '#lm-q');
   if (el.matches('[data-lib-markbook]')) return pick('[data-lib-markbook]:not([disabled])', '.lib-chgrid .pch', '.pc-title');
   // 'Show all' / 'Show more' are gone once everything is shown: the first row that was hidden
@@ -829,6 +856,7 @@ function homeView() {
   }
   h += continueCard();
   h += studyCard();
+  h += memoryCard();
   if (!lib.loaded) {
     h += !lib.offline ? SKELETON
       : state.auth.hosted ? empty('info', 'Library is unavailable right now', esc(S.offlineMsg()))
@@ -980,8 +1008,8 @@ function actText(a) {
     case 'profile.import': {
       // the words of the import's toast and the sign-up preview (account.js): chapters = reading progress, not 'read'
       const parts = [+x.notes > 0 ? plural(+x.notes, 'note') : '', +x.bookmarks > 0 ? plural(+x.bookmarks, 'bookmark') : '', +x.links > 0 ? plural(+x.links, 'link') : '', +x.marks > 0 ? plural(+x.marks, 'highlight') : '',
-        +x.chapters > 0 ? `reading progress for ${plural(+x.chapters, 'chapter')}` : ''].filter(Boolean);
-      // no counts: only guest study days, activity or the last-read place came over
+        +x.memory > 0 ? plural(+x.memory, 'memory verse') : '', +x.chapters > 0 ? `reading progress for ${plural(+x.chapters, 'chapter')}` : ''].filter(Boolean);
+      // no counts: only guest study days, activity or the last-read place came over (memory verses are counted)
       const sub = parts.join(' · ');
       return sub ? ['Brought over guest notes and progress', sub[0].toUpperCase() + sub.slice(1)] : ['Brought over guest reading history'];
     }
@@ -1057,6 +1085,7 @@ let previewSeq = 0;
 function afterRender(body, fsel, alt) {
   const seg = $('#lib-mode', body) || $('#lm-mode', body); if (seg) placeInd(seg);
   if (fsel) { let el = $(fsel, body); if ((!el || el.disabled) && alt) el = alt(body); focusIn(el); }
+  if (mzRefocus) { const el = $(`li[data-mz="${cssEsc(mzRefocus)}"] [data-mz-menu]`, body); mzRefocus = null; if (el) focusIn(el); }
   if (focusBm) {
     const li = $(`li[data-bm="${cssEsc(focusBm)}"]`, body);
     if (li) {
@@ -1084,6 +1113,19 @@ function afterRender(body, fsel, alt) {
       if (el.textContent) continue;
       const p = parseRef(ref); if (!p) continue;
       try { const r = await previewText(p.b, p.c, p.v || 1); if (el.isConnected) el.textContent = clip(r.text, n) || ' '; } catch (e) { if (el.isConnected) el.textContent = ' '; }
+    }
+  })();
+  // Library › Memory: the first words of KJV and BSB memory verses, once each (kept for later redraws)
+  const mz = mem ? $$('[data-mz-first]:empty', body) : [];
+  if (mz.length) (async () => {
+    for (const el of mz) {
+      if (seq !== previewSeq) return;
+      const x = mem.getMemory(el.dataset.mzFirst); if (!x || !el.isConnected) continue;
+      const k = mzKey(x);
+      if (!mzWords.has(k)) { let t = ''; try { t = firstWords(await mem.memoryPreview(x)); } catch (e) { t = ''; } mzWords.set(k, t); }
+      if (!el.isConnected) continue;
+      const t = mzWords.get(k);
+      if (t) el.innerHTML = scripture(t); else el.remove();
     }
   })();
 }
@@ -1911,6 +1953,125 @@ function studyCard() {
   const n = S2.entries().length;
   return `<section class="lib-card lib-study-card" aria-labelledby="lib-study-h"><div class="lh"><h3 id="lib-study-h">Study</h3><span>${n ? esc(plural(n, 'note, highlight or comment', 'notes, highlights and comments')) : ''}</span></div>
     <div class="lib-study-row"><p>What you’ve been diving into: a look back on the month, your notes connected by theme and thread, and your own studies.</p><button class="btn btn-tinted sm" type="button" data-lib-study>${icon('sparkle')}Open Study</button></div></section>`;
+}
+
+// ------------------------------------------------------------ Memorize (memorize-brief §6): the home's card and Library › Memory
+// Ported from app/mock/memorize-library.html. memory.js works out each verse's place in line (memoryWhen, memoryDue,
+// memoryIsUpnext); a row or the pinned card's Practise opens the practice through memory.js practise (practice.js).
+/** This profile's memory verses have loaded (memory.js keeps them per scope). */
+const memOk = () => !!(mem && mem.memory && mem.memory.loaded && mem.memory.scope === curScope());
+const trAbbr = tr => S.trInfo(tr).abbr;
+/** KJV small capitals for the divine name (LORD, GOD, LORD’S), as practice.js and home.js show it. */
+const scripture = s => esc(S.smart(s)).replace(/\b(?:LORD|GOD)(?:[’']S)?(?!\p{L})/gu, m => `<span class="sc">${m[0]}${m.slice(1).toLowerCase()}</span>`);
+let mzRemoved = null, mzRefocus = null;   // the verse last removed here; after its Undo, its row's ⋯ takes the focus (the mock's)
+const mzWords = new Map();   // 'id|ref|tr' -> the first words of a KJV or BSB memory verse ('' when its text can't be had)
+const mzKey = x => `${x.id}|${x.ref}|${x.tr}`;
+const firstWords = t => { const w = String(t || '').trim().split(/\s+/).filter(Boolean); return w.length > 7 ? w.slice(0, 7).join(' ').replace(/[,;:.]$/, '') + '…' : w.join(' '); };
+const MZ_PLACE = ['Next in line', 'Second in line', 'Third in line', 'Fourth in line', 'Fifth in line'];
+const mzStep = x => (x.heart ? 6 : Math.max(0, Math.min(5, Math.floor(+x.step || 0))));
+/** '12 October' (with the year when it isn't this one). */
+const mzDay = day => { const d = parseDay(day); return `${d.getDate()} ${MONTH[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`; };
+/** When a verse is next practised: 'Due today', 'Next review tomorrow', 'Next review Thursday', 'Next review in January';
+ *  '' for a verse teed up (it has no day until it is current). */
+function mzWhen(x) {
+  const w = mem.memoryWhen(x);
+  return !w || w === 'Due today' || w.startsWith('Next review') ? w : `Next review ${w === 'Tomorrow' ? 'tomorrow' : w}`;
+}
+/** The six review dots (memory.css .mz-steps), named for a screen reader only where no words beside them say the stage. */
+const mzDots = (x, label = true) => {
+  const n = mzStep(x);
+  return `<span class="mz-steps" ${label ? `role="img" aria-label="Review ${Math.min(6, n + 1)} of 6"` : 'aria-hidden="true"'}>${[0, 1, 2, 3, 4, 5].map(i => `<i class="${i < n ? 'd' : i === n ? 'n' : ''}"></i>`).join('')}</span>`;
+};
+/** The first words of a KJV or BSB verse, faded (filled in afterRender the first time); '' for the other translations. */
+function mzFirstHtml(x, tag, cls) {
+  if (x.tr !== 'kjv' && x.tr !== 'bsb') return '';
+  const t = mzWords.get(mzKey(x));
+  return t === '' ? '' : `<${tag} class="${cls} mz-first" data-mz-first="${esc(x.id)}">${t ? scripture(t) : ''}</${tag}>`;
+}
+
+/** The Memory entry on the Library home: the counts, the memory verse and when, and Open Memory. */
+function memoryCard() {
+  if (!mem) return '';
+  const o = memOk() ? mem.organizedMemory() : null, any = !!o && !!(o.current || o.heart.length);
+  const count = o ? [[o.current ? 1 : 0, 'learning'], [o.upnext.length, 'up next'], [o.heart.length, 'on the heart']].filter(([n]) => n).map(([n, w]) => `${n.toLocaleString()} ${w}`).join(', ') : '';
+  const due = x => `<span class="mz-when${mem.memoryDue(x) ? '' : ' calm'}">`;
+  const line = o && o.current ? `<b>${esc(mem.memoryLabel(o.current))}</b> · ${due(o.current)}${esc(mzWhen(o.current))}</span>`
+    : o && o.dueHeart.length ? `<b>${esc(mem.memoryLabel(o.dueHeart[0]))}</b> · ${due(o.dueHeart[0])}Review due</span>`
+    : any ? 'No verse being learned just now. Select a verse and choose Memorize.'
+    : 'Verses you’re learning by heart. Select a verse and choose Memorize.';
+  return `<section class="lib-card lib-mem-card" aria-labelledby="lib-mem-h"><div class="lh"><h3 id="lib-mem-h">Memory</h3><span>${esc(count)}</span></div>
+    <div class="lib-mem-row"><p>${line}</p>${any ? `<button class="btn btn-tinted sm" type="button" data-lib-memory>${icon('memorize')}Open Memory</button>` : ''}</div></section>`;
+}
+
+/** Library › Memory: the memory verse pinned, then Up next and Written on the heart (each row opens its practice). */
+function memoryView() {
+  const head = `<div class="navbar"><button class="back" type="button" data-lib-back>${icon('chev-left')}Library</button></div>
+    <div class="mz-vh"><h3 class="pc-title">Memory</h3><p class="pc-sub">Verses you’re learning by heart</p></div>`;
+  if (!memOk()) return head + (memFailed ? empty('info', 'Memory is unavailable right now', 'Reload the page to try again.') : SKELETON);
+  const au = state.auth || {};
+  const guest = S.readOnlyGuest() ? `<div class="notice lib-guest" role="note">${icon('person')}<p>Sign in to memorize verses<small>The verses you’re learning by heart, and when each is next due, are kept with your profile.</small></p>${au.features && au.features.signup === false ? '' : '<button class="btn btn-tinted sm" type="button" data-lib-auth="signup">Create profile</button>'}<button class="btn btn-plain sm" type="button" data-lib-auth="signin">Sign in</button></div>` : '';
+  const o = mem.organizedMemory();
+  if (!o.current && !o.heart.length) return head + guest + `<div class="mz-none"><span class="tile-i">${icon('memorize')}</span><h3>Nothing to memorize yet</h3><p>Select a verse and choose Memorize.</p></div>`;
+  // Up next counts against the three teed up; two devices or an import may leave more, and every one is listed
+  const n = o.upnext.length;
+  const groups = [mzGroup('up', 'Up next', n <= 3 ? `${n} of 3` : n.toLocaleString(), o.upnext), mzGroup('heart', 'Written on the heart', o.heart.length.toLocaleString(), o.heart)].filter(Boolean);
+  return head + guest + (o.current ? mzCurHtml(o.current) : '') + (groups.length ? `<div class="lib-cols mz-cols">${groups.map(g => `<div class="lib-col">${g}</div>`).join('')}</div>` : '');
+}
+/** The memory verse, pinned (the Library's Continue card): Practise, and a ⋯ with Practise and Remove. */
+function mzCurHtml(x) {
+  const label = mem.memoryLabel(x);
+  return `<section class="lib-continue mz-cur" aria-labelledby="mz-cur-k">
+    <div><p class="lc-k" id="mz-cur-k">Your memory verse</p><p><span class="lc-t">${esc(label)}</span></p>
+      ${mzFirstHtml(x, 'p', 'lc-q')}
+      <p class="lc-s">${mzDots(x, false)}<span>${esc(trAbbr(x.tr))} · Learning · review ${mzStep(x) + 1} of 6</span></p>
+      <p class="lc-s mz-when-l"><span class="mz-when${mem.memoryDue(x) ? '' : ' calm'}">${esc(mzWhen(x))}</span></p></div>
+    <button class="btn btn-primary" type="button" data-practise="${esc(x.id)}" aria-label="Practise ${esc(label)}">Practise${icon('arrow-right')}</button>
+    <button class="mz-more" type="button" data-mz-menu aria-haspopup="menu" aria-expanded="false" aria-label="More for ${esc(label)}" title="More">${icon('ellipsis')}</button>
+  </section>`;
+}
+function mzGroup(key, title, count, list) {
+  if (!list.length) return '';
+  return `<section class="lib-sec" aria-labelledby="mz-h-${key}"><div class="lh"><h3 id="mz-h-${key}">${title}</h3><span>${esc(count)}</span></div><ul class="group">${list.map(mzRowHtml).join('')}</ul></section>`;
+}
+/** A row: the reference · translation, the first words, then the dots and its place in line, or since when it is on the heart. */
+function mzRowHtml(x, i) {
+  const label = mem.memoryLabel(x), id = esc(x.id);
+  let meta;
+  if (x.heart) {
+    const due = mem.memoryDue(x), w = mzWhen(x);
+    const when = due ? '<span class="mz-when">review due</span>' : w ? `<span class="mz-when calm">${esc(w[0].toLowerCase() + w.slice(1))}</span>` : '';
+    meta = `<span>Since ${esc(mzDay(x.heart))}</span>${when ? `<span><span class="mz-dot" aria-hidden="true">·</span>${when}</span>` : ''}`;
+  } else meta = `${mzDots(x)}<span class="mz-when calm">${MZ_PLACE[i] || 'In line'}</span>`;
+  return `<li class="mz-row${x.heart ? ' written' : ''}" data-mz="${id}"><button type="button" class="cell" data-practise="${id}" aria-label="Practise ${esc(label)}" aria-describedby="mz-m-${id}"><span class="cell-body">
+    <span class="cell-title">${esc(label)}<span class="mz-tr"> · ${esc(trAbbr(x.tr))}</span></span>
+    ${mzFirstHtml(x, 'span', 'cell-sub serif')}
+    <span class="mz-meta" id="mz-m-${id}">${meta}</span></span></button>
+    <button type="button" class="mz-more" data-mz-menu aria-haspopup="menu" aria-expanded="false" aria-label="More for ${esc(label)}">${icon('ellipsis')}</button></li>`;
+}
+/** What a practice opened here gives focus back to after the list redraws: that verse's Practise (or its ⋯). */
+const mzFocusBack = (id, menu) => () => {
+  const el = $(`#library-body [data-practise="${cssEsc(id)}"]`);
+  return el && menu ? el.closest('li[data-mz], .mz-cur')?.querySelector('[data-mz-menu]') || el : el;
+};
+/** A memory verse's ⋯ (ui.js openMenu, as the bookmark rows): Practise, Make current (a verse teed up), Remove. */
+function openMzMenu(btn) {
+  const own = btn.closest('li[data-mz], .mz-cur'), id = own && (own.dataset.mz || $('[data-practise]', own)?.dataset.practise);
+  const x = id && mem && mem.getMemory(id); if (!x || !fn('openMenu')) return;
+  const html = `<button type="button" role="menuitem" data-mzi="practise">Practise${icon('arrow-right')}</button>`
+    + (mem.memoryIsUpnext(x) ? `<button type="button" role="menuitem" data-mzi="current">Make current${icon('memorize')}</button>` : '')
+    + `<hr><button type="button" role="menuitem" class="danger" data-mzi="remove">Remove${icon('trash')}</button>`;
+  ui.openMenu(btn, html, {
+    label: mem.memoryLabel(x), className: 'mz-menu',
+    onClick: e => {
+      const it = e.target.closest('[data-mzi]'); if (!it) return;
+      const act = it.dataset.mzi;
+      closeMenuSafe(true);   // focus back on ⋯; after the redraw focusAlt passes it on (the pinned card, the next row)
+      if (!mem.getMemory(id)) return;
+      if (act === 'practise') mem.practise(id, { returnFocus: mzFocusBack(id, true) });
+      else if (act === 'current') mem.makeCurrent(id);
+      else if (act === 'remove' && mem.removeVerse(id)) mzRemoved = id;
+    },
+  });
 }
 
 // ------------------------------------------------------------ This month (§2.1)
@@ -2809,6 +2970,15 @@ function onLibClick(e) {
   if (t.closest('#lib-more')) { moreMenu(t.closest('#lib-more')); return; }
   const bmMenu = t.closest('[data-bm-menu]');
   if (bmMenu) { const li = bmMenu.closest('li[data-bm]'); const bm = li && lib.bookmarks.find(x => x.id === li.dataset.bm); if (bm) openBookmarkMenu(bmMenu, bm); return; }
+  // Memorize: a memory verse's ⋯ and Practise (Library › Memory), Open Memory (the home's card)
+  const mzMenu = t.closest('[data-mz-menu]'); if (mzMenu) { openMzMenu(mzMenu); return; }
+  const pr = t.closest('#library-body [data-practise]');
+  if (pr) { if (mem) mem.practise(pr.dataset.practise, { returnFocus: mzFocusBack(pr.dataset.practise, false) }); return; }
+  if (t.closest('[data-lib-memory]')) {
+    homeScroll = document.getElementById('library-body')?.scrollTop || 0;
+    view = { name: 'memory' }; renderLibrary({ push: true });
+    return;
+  }
   const go = t.closest('[data-lib-go]'); if (go) { goRef(go.dataset.libGo); return; }
   // Study (This month, Connected and the note card)
   if (t.closest('#lib-study, #lib-ncard, #lib-ncard-scrim, #st-tabs') && onStudyClick(e, t)) return;
@@ -2850,10 +3020,11 @@ function onLibClick(e) {
     const from = view; view = { name: 'home' }; renderLibrary({ pop: true });
     const body = document.getElementById('library-body'); if (body) body.scrollTop = homeScroll;
     // with the last link deleted inside My map the home has no ‘Open my map’ button: its My links heading instead
-    const el = from.name === 'map' ? ($('#library-body [data-lib-links]') || $('#library-body #lib-links h3')) : from.name === 'study' ? $('#library-body [data-lib-study]') : $(`#library-body [data-lib-book="${from.b}"]`);
+    const el = from.name === 'map' ? ($('#library-body [data-lib-links]') || $('#library-body #lib-links h3')) : from.name === 'study' ? $('#library-body [data-lib-study]')
+      : from.name === 'memory' ? ($('#library-body [data-lib-memory]') || $('#library-body #lib-mem-h')) : $(`#library-body [data-lib-book="${from.b}"]`);
     focusIn(el);
     // My map opened from a link's tag chip: the home was never scrolled to its button
-    if (el && body && (from.name === 'map' || from.name === 'study')) { const r = el.getBoundingClientRect(), br = body.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) el.scrollIntoView({ block: 'center' }); }
+    if (el && body && (from.name === 'map' || from.name === 'study' || from.name === 'memory')) { const r = el.getBoundingClientRect(), br = body.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) el.scrollIntoView({ block: 'center' }); }
     return;
   }
   if (t.closest('[data-lib-resume]')) { resume(); return; }
@@ -2928,6 +3099,13 @@ export function initLibrary(actions) {
   // My links: the home section, the stats tile and My map follow links.js (My map rebuilds its graph only while shown)
   document.addEventListener('bs:links-changed', () => { linksVer++; if (libOpen()) scheduleRender(); });
   document.addEventListener('bs:marks-changed', () => { if (libOpen()) scheduleRender(); }); // the Highlights tile, the rows' words
+  // Memorize: the home's Memory card and Library › Memory follow memory.js (a practice judged, another window's change)
+  document.addEventListener('bs:memory-changed', e => {
+    if (!libOpen() || (view.name !== 'home' && view.name !== 'memory')) return;
+    const d = e.detail || {};
+    if (view.name === 'memory' && mzRemoved && d.reason === 'add' && (d.ids || []).includes(mzRemoved)) { mzRefocus = mzRemoved; mzRemoved = null; } // its Undo
+    scheduleRender();
+  });
   // Study follows the notes document: theme choices and studies (store.js), note text, and marks above. A local choice
   // has already painted (choose, moveNote); the builder's own saves are studydoc.js's while the Studies tab is shown.
   for (const ev of ['bs:studies-changed', 'bs:notes-replaced', 'bs:note-saved']) document.addEventListener(ev, e => { if (ev === 'bs:studies-changed' && e.detail && e.detail.reason === 'local') return; if (libOpen() && view.name === 'study') scheduleRender(); });

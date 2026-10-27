@@ -64,7 +64,7 @@ const listJoin = parts => parts.length <= 1 ? parts.join('') : `${parts.slice(0,
 function guestMeta(g) {
   if (!g) return '';
   const chs = +(g.chapters ?? g.chaptersRead) || 0;
-  const s = [g.notes ? plural(g.notes, 'note') : '', g.bookmarks ? plural(g.bookmarks, 'bookmark') : '', g.links ? plural(g.links, 'link') : '', g.marks ? plural(g.marks, 'highlight') : '', chs ? `reading progress for ${plural(chs, 'chapter')}` : ''].filter(Boolean).join(' · ');
+  const s = [g.notes ? plural(g.notes, 'note') : '', g.bookmarks ? plural(g.bookmarks, 'bookmark') : '', g.links ? plural(g.links, 'link') : '', g.marks ? plural(g.marks, 'highlight') : '', g.memory ? plural(g.memory, 'memory verse') : '', chs ? `reading progress for ${plural(chs, 'chapter')}` : ''].filter(Boolean).join(' · ');
   return s && s[0].toUpperCase() + s.slice(1);
 }
 
@@ -247,6 +247,9 @@ function forgetLocal(uid, { all = false } = {}) {
   // highlights and comments (marks.js) likewise
   const marksLeft = !all && Object.keys((read(lsKey('bs-marks-dirty-v1', uid)) || {}).d || {}).length > 0;
   if (!marksLeft) { lsDel(lsKey('bs-marks-v1', uid)); lsDel(lsKey('bs-marks-dirty-v1', uid)); }
+  // memory verses (memory.js) likewise
+  const memoryLeft = !all && Object.keys((read(lsKey('bs-memory-dirty-v1', uid)) || {}).d || {}).length > 0;
+  if (!memoryLeft) { lsDel(lsKey('bs-memory-v1', uid)); lsDel(lsKey('bs-memory-dirty-v1', uid)); }
   lsDel(lsKey('bs-pos-v1', uid));
   // the event outboxes: the shared key of older versions and one per page ('bs-outbox-v1:<uid>#<page>')
   const base = lsKey('bs-outbox-v1', uid), keys = [];
@@ -582,7 +585,7 @@ async function onAuthSubmit(e) {
       switchScope(me, up ? 'signup' : 'signin');
       if (up) {
         const im = r.data && r.data.imported;
-        const parts = im ? [im.notes ? plural(im.notes, 'note') : '', im.bookmarks ? plural(im.bookmarks, 'bookmark') : '', im.links ? plural(im.links, 'link') : '', im.marks ? plural(im.marks, 'highlight') : '', im.chapters ? `reading progress for ${plural(im.chapters, 'chapter')}` : ''].filter(Boolean) : [];
+        const parts = im ? [im.notes ? plural(im.notes, 'note') : '', im.bookmarks ? plural(im.bookmarks, 'bookmark') : '', im.links ? plural(im.links, 'link') : '', im.marks ? plural(im.marks, 'highlight') : '', im.memory ? plural(im.memory, 'memory verse') : '', im.chapters ? `reading progress for ${plural(im.chapters, 'chapter')}` : ''].filter(Boolean) : [];
         toast(`Welcome, ${firstName(who)}. Your profile is ready.${parts.length ? ` Brought over ${listJoin(parts)}.` : ''}`);
       } else toast(`Signed in as ${who.name}.`);
     }
@@ -774,7 +777,7 @@ function renderProfile() {
 <div class="actions"><button type="button" class="btn btn-tinted sm" data-prof="password">Change password</button></div>
 <h3 class="group-h">Your data</h3>
 <ul class="group av">
-  <li><button class="cell" type="button" data-prof="export"><span class="tile-i blue">${icon('export')}</span><span class="cell-body"><span class="cell-title">Export profile</span><span class="cell-sub">Notes, bookmarks, links, highlights and progress as JSON</span></span></button></li>
+  <li><button class="cell" type="button" data-prof="export"><span class="tile-i blue">${icon('export')}</span><span class="cell-body"><span class="cell-title">Export profile</span><span class="cell-sub">Notes, bookmarks, links, highlights, memory verses and progress as JSON</span></span></button></li>
   <li><button class="cell" type="button" data-prof="obsidian"><span class="tile-i indigo">${icon('export')}</span><span class="cell-body"><span class="cell-title">Export notes for Obsidian</span><span class="cell-sub">Markdown with [[John 3.16|John 3:16]] links</span></span></button></li>
   ${importRow}
   ${fileRow}
@@ -943,11 +946,11 @@ async function importGuest(btn) {
   });
 }
 /** The import's counts in the words of 'Bring over guest data': '3 notes, 1 bookmark and reading progress for 2 chapters'. */
-const importedParts = im => [im.notes ? plural(im.notes, 'note') : '', im.bookmarks ? plural(im.bookmarks, 'bookmark') : '', im.links ? plural(im.links, 'link') : '', im.marks ? plural(im.marks, 'highlight') : '', im.chapters ? `reading progress for ${plural(im.chapters, 'chapter')}` : ''].filter(Boolean);
+const importedParts = im => [im.notes ? plural(im.notes, 'note') : '', im.bookmarks ? plural(im.bookmarks, 'bookmark') : '', im.links ? plural(im.links, 'link') : '', im.marks ? plural(im.marks, 'highlight') : '', im.memory ? plural(im.memory, 'memory verse') : '', im.chapters ? `reading progress for ${plural(im.chapters, 'chapter')}` : ''].filter(Boolean);
 /** Every tab of this profile reloads what an import changed (the guest import does the same). */
 async function afterImport(rev) {
   rev = rev || {};
-  for (const t of ['notes', 'library', 'links', 'marks']) broadcast({ t, scope: state.auth.scope, rev: rev[t] || 0 });
+  for (const t of ['notes', 'library', 'links', 'marks', 'memory']) broadcast({ t, scope: state.auth.scope, rev: rev[t] || 0 });
   try { await A?.onScopeChange?.({ prevScope: state.auth.scope, reason: 'import' }); } catch (e) { console.error(e); }
 }
 const IMPORT_MAX = 25 * 1024 * 1024; // serve.py's limit for /api/profile/import
@@ -1062,8 +1065,8 @@ async function deleteProfile() {
   const uid = state.auth.scope;
   await confirmDialog({
     title: 'Delete this profile?',
-    body: state.auth.hosted ? `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this site. It’s erased straight away and can’t be undone.`
-      : `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this computer. Guest notes are not affected.`,
+    body: state.auth.hosted ? `This removes ${u.name}’s notes, bookmarks, links, highlights, memory verses and reading progress from this site. It’s erased straight away and can’t be undone.`
+      : `This removes ${u.name}’s notes, bookmarks, links, highlights, memory verses and reading progress from this computer. Guest notes are not affected.`,
     ok: 'Delete profile', danger: true, password: true,
     onConfirm: async password => {
       if (DRY) return MSG.dry;

@@ -38,6 +38,7 @@ try { if (/BibleLantern\/iOS/.test(navigator.userAgent) || /[?&]app=ios(&|$)/.te
 <link rel="stylesheet" href="css/study.css">
 <link rel="stylesheet" href="css/art.css">
 <link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/memory.css">
 </head>
 <body>
 <a class="skip" href="#reader">Skip to the text</a>
@@ -245,6 +246,20 @@ try { if (/BibleLantern\/iOS/.test(navigator.userAgent) || /[?&]app=ios(&|$)/.te
   <div class="modal-head"><div class="vm-head"><h2 id="video-title" class="modal-title"></h2><p id="video-sub" class="vm-sub"></p></div><button type="button" class="close-btn" data-close aria-label="Close" title="Close (Esc)"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
   <div class="modal-body vm-body"><div id="video-frame" class="player vm-frame"></div><p id="video-note" class="vm-note" hidden></p></div>
   <div class="modal-foot"><a id="video-yt" class="btn btn-plain vm-yt" href="https://www.youtube.com/" target="_blank" rel="noopener">Watch on YouTube<svg class="i" aria-hidden="true"><use href="#i-external"/></svg></a><button type="button" class="btn btn-primary" data-close>Close</button></div>
+</dialog>
+
+<dialog id="practice" class="modal practice" aria-labelledby="practice-title" aria-describedby="practice-sub">
+  <div class="modal-head">
+    <div class="lib-titles"><h2 id="practice-title" class="modal-title"></h2><p class="lib-sub" id="practice-sub"></p></div>
+    <button type="button" class="close-btn" data-close aria-label="Close" title="Close (Esc)"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button>
+  </div>
+  <div class="mz-pr-body">
+    <div class="segmented" id="practice-steps" role="radiogroup" aria-label="Step"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-step="read" aria-checked="true">Read</button><button type="button" role="radio" data-step="fade" aria-checked="false" tabindex="-1">Fade</button><button type="button" role="radio" data-step="letters" aria-checked="false" tabindex="-1">First letters</button><button type="button" role="radio" data-step="recall" aria-checked="false" tabindex="-1">Recall</button></div>
+    <div class="mz-pane" id="practice-pane"></div>
+    <div class="mz-pr-meta" id="practice-meta" hidden></div>
+  </div>
+  <div class="mz-pr-foot" id="practice-foot"></div>
+  <p class="sr" id="practice-say" aria-live="polite"></p>
 </dialog>
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

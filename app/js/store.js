@@ -62,6 +62,12 @@ const LICENSED = [
 export const LICENSED_IDS = LICENSED.map(t => t.id);
 /** The texts read through serve.py's /api/passage, a chapter at a time: ESV and NLT (a key), NIV, NKJV and NASB (API.Bible). */
 export const isPassageTr = tr => tr === 'esv' || tr === 'nlt' || LICENSED_IDS.includes(tr);
+/** The ESV's and NLT's credit lines, shown under their text (the reader's footer, a memory verse's practice). */
+export const COPYRIGHT = {
+  esv: 'Scripture quotations marked ESV are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.',
+  // Tyndale's required credit line for a project that uses more than one translation (tyndale.com permissions)
+  nlt: 'Scripture quotations marked (NLT) are taken from the Holy Bible, New Living Translation, copyright ©1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.',
+};
 export function applyLicensed() {
   const list = state.translations, on = Array.isArray(state.apiKeys?.licensed) ? state.apiKeys.licensed : [];
   if (!Array.isArray(list) || !list.length) return;

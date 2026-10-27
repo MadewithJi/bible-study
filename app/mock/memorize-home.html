@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Memorize: Home</title>
+<script>(function(){var q=location.search,m=q.match(/[?&]theme=(light|dark)\b/),t=m?m[1]:null,e=/[?&]embed\b/.test(q);if(!t&&!e)try{t=localStorage.getItem('mz-mock-theme')}catch(x){}if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;document.documentElement.classList.add(e?'mz-embed':'mz-has-strip')})()</script>
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/home.css">
+<link rel="stylesheet" href="memorize-shell.css">
+<style>
+  /* Home's Today as home.js builds it; the new band, Your memory verse, comes straight after the cover. It is a second
+     Continue-reading band (.cont .cont-in .kick .cont-t .cont-at .cont-q .cont-b), so the two read as one pattern;
+     the hairline at the top of each band (.cont-in::before) keeps them apart, and the lamp glow stays Continue's. */
+  #home { padding-top: 0; }
+  #home .mz-mem::before { content: none; }
+  #home .mz-when { margin-top: 4px; }
+  #home .mz-due { font-weight: 500; color: var(--lamp-ink); }
+  #home .mz-where { display: flex; align-items: center; gap: 9px; }
+  #home .mz-quiet { height: 46px; padding: 0 16px; border-radius: var(--r-pill); font: 500 15px/1 var(--sans); color: var(--label-2); transition: background-color var(--d-1), color var(--d-1); }
+  #home .mz-quiet:hover { color: var(--label); background: rgba(255,255,255,.08); }
+  #home .mz-later { color: var(--label-2); font-size: 15px; }
+  #home .mz-aside { padding-bottom: 36px; }
+  #home .mz-aside .mz-note { margin-top: 0; }
+  /* the card's other two states, small, side by side: mock-only captions, so a dashed outline (as the ⓘ lines) */
+  #home .mz-vars { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 18px; }
+  #home .mz-cap { margin: 0 0 8px 4px; font: 600 12px/1.4 var(--sans); color: var(--label-2); }
+  #home .mz-var { display: grid; grid-template-columns: minmax(0, 1fr); padding: 16px 18px; border: 1px dashed rgba(255,255,255,.18); border-radius: 14px; }
+  #home .mz-var .cont-t { font-size: 26px; }
+  #home .mz-empty { display: flex; align-items: center; gap: 14px; }
+  #home .mz-empty .tile-i { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,.08); color: var(--lamp-ink); }
+  #home .mz-empty .tile-i .i { width: 22px; height: 22px; }
+  #home .mz-empty p { font-size: 15px; line-height: 1.45; color: var(--label); }
+  #home .mz-empty p span { display: block; color: var(--label-2); font-size: 14px; }
+  @media (max-width: 899px) { #home .mz-vars { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 599px) {
+    /* a phone: the cover stays as it is, so the card is compact to keep Practise above the fold. Row 1–2: the
+       kicker and reference, Practise beside them; row 3: where it stands; row 4: when, and Not today. */
+    #home .mz-mem .cont-in { grid-template-columns: minmax(0, 1fr) auto; gap: 0 16px; padding-block: 26px 28px; }
+    #home .mz-mem .cont-in > div:first-child, #home .mz-mem .mz-act { display: contents; }
+    #home .mz-mem .kick { grid-area: 1 / 1; }
+    #home .mz-mem .cont-t { grid-area: 2 / 1; }
+    #home .mz-mem .mz-where { grid-area: 3 / 1 / auto / -1; }
+    #home .mz-mem .mz-when { grid-area: 4 / 1; align-self: center; margin-top: 0; }
+    #home .mz-mem .mz-first { display: none; }
+    #home .mz-mem .mz-act .lbtn { grid-area: 1 / 2 / 3; align-self: end; width: auto; }
+    #home .mz-mem .mz-act .mz-quiet { grid-area: 4 / 2; justify-self: end; height: 44px; margin-right: -12px; padding: 0 12px; }
+    #home .mz-mem .mz-later { grid-area: 4 / 1 / auto / -1; margin-top: 8px; }
+  }
+</style>
+</head>
+<body class="mz-body">
+<main id="home" data-state="today">
+  <div class="hm-today">
+    <section class="cover dk" aria-labelledby="hm-h-today">
+      <div class="plate" data-plate="vod"><img alt="Jesus Walking on the Sea, an engraving by Gustave Doré" decoding="async"><span class="glow"></span><span class="halo"></span><span class="beam"></span><span class="shade"></span></div>
+      <div class="mast"><form class="finder" role="search" onsubmit="return false"><span data-icon="search"></span><label class="sr" for="hm-q">Search the Bible</label><input id="hm-q" name="q" type="search" placeholder="John 3:16, love, G26" autocomplete="off" enterkeyhint="search" spellcheck="false"></form></div>
+      <div class="hero-in wrap">
+        <h1 id="hm-h-today" class="dateline"><span class="dl-k" id="hm-greet">Good morning</span><span class="sr">, </span> <span class="dl-sep" aria-hidden="true"></span> <span>Sunday 25 October</span></h1>
+        <p class="vod-k">Verse of the day</p>
+        <a class="vod" href="#"><span class="vod-t">But he saith unto them, It is I; be not afraid.</span><span class="vod-r"><span class="vod-ref">John 6:20 · KJV</span> <span class="vod-go">Open the verse<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span></a>
+      </div>
+      <span class="plate-cap" aria-hidden="true"><span data-icon="photo"></span><span><b>Jesus Walking on the Sea</b><br>Gustave Doré, 1866</span></span>
+    </section>
+
+    <section class="cont dk mz-mem" aria-labelledby="mz-mem-k">
+      <div class="wrap cont-in" id="mz-card"></div>
+      <div class="wrap mz-aside">
+        <p class="mz-note"><span data-icon="info"></span><span><b>Not decided yet:</b> one current verse at a time (shown, the default) or up to three, each with its own band here.</span></p>
+        <div class="mz-vars" role="group" aria-label="Mock-up: the card’s other two states">
+          <div><p class="mz-cap">When nothing is due</p><div class="mz-var" id="mz-next"></div></div>
+          <div><p class="mz-cap">Before any verse is chosen (proposed: not shown on Home; this empty state lives in Library › Memory)</p><div class="mz-var" id="mz-none"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cont dk" aria-labelledby="hm-h-cont">
+      <div class="wrap cont-in"><div><h2 id="hm-h-cont" class="kick">Continue reading</h2><p class="cont-t"><a href="#">John 3</a></p><p class="cont-at">Verse 21 of 36 · Yesterday</p></div>
+        <blockquote class="cont-q"><span class="vnumb">21</span>But he that doeth truth cometh to the light, that his deeds may be made manifest, that they are wrought in God.</blockquote>
+        <div class="cont-b"><div class="cprog"><span>Chapter progress</span><span class="prog-n">58%</span><span class="prog-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="58" aria-label="John 3 progress"><span style="width:58%"></span></span></div>
+          <a class="lbtn btn-fill" href="#" aria-label="Resume John 3:21">Resume<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div></div>
+    </section>
+  </div>
+
+  <div class="paper">
+    <section class="sec wrap" aria-labelledby="hm-h-study">
+      <header class="sec-h"><h2 id="hm-h-study" class="sec-t">Your study, recently</h2><p class="sec-d">Your latest notes, highlights and links, each with its verse.</p></header>
+      <div class="study-in">
+        <ol class="feed">
+          <li class="entry"><p class="e-k"><span data-icon="note"></span>Note <span aria-hidden="true">·</span> <time>Yesterday</time></p><h3 class="e-ref"><a href="#">Psalm 119:105</a></h3><blockquote class="e-v">Thy word is a lamp unto my feet, and a light unto my path.</blockquote><p class="e-n">Enough light for the next step, not the whole road.</p></li>
+          <li class="entry"><p class="e-k"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 4.6l4.8 4.8-8.2 8.2H6.4v-4.8z"/><path d="M12 7.2l4.8 4.8"/><path d="M4 20.5h16"/></svg>Highlight <span aria-hidden="true">·</span> <time>Thursday</time></p><h3 class="e-ref"><a href="#">John 3:21</a></h3><blockquote class="e-v">But he that doeth truth <mark class="mk-yellow">cometh to the light</mark>, that his deeds may be made manifest, that they are wrought in God.</blockquote></li>
+          <li class="entry"><p class="e-k"><span data-icon="note"></span>Note <span aria-hidden="true">·</span> <time>20 October</time></p><h3 class="e-ref"><a href="#">Isaiah 40:31</a></h3><blockquote class="e-v">But they that wait upon the <span class="sc">Lord</span> shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint.</blockquote></li>
+        </ol>
+        <aside class="tally" aria-label="Your reading">
+          <div><p class="stat-n"><span>12</span><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path class="cr" d="M12 10.3v6.2M9.8 12.4h4.4"/></svg></p><p class="stat-l">day reading streak</p><p class="stat-s">You’ve read today</p></div>
+          <div><p class="stat-n">9</p><p class="stat-l">chapters this week</p>
+            <ol class="week" aria-label="Chapters read each day"><li><span class="bar" style="--h:50%"></span><span>M</span></li><li><span class="bar" style="--h:25%"></span><span>T</span></li><li><span class="bar" style="--h:75%"></span><span>W</span></li><li><span class="bar" style="--h:25%"></span><span>T</span></li><li><span class="bar" style="--h:50%"></span><span>F</span></li><li><span class="bar" style="--h:0%"></span><span>S</span></li><li class="now"><span class="bar" style="--h:100%"></span><span>S</span></li></ol></div>
+        </aside>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { initShell, icon, go } from './memorize-shell.js';
+
+const dots = (done, now = -1) => `<span class="mz-steps" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map(i => `<i class="${i < done ? 'd' : i === now ? 'n' : ''}"></i>`).join('')}</span>`;
+const arrow = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const head = (n = 2) => `<div><h2 class="kick" id="mz-mem-k">Your memory verse</h2><p class="cont-t">John 3:16</p>`
+  + `<p class="cont-at mz-where">${dots(n, n)}KJV · Learning · review ${n + 1} of 6</p>`;
+const CARD = {
+  // Practise comes first, on screen and for the keyboard, as Home's own bands put their main action first
+  due: () => `${head()}<p class="cont-at mz-when" id="mz-min"><span class="mz-due">Due today</span> · about a minute</p></div>
+    <p class="cont-q mz-first">For God so loved the world…</p>
+    <div class="cont-b two mz-act"><a class="lbtn btn-fill" href="#" data-go="practise" aria-describedby="mz-min">Practise${arrow}</a><button type="button" class="mz-quiet" data-act="later">Not today</button></div>`,
+  later: () => `${head()}</div>
+    <p class="cont-q mz-first">For God so loved the world…</p>
+    <div class="cont-b two mz-later"><span>Moved to tomorrow.</span><button type="button" class="mz-quiet" data-act="undo">Undo</button></div>`,
+  next: () => `<p class="kick">Your memory verse</p><p class="cont-t">John 3:16</p><p class="cont-at mz-where">${dots(3, 3)}KJV · Learning · review 4 of 6</p><p class="cont-at mz-when">Next review Thursday</p>`,
+  none: () => `<div class="mz-empty"><span class="tile-i">${icon('mz')}</span><p>Nothing to memorize yet.<span>Select a verse and choose Memorize.</span></p></div>`,
+};
+const card = document.getElementById('mz-card');
+const show = (st, focus = '') => { card.innerHTML = CARD[st](); card.dataset.state = st; if (focus) card.querySelector(focus)?.focus(); };
+show('due');
+document.getElementById('mz-next').innerHTML = CARD.next();
+document.getElementById('mz-none').innerHTML = CARD.none();
+card.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  if (b.dataset.act === 'later') show('later', '[data-act="undo"]');
+  else if (b.dataset.act === 'undo') show('due', '[data-act="later"]');
+});
+// "Practise" in the card: the gallery shows the practice; on its own, the page goes there (shell: [data-go])
+card.addEventListener('click', e => { const a = e.target.closest('a[data-go]'); if (a && document.documentElement.classList.contains('mz-embed')) return; if (a) { e.preventDefault(); go(a.dataset.go); } });
+// the other links on Home are not part of these mock-ups
+document.addEventListener('click', e => { const a = e.target.closest('a[href="#"]'); if (a && !a.dataset.go) e.preventDefault(); });
+
+const h = new Date().getHours();
+document.getElementById('hm-greet').textContent = `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}`;
+
+// the plate: the day's engraving with its light placed as home.js does (dore-184, 1800 × 1438; light at 68% 40%)
+const fig = document.querySelector('.plate'), img = fig.querySelector('img'), P = { w: 1800, h: 1438 }, spec = { pos: '50% 40%', light: [68, 40] };
+function placeLight() {
+  const W = fig.clientWidth, H = fig.clientHeight; if (!W || !H) return;
+  const s = Math.max(W / P.w, H / P.h), iw = P.w * s, ih = P.h * s, [px, py] = spec.pos.split(' ').map(parseFloat);
+  const lx = (W - iw) * px / 100 + iw * spec.light[0] / 100, ly = (H - ih) * py / 100 + ih * spec.light[1] / 100;
+  const tx = W * (W < 600 ? 0.45 : 0.28), ty = H * 0.8, a = Math.atan2(tx - lx, -(ty - ly)) * 180 / Math.PI;
+  fig.style.setProperty('--pos', spec.pos); fig.style.setProperty('--lx', `${Math.round(lx)}px`); fig.style.setProperty('--ly', `${Math.round(ly)}px`); fig.style.setProperty('--ba', `${a.toFixed(1)}deg`);
+}
+img.width = P.w; img.height = P.h;
+img.addEventListener('load', () => fig.classList.add('is-on'), { once: true });
+img.src = '../data/art/dore-184-s.jpg';
+const big = new Image(); big.onload = () => { img.src = big.src; }; big.src = '../data/art/dore-184.jpg';
+placeLight(); addEventListener('resize', placeLight);
+
+initShell();
+</script>
+</body>
+</html>

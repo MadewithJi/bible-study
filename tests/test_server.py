@@ -638,7 +638,7 @@ class T03_Signup(Base):
         self.assertEqual(r.json["user"]["email"], email)
         self.assertEqual(r.json["user"]["name"], "Alice Test", "whitespace is collapsed")
         self.assertEqual(r.json["user"]["initials"], "AT")
-        self.assertEqual(r.json["imported"], {"notes": 3, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "studies": 0, "themes": 0})
+        self.assertEqual(r.json["imported"], {"notes": 3, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "memory": 0, "studies": 0, "themes": 0})
         cookies = r.set_cookies()
         self.assertEqual(len(cookies), 1)
         ck = cookies[0]
@@ -1371,7 +1371,7 @@ class T09_ExportImportDelete(Base):
         self.assertIn("43.3.16", b.req("GET", "/api/notes").json["refs"])
         self.assertIn("50.4.13", b.req("GET", "/api/notes").json["refs"], "the profile's own notes are kept")
         r2 = b.req("POST", "/api/profile/import-guest", {}, scoped=True)
-        self.assertEqual(r2.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "studies": 0, "themes": 0})
+        self.assertEqual(r2.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "memory": 0, "studies": 0, "themes": 0})
         self.assertEqual(r2.json["rev"], r.json["rev"], "nothing changed the second time")
         ch2 = b.library().json["chapters"]["66.21"]
         self.assertEqual(ch1, ch2)
@@ -2172,7 +2172,7 @@ class T15_LibraryIntegrity(Base):
         self.assertLess(t_old, before["activity"][-1]["t"], "precondition: the guest's entries are older than all the profile keeps")
         for _ in range(3):
             r = p.req("POST", "/api/profile/import-guest", {}, scoped=True)
-            self.assertEqual(r.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "studies": 0, "themes": 0})
+            self.assertEqual(r.json["imported"], {"notes": 0, "bookmarks": 0, "chapters": 0, "links": 0, "marks": 0, "memory": 0, "studies": 0, "themes": 0})
             self.assertEqual(r.json["rev"]["library"], before["rev"], "nothing changed")
         self.assertEqual(p.library(activity=1000).json["activity"], before["activity"], "no real history was pushed out")
         self.assertEqual([i["mode"] for i in H.read("profiles", p.scope, "library.json")["imports"]], ["copy"])
@@ -5793,6 +5793,433 @@ class T30_ApiBibleServer(Base):
                     with open(os.path.join(root, fn), "rb") as f:
                         self.assertNotIn(key, f.read(), fn)
         self.assertFalse([p for p, _ in FakeApiBible.seen if FakeApiBible.key in p], "never in a URL")
+
+
+# ======================================================================= AD. Memorize: memory verses (Memorize brief §1, §2)
+def new_memory_id():
+    return "mv_" + secrets.token_hex(6)
+
+
+class T31_Memory(Base):
+    """Memory verses (Memorize brief §1, §2): the third per-key collection, on the My links and marks machinery."""
+
+    @classmethod
+    def setUpClass(cls):
+        H.restart("--max-users", "200")  # the suite is past the local profile cap (50) by now; this class signs up six
+        for who in ("mina", "milo"):
+            email, pw = H.account(who, "Memorize")
+            c = Client()
+            assert c.signup(email, pw, name=who.title()).status == 201
+            S[who] = c
+
+    def verse(self, vid, ref="43.3.16", **kw):
+        return dict({"id": vid, "ref": ref, "tr": "kjv", "pos": 1, "step": 0, "due": "", "heart": "", "last": 0,
+                     "updated": now_ms()}, **kw)
+
+    def changes(self, c, set_=None, del_=None, base=None, rev=None, **extra):
+        body = dict({"set": set_ or {}, "del": del_ or {}}, **extra)
+        if base is not None:
+            body["base"] = base
+        if rev is not None:
+            body["baseRev"] = rev
+        return c.req("POST", "/api/memory/changes", body, scoped=True)
+
+    def memory(self, c):
+        return c.req("GET", "/api/memory").json
+
+    def test_m01_get_and_first_write(self):
+        g = Client()
+        r = g.req("GET", "/api/memory")
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual(r.json, {"memory": {}, "rev": 0, "scope": "guest"})
+        self.assertEqual((r.headers["ETag"], r.headers["Cache-Control"]), ('"0"', "no-store"))
+        a = S["mina"]
+        self.assertEqual(self.memory(a), {"memory": {}, "rev": 1, "scope": a.scope}, "a new profile starts at rev 1")
+        self.assertEqual(H.read("profiles", a.scope, "memory.json"), {"version": 1, "rev": 1, "memory": {}, "deleted": {}})
+        lib0 = a.library(activity=1000).json
+        vid = new_memory_id()
+        w = self.changes(a, {vid: self.verse(vid)}, base={vid: None}, rev=1)
+        self.assertEqual(w.status, 200, w)
+        self.assertEqual((w.json["ok"], w.json["rev"], w.json["changed"], w.json["stale"], w.json["conflicts"]), (True, 2, True, False, {}))
+        self.assertRegex(w.json["saved"], r"^\d\d:\d\d:\d\d$")
+        r = a.req("GET", "/api/memory")
+        self.assertEqual((r.json["rev"], r.json["scope"], r.headers["ETag"]), (2, a.scope, '"2"'))
+        self.assertEqual(w.json["versions"], {vid: r.json["memory"][vid]["updated"]})
+        self.assertNotIn("deleted", r.json)
+        self.assertEqual(H.read("profiles", a.scope, "memory.json")["memory"][vid], r.json["memory"][vid])
+        lib = a.library(activity=1000).json
+        self.assertEqual((lib["rev"], lib["activityTotal"], lib["chapters"]), (lib0["rev"], lib0["activityTotal"], lib0["chapters"]),
+                         "a memory verse adds no activity and marks no verse as studied")
+        self.assertEqual(g.req("GET", "/api/memory").json["memory"], {}, "the guest space is separate")
+
+    def test_m02_validation_is_atomic(self):
+        a, k = S["mina"], "mv_0123456789ab"
+        V = lambda **kw: self.verse(k, **kw)  # noqa: E731
+        no_ref, no_tr = ({f: v for f, v in V().items() if f != drop} for drop in ("ref", "tr"))
+        bad = [no_ref, V(ref=None), V(ref="43.3"), V(ref="43.3.37"), V(ref="43.22.1"), V(ref="67.1.1"), V(ref="43:3:16"), V(ref=43316),
+               V(ref="43.3.١٦"), V(ref=" 43.3.16"), V(ref="43.3.16-"), V(ref="43.3.17-16"), V(ref="43.3.1-13"), V(ref="43.3.36-4.2"),
+               V(ref="43.3.36-37"), no_tr, V(tr=None), V(tr="KJV"), V(tr="lsb"), V(tr=5), V(pos="1"), V(pos=True), V(pos=[1]),
+               V(pos=1e12 + 1), V(pos=-1e12 - 1), V(step=-1), V(step=7), V(step=1.5), V(step=6.0), V(step="3"), V(step=True),
+               V(due="2026-02-30"), V(due="tomorrow"), V(due=5), V(due="2026-1-5"), V(due="2026-10-26T00:00"), V(heart="2026-13-01"),
+               V(heart=True), V(heart="2026-10-01"), V(heart="2026-10-01", step=5), V(last=-1), V(last="x"), V(last=True),
+               V(updated="x"), V(updated=-1), V(created="soon"), dict(V(), pad="x" * 2100), "not an object", [k],
+               dict(V(), id="mv_ba9876543210"), dict(V(), id=None), dict(V(), id="mv_0123456789AB")]
+        rev = self.memory(a)["rev"]
+        for case in bad:
+            with self.subTest(case=str(case)[:120]):
+                self.assertErr(self.changes(a, {k: case}), 400, "invalid_memory_verse", field=k)
+        msg = lambda case: self.changes(a, {k: case}).json["message"]  # noqa: E731
+        self.assertEqual(msg(V(ref="43.3.1-13")), "A memory verse can be up to 12 verses long.")
+        self.assertEqual(msg(V(heart="2026-10-01", step=5)), "A verse written on the heart has step 6.")
+        self.assertTrue(msg(V(ref="43.3.36-4.2")).startswith("“ref” must be a verse in this Bible"))
+        self.assertEqual(msg(V(step=7)), "“step” must be a whole number from 0 to 6.")
+        self.assertEqual(msg(V(due="tomorrow")), "“due” must be empty or a day like 2026-10-26.")
+        self.assertIn("2 KB", msg(dict(V(), pad="x" * 2100)))
+        self.assertErr(self.changes(a, {"mv_XYZ": V()}), 400, "invalid_memory_verse", field="mv_XYZ")
+        self.assertErr(self.changes(a, {"mk_0123456789ab": V()}), 400, "invalid_memory_verse", field="mk_0123456789ab")
+        self.assertErr(self.changes(a, {k: V()}, {k: now_ms()}), 400, "invalid_memory_verse", field=k)
+        self.assertEqual(self.changes(a, {k: V()}, {k: now_ms()}).json["message"], "A memory verse can’t be saved and deleted at once.")
+        self.assertErr(self.changes(a, del_={k: "x"}), 400, "invalid_memory_verse", field=k)
+        self.assertErr(self.changes(a, del_={"nope": now_ms()}), 400, "invalid_memory_verse", field="nope")
+        good = new_memory_id()
+        self.assertErr(self.changes(a, {good: self.verse(good), k: V(step=7)}), 400, "invalid_memory_verse", field=k)
+        self.assertNotIn(good, self.memory(a)["memory"], "one bad memory verse: nothing is applied")
+        self.assertErr(a.req("POST", "/api/memory/changes", {"set": []}, scoped=True), 400, "bad_request")
+        self.assertErr(self.changes(a, {good: self.verse(good)}, base={good: "x"}), 400, "bad_request", field=good)
+        self.assertErr(self.changes(a, rev=-1), 400, "bad_request", field="baseRev")
+        for day in ("2026-02-30", 5):
+            self.assertErr(self.changes(a, {good: self.verse(good)}, day=day), 400, "bad_request", field="day")
+        self.assertEqual(self.memory(a)["rev"], rev, "nothing was written")
+        self.assertErr(self.changes(a, del_={f"mv_{i:012x}": now_ms() for i in range(1001)}), 400, "bad_request")
+
+    def test_m03_defaults_and_canonical_form(self):
+        a, vid = S["mina"], new_memory_id()
+        r = self.changes(a, {vid: {"id": vid, "ref": "19.023.01-06", "tr": "esv", "evil": "<script>", "updated": now_ms() + 3_600_000}})
+        self.assertEqual(r.status, 200, r)
+        mv = self.memory(a)["memory"][vid]
+        self.assertEqual(list(mv), ["id", "ref", "tr", "pos", "step", "due", "heart", "last", "created", "updated"])
+        self.assertEqual({f: mv[f] for f in ("ref", "tr", "pos", "step", "due", "heart", "last")},
+                         {"ref": "19.23.1-6", "tr": "esv", "pos": 0, "step": 0, "due": "", "heart": "", "last": 0},
+                         "canonical ref, defaults filled in, unknown fields dropped")
+        self.assertLessEqual(mv["updated"], now_ms(), "a time from the future is clamped")
+        self.assertEqual(mv["created"], mv["updated"])
+        v2, v3, v4, t = new_memory_id(), new_memory_id(), new_memory_id(), now_ms()
+        r = self.changes(a, {v2: self.verse(v2, ref="43.3.16-16", pos=-1e12),
+                             v3: self.verse(v3, ref="19.119.1-12", tr="nasb", pos=-0.5, step=6, heart="2026-10-01", due="2026-12-30",
+                                            last=t + 3_600_000),
+                             v4: self.verse(v4, ref="1.1.1", pos=1e12, step=3, due="2026-10-27", last=t - 5)})
+        self.assertEqual(r.status, 200, r)
+        got = self.memory(a)["memory"]
+        self.assertEqual((got[v2]["ref"], got[v2]["pos"]), ("43.3.16", -1e12), "a one-verse range is one verse")
+        self.assertEqual({f: got[v3][f] for f in ("ref", "tr", "pos", "step", "heart", "due")},
+                         {"ref": "19.119.1-12", "tr": "nasb", "pos": -0.5, "step": 6, "heart": "2026-10-01", "due": "2026-12-30"},
+                         "twelve verses; written on the heart")
+        self.assertTrue(t <= got[v3]["last"] <= now_ms(), "a last review from the future is clamped")
+        self.assertEqual((got[v4]["pos"], got[v4]["step"], got[v4]["last"]), (1e12, 3, t - 5))
+
+    def test_m04_compare_and_set(self):
+        a = S["mina"]
+        t1, t2 = a.tab(), a.tab()
+        vid, v0 = new_memory_id(), now_ms() - 10_000
+        r = self.changes(t1, {vid: self.verse(vid, updated=v0)}, base={vid: None})
+        self.assertEqual((r.json["changed"], r.json["versions"]), (True, {vid: v0}))
+        rev = r.json["rev"]
+        r = self.changes(t1, {vid: self.verse(vid, updated=v0)}, base={vid: None})
+        self.assertEqual((r.json["changed"], r.json["conflicts"], r.json["versions"], r.json["rev"]), (False, {}, {vid: v0}, rev), "a retried create")
+        review = self.verse(vid, updated=v0 - 5, step=1, due="2026-10-27", last=v0)
+        r = self.changes(t1, {vid: review}, base={vid: v0})
+        v1 = r.json["versions"][vid]
+        self.assertEqual(v1, v0 + 1, "the version moves forward even from a clock that is behind")
+        r = self.changes(t1, {vid: review}, base={vid: v0})
+        self.assertEqual((r.json["changed"], r.json["conflicts"], r.json["versions"]), (False, {}, {vid: v1}), "a retried review")
+        stored = self.memory(a)["memory"][vid]
+        r = self.changes(t2, {vid: self.verse(vid, pos=-1)}, base={vid: v0})
+        self.assertEqual((r.json["changed"], r.json["conflicts"], r.json["versions"]), (False, {vid: stored}, {}),
+                         "Make current from a tab that missed the review: a conflict, with the newer version")
+        r = self.changes(t2, del_={vid: now_ms()}, base={vid: v0})
+        self.assertEqual(r.json["conflicts"], {vid: stored}, "removing a verse changed elsewhere is a conflict")
+        self.assertEqual(self.memory(a)["memory"][vid], stored)
+        td = now_ms()
+        r = self.changes(t1, del_={vid: td}, base={vid: v1})
+        self.assertEqual((r.json["changed"], r.json["conflicts"], r.json["versions"]), (True, {}, {vid: None}))
+        self.assertNotIn(vid, self.memory(a)["memory"])
+        self.assertGreaterEqual(H.read("profiles", a.scope, "memory.json")["deleted"][vid], td, "tombstone")
+        r = self.changes(t2, {vid: self.verse(vid, updated=td - 1000)})
+        self.assertEqual(r.json["conflicts"], {vid: None}, "an edit older than the remove does not bring it back")
+        r = self.changes(t2, del_={vid: td + 5}, base={vid: v1})
+        self.assertEqual((r.json["conflicts"], r.json["versions"]), ({}, {vid: None}), "removing a removed verse is no conflict")
+        r = self.changes(t1, {vid: dict(stored, updated=now_ms())}, base={vid: None})
+        self.assertEqual((r.json["changed"], r.json["conflicts"]), (True, {}), "Undo: the same id and fields come back with base null")
+        back = self.memory(a)["memory"][vid]
+        self.assertEqual(dict(back, updated=0), dict(stored, updated=0), "its progress and place in line are kept")
+        rev = self.memory(a)["rev"]
+        self.assertTrue(self.changes(t1, rev=rev - 1).json["stale"])
+        self.assertFalse(self.changes(t1, rev=rev).json["stale"])
+        # two devices adding at once: per-id compare-and-set, so neither conflicts, even past four learning verses
+        xs, ys = [new_memory_id() for _ in range(3)], [new_memory_id() for _ in range(3)]
+        rx = self.changes(t1, {x: self.verse(x, ref="19.23.1", pos=50) for x in xs}, base={x: None for x in xs}, rev=rev)
+        ry = self.changes(t2, {y: self.verse(y, ref="19.23.1", pos=50) for y in ys}, base={y: None for y in ys}, rev=rev)
+        self.assertEqual((rx.json["conflicts"], ry.json["conflicts"], ry.json["stale"]), ({}, {}, True))
+        got = self.memory(a)["memory"]
+        self.assertLessEqual(set(xs + ys), set(got))
+        self.assertGreater(sum(1 for v in got.values() if not v["heart"]), 4, "the cap of four learning verses is the browser's: none is lost")
+
+    def test_m05_scope_csrf_and_routes(self):
+        a, g = S["mina"], Client()
+        vid = new_memory_id()
+        body = {"set": {vid: self.verse(vid)}}
+        r = a.req("POST", "/api/memory/changes", body, headers={"X-BS-Scope": "guest"})
+        self.assertErr(r, 409, "scope_mismatch")
+        self.assertEqual(r.json["scope"], a.scope)
+        r = g.req("POST", "/api/memory/changes", body, headers={"X-BS-Scope": a.scope})
+        self.assertErr(r, 409, "scope_mismatch")
+        self.assertEqual(r.json["scope"], "guest")
+        self.assertErr(a.req("POST", "/api/memory/changes", body), 400, "scope_required")
+        self.assertErr(S["milo"].req("POST", "/api/memory/changes", body, headers={"X-BS-Scope": a.scope}), 409, "scope_mismatch")
+        for h in ({"Origin": "http://evil.example"}, {"Origin": "null"}, {"Sec-Fetch-Site": "cross-site"}):
+            self.assertErr(a.req("POST", "/api/memory/changes", body, headers=h, scoped=True), 403, "csrf")
+        self.assertNotIn(vid, self.memory(a)["memory"])
+        self.assertNotIn(vid, self.memory(g)["memory"])
+        self.assertErr(a.req("GET", "/api/memory/changes"), 405, "method_not_allowed")
+        r = a.req("POST", "/api/memory", {}, scoped=True)
+        self.assertErr(r, 405, "method_not_allowed")
+        self.assertEqual(r.headers["Allow"], "GET")
+        big = json.dumps({"set": {}, "pad": "x" * (1024 * 1024)}).encode()
+        self.assertErr(a.req("POST", "/api/memory/changes", raw=big, scoped=True), 413, "too_large")
+
+    def test_m06_limit_and_damaged_files(self):
+        email, pw = H.account("memcap", "Memorize: limit and repair")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Memory Cap").status, 201)
+        pdir = os.path.join(H.data, "profiles", c.scope)
+        path, t = os.path.join(pdir, "memory.json"), now_ms()
+        full = {f"mv_{i:012x}": {"id": f"mv_{i:012x}", "ref": f"19.119.{i % 176 + 1}", "tr": "kjv", "pos": i, "step": 6, "due": "2027-01-01",
+                                 "heart": "2026-10-01", "last": t, "created": t, "updated": t} for i in range(accounts.MAX_MEMORY - 1)}
+        put_raw(path, json.dumps({"version": 1, "rev": 5, "memory": full, "deleted": {}}).encode("utf-8"))
+        n1, n2 = new_memory_id(), new_memory_id()
+        r = self.changes(c, {n1: self.verse(n1), n2: self.verse(n2)})
+        self.assertErr(r, 409, "memory_verse_limit")
+        self.assertEqual(r.json["message"], "You’ve reached the limit of 1,000 memory verses.")
+        self.assertEqual(self.changes(c, {n1: self.verse(n1)}).status, 200)
+        self.assertErr(self.changes(c, {n2: self.verse(n2)}), 409, "memory_verse_limit")
+        first = "mv_000000000000"
+        self.assertEqual(self.changes(c, {first: dict(full[first], due="2027-02-01", updated=now_ms())}).status, 200, "edits still work at the limit")
+        r = self.changes(c, {n2: self.verse(n2)}, del_={first: now_ms()})
+        self.assertEqual(r.status, 200, "at the limit, a remove makes room for an add in the same batch")
+        self.assertEqual((first in self.memory(c)["memory"], n2 in self.memory(c)["memory"]), (False, True))
+        # a readable but wrongly shaped file is repaired entry by entry, never moved aside or a 500
+        good = new_memory_id()
+        put_raw(path, json.dumps({"rev": "x", "memory": {good: self.verse(good, updated=now_ms() + 86_400_000),
+                                                         "mv_aaaaaaaaaaaa": {"id": "mv_aaaaaaaaaaaa", "ref": "x"}, "mv_bbbbbbbbbbbb": 5,
+                                                         "mv_cccccccccccc": self.verse("mv_dddddddddddd")},
+                                  "deleted": {"mv_eeeeeeeeeeee": "soon", "nonsense": 5, "mv_ffffffffffff": now_ms() + 10 ** 9}}).encode("utf-8"))
+        mtime = int(os.stat(path).st_mtime * 1000)
+        r = c.req("GET", "/api/memory")
+        self.assertEqual((r.status, r.json["rev"], list(r.json["memory"])), (200, 0, [good]))
+        self.assertEqual(r.json["memory"][good]["updated"], mtime, "a time from the future reads as the file's mtime")
+        r = self.changes(c, del_={good: now_ms()}, base={good: mtime})
+        self.assertEqual((r.status, r.json["conflicts"]), (200, {}), "a base taken from the repaired GET still matches")
+        disk = H.read("profiles", c.scope, "memory.json")
+        self.assertEqual(set(disk["deleted"]), {good, "mv_ffffffffffff"})
+        self.assertLessEqual(disk["deleted"]["mv_ffffffffffff"], now_ms())
+        self.assertFalse([f for f in os.listdir(pdir) if ".corrupt-" in f])
+        self.assertTrue(os.path.exists(path + ".bak"), "the daily backup")
+        # an unparseable file is moved aside, never overwritten in place
+        put_raw(path, b"{not json")
+        r = c.req("GET", "/api/memory")
+        self.assertEqual((r.status, r.json["memory"], r.json["rev"]), (200, {}, 0))
+        self.assertTrue([f for f in os.listdir(pdir) if f.startswith("memory.json.corrupt-")])
+        # a bad optional field is repaired field by field: only a bad id or ref loses a verse and its progress
+        ma, mb, mc, md = (new_memory_id() for _ in range(4))
+        put_raw(path, json.dumps({"version": 1, "rev": 2, "memory": {
+            ma: self.verse(ma, tr="lsb", pos="x", step=9, due="soon", last=-5, created="x"),
+            mb: self.verse(mb, step=2, heart="2026-10-01", due="2027-01-01"),
+            mc: self.verse(mc, step=6, heart="not a day"),
+            md: self.verse(md, ref="43.3.1-13", step=5)}}).encode("utf-8"))
+        got = self.memory(c)["memory"]
+        self.assertEqual(sorted(got), sorted([ma, mb, mc]))
+        self.assertEqual({k: got[ma][k] for k in ("tr", "pos", "step", "due", "last")}, {"tr": "kjv", "pos": 0, "step": 0, "due": "", "last": 0})
+        self.assertEqual(got[ma]["created"], got[ma]["updated"], "a bad created time becomes the updated time")
+        self.assertEqual((got[mb]["step"], got[mb]["heart"], got[mb]["due"]), (6, "2026-10-01", "2027-01-01"), "a day on the heart is kept")
+        self.assertEqual((got[mc]["step"], got[mc]["heart"]), (6, ""))
+        self.assertEqual(self.changes(c, del_={mc: now_ms()}).status, 200)
+        disk = H.read("profiles", c.scope, "memory.json")["memory"]
+        self.assertEqual((sorted(disk), disk[ma]["tr"], disk[mb]["step"]), (sorted([ma, mb]), "kjv", 6), "the next save keeps the repairs")
+        with open(H.log_path, "rb") as f:
+            self.assertIn(f"memory-repaired scope={c.scope} dropped=1 repaired=3", f.read().decode("utf-8", "replace"))
+        self.assertEqual(self.changes(c, {n2: self.verse(n2)}).status, 200)
+        self.assertEqual(c.req("GET", "/api/export/profile").status, 200)
+
+    def test_m07_guest_import_copy_and_merge(self):
+        g, t0 = Client(), now_ms() - 60_000
+        ids = {k: new_memory_id() for k in ("kept", "taken", "tomb", "newer")}
+        sets = {ids[k]: self.verse(ids[k], ref=f"45.5.{i + 1}", pos=i + 1, step=2 if k == "taken" else 0, updated=t0)
+                for i, k in enumerate(ids)}
+        self.assertEqual(self.changes(g, sets).status, 200)
+        guest = H.read("guest-memory.json")
+        me = g.me().json["guest"]
+        self.assertEqual((me["memory"], me["hasData"]), (len(guest["memory"]), True))
+        # sign-up with import: a copy (rev 1, no tombstones); the guest file is left as it is
+        email, pw = H.account("memimp", "Memorize: sign-up import")
+        c = Client()
+        r = c.signup(email, pw, name="Memory Import", import_guest=True)
+        self.assertEqual(r.status, 201, r)
+        self.assertEqual(r.json["imported"]["memory"], len(guest["memory"]))
+        disk = H.read("profiles", c.scope, "memory.json")
+        self.assertEqual((disk["rev"], disk["deleted"], disk["memory"]), (1, {}, guest["memory"]))
+        self.assertEqual(H.read("guest-memory.json"), guest)
+        imp = [e for e in c.library().json["activity"] if e["type"] == "profile.import"][0]
+        self.assertEqual(imp["x"]["memory"], len(guest["memory"]))
+        # a profile with memory verses of its own imports later: merge
+        b = S["milo"]
+        own = {ids["kept"]: dict(sets[ids["kept"]], updated=t0 + 5000, pos=-3),
+               ids["tomb"]: dict(sets[ids["tomb"]], updated=t0 - 5000),
+               ids["newer"]: dict(sets[ids["newer"]], updated=t0 - 5000, step=4)}
+        self.assertEqual(self.changes(b, own).status, 200)
+        self.assertTrue(self.changes(b, del_={ids["tomb"]: t0 + 1}).json["changed"])
+        r = b.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        want = len(set(guest["memory"]) - set(own)) + 1
+        mine = self.memory(b)["memory"]
+        self.assertEqual(r.json["imported"]["memory"], want)
+        self.assertEqual(mine[ids["kept"]]["pos"], -3, "the profile's newer edit is kept")
+        self.assertEqual(mine[ids["newer"]], guest["memory"][ids["newer"]], "the guest's newer edit is taken")
+        self.assertEqual(mine[ids["taken"]]["step"], 2)
+        self.assertNotIn(ids["tomb"], mine, "removed in the profile after the guest's edit: stays removed")
+        self.assertEqual(r.json["rev"]["memory"], self.memory(b)["rev"])
+        imp = [e for e in b.library().json["activity"] if e["type"] == "profile.import"][0]
+        self.assertEqual(imp["x"]["memory"], want)
+        r2 = b.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual((r2.json["imported"]["memory"], r2.json["changed"], r2.json["rev"]), (0, False, r.json["rev"]), "idempotent")
+        self.assertEqual(self.memory(b)["memory"], mine)
+
+    def test_m08_export_and_profile_import(self):
+        a = S["mina"]
+        r = a.req("GET", "/api/export/profile")
+        self.assertEqual(r.json["memory"], {"memory": self.memory(a)["memory"]})
+        self.assertNotIn(b'"deleted"', r.raw, "tombstones are not exported")
+        self.assertEqual(Client().req("GET", "/api/export/profile").json["memory"]["memory"], self.memory(Client())["memory"])
+        export, n = r.json, len(self.memory(a)["memory"])
+        bad = new_memory_id()
+        export["memory"]["memory"].update({bad: self.verse(bad, step=9), "mv_nothex": self.verse("mv_nothex")})
+        email, pw = H.account("memfile", "Memorize: profile import")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Memory File").status, 201)
+        r = c.req("POST", "/api/profile/import", export, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual((r.json["imported"]["memory"], r.json["skipped"], r.json["changed"]), (n, 2, True), "a bad verse is skipped and counted")
+        self.assertEqual(self.memory(c)["memory"], self.memory(a)["memory"])
+        self.assertEqual(r.json["rev"]["memory"], self.memory(c)["rev"])
+        rows = [e for e in c.library().json["activity"] if e["type"] == "profile.import"]
+        self.assertEqual((len(rows), rows[0]["x"]["memory"]), (1, n))
+        r2 = c.req("POST", "/api/profile/import", export, scoped=True)
+        self.assertEqual((r2.json["imported"]["memory"], r2.json["changed"], r2.json["rev"]), (0, False, r.json["rev"]), "idempotent")
+        r = c.req("POST", "/api/profile/import", {"format": "bible-study-profile", "version": 1, "notes": {"refs": {}}}, scoped=True)
+        self.assertEqual((r.status, r.json["imported"]["memory"]), (200, 0), "an export from before Memorize has no memory section")
+        for sec in ([], {"memory": []}, "x"):
+            self.assertErr(c.req("POST", "/api/profile/import", {"format": "bible-study-profile", "version": 1, "memory": sec}, scoped=True),
+                           400, "invalid_import")
+
+    def test_m09_pure_functions(self):
+        A, t = accounts, 1761436800000
+        mv = lambda vid="mv_000000000001", **kw: A.clean_memory_verse(dict({"id": vid, "ref": "43.3.16", "tr": "kjv", "updated": t,  # noqa: E731
+                                                                            "created": t}, **kw), t)
+        f = mv(ref="43.03.16-018", pos=2.5)
+        self.assertEqual(f, {"id": "mv_000000000001", "ref": "43.3.16-18", "tr": "kjv", "pos": 2.5, "step": 0, "due": "", "heart": "",
+                             "last": 0, "created": t, "updated": t})
+        self.assertEqual(mv(last=t + 3_600_000)["last"], t, "the clock guard")
+        self.assertEqual(mv(ref="43.3.16-27")["ref"], "43.3.16-27", "twelve verses at most")
+        for kw in ({"ref": "43.3.16-28"}, {"ref": "43.3.16-15"}, {"step": 6.0}, {"heart": "2026-10-26", "step": 5},
+                   {"pos": float("nan")}, {"pos": float("inf")}, {"due": "2026-10-32"}, {"tr": "lsb"}):
+            with self.subTest(kw=kw), self.assertRaises(ValueError):
+                mv(**kw)
+        with self.assertRaises(ValueError):
+            A.clean_memory_verse(dict(f, pad="x" * 2048), t)
+        self.assertEqual(A.clean_memory_verse(dict(f, pad="x" * 2048), t, check_size=False), f, "load-time repair: no size check")
+        s = A._salvage_memory_verse(dict(f, tr="lsb", pos="x", step=9, due=5, last=-1, created="x", updated=None), t)
+        self.assertEqual({k: s[k] for k in ("tr", "pos", "step", "due", "last", "created", "updated")},
+                         {"tr": "kjv", "pos": 0, "step": 0, "due": "", "last": 0, "created": None, "updated": None})
+        self.assertEqual(A._salvage_memory_verse(dict(f, heart="2026-10-01", step=1), t)["step"], 6, "a day on the heart is kept")
+        self.assertEqual(A._salvage_memory_verse(5, t), 5)
+        doc = A.empty_memory()
+        self.assertEqual(doc, {"version": 1, "rev": 0, "memory": {}, "deleted": {}})
+        self.assertEqual(A.apply_memory_verse_changes(doc, {f["id"]: f}, {}, {f["id"]: None}), (True, {}, [f["id"]]))
+        self.assertEqual(A.apply_memory_verse_changes(doc, {f["id"]: f}, {}, {f["id"]: None}), (False, {}, []))
+        self.assertEqual(A.memory_verse_versions(doc, [f["id"], "mv_00000000000f"], {}), {f["id"]: t, "mv_00000000000f": None})
+        lib = A.new_library(t)
+        before = json.loads(json.dumps(lib))
+        self.assertFalse(A.add_memory_verse_activity(lib, [f], "2026-10-26", t))
+        self.assertEqual(lib, before, "no activity and no studied verses")
+        dst = {"memory": {f"mv_{i:012x}": {"updated": 1} for i in range(A.MAX_MEMORY - 1)}, "deleted": {}}
+        src = {"memory": {f"mv_aaaaaaaaaaa{i}": mv(f"mv_aaaaaaaaaaa{i}") for i in range(3)}}
+        self.assertEqual((A.merge_memory(dst, src), len(dst["memory"])), (1, A.MAX_MEMORY), "an import stops at the limit")
+        self.assertFalse(A.guest_summary({"refs": {}}, A.new_library(), None, None, {"memory": {}})["hasData"])
+        s = A.guest_summary({"refs": {}}, A.new_library(), None, None, {"memory": {f["id"]: f}})
+        self.assertEqual((s["memory"], s["marks"], s["hasData"]), (1, 0, True), "memory verses alone are guest data")
+        self.assertEqual(A.guest_summary({"refs": {}}, A.new_library())["memory"], 0)
+
+    def test_m10_profile_deletion_takes_memory(self):
+        email, pw = H.account("memdel", "Memorize: delete")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Memory Delete").status, 201)
+        uid, vid = c.scope, new_memory_id()
+        self.assertEqual(self.changes(c, {vid: self.verse(vid)}).status, 200)
+        self.assertEqual(c.req("POST", "/api/account/delete", {"password": pw}).status, 200)
+        self.assertFalse(os.path.exists(os.path.join(H.data, "profiles", uid)))
+        moved = [d for d in os.listdir(os.path.join(H.data, "deleted")) if d.startswith(uid + "-")]
+        self.assertEqual(len(moved), 1)
+        with open(os.path.join(H.data, "deleted", moved[0], "memory.json"), encoding="utf-8") as fh:
+            self.assertIn(vid, json.load(fh)["memory"], "the memory verses go with the profile folder")
+
+    def test_m11_hosted_guest_refused(self):
+        port, d = free_port(), os.path.join(H.tmp, f"memory-hosted-{RUN}")
+        proc, _ = spawn_server({"BS_HOSTED": "1", "BS_DATA_DIR": d, "RAILWAY_VOLUME_MOUNT_PATH": "/",
+                                "BS_OWNER_EMAILS": f"memory-owner-{RUN}@example.test"}, "--port", str(port))
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+        def at(method, path, body=None):
+            hdrs = {} if body is None else {"Content-Type": "application/json", "X-BS-Scope": "guest"}
+            rq = urllib.request.Request(f"http://127.0.0.1:{port}{path}", None if body is None else json.dumps(body).encode("utf-8"),
+                                        method=method, headers=hdrs)
+            try:
+                with opener.open(rq, timeout=30) as resp:
+                    return resp.status, json.loads(resp.read())
+            except urllib.error.HTTPError as e:
+                return e.code, json.loads(e.read())
+        try:
+            self.assertEqual(wait_health(port, proc), {"ok": True})
+            self.assertEqual(at("GET", "/api/memory"), (200, {"memory": {}, "rev": 0, "scope": "guest"}), "guests read")
+            vid = new_memory_id()
+            st, j = at("POST", "/api/memory/changes", {"set": {vid: self.verse(vid)}})
+            self.assertEqual((st, j["error"], j["message"]), (401, "sign_in_required", T22_Hosted.msg_sign_in), "but never write")
+            g = at("GET", "/api/auth/me")[1]["guest"]
+            self.assertEqual((g["memory"], g["hasData"]), (0, False))
+            self.assertFalse(os.path.exists(os.path.join(d, "guest-memory.json")))
+        finally:
+            stop_proc(proc)
+
+    def test_m12_import_keeps_one_entry_per_passage_and_the_current_verse(self):
+        g, t0 = Client(), now_ms() - 3_600_000
+        gid = {k: new_memory_id() for k in ("first", "john")}
+        self.assertEqual(self.changes(g, {gid["first"]: self.verse(gid["first"], ref="19.23.1", pos=1, step=2, created=t0, updated=t0),
+                                          gid["john"]: self.verse(gid["john"], ref="43.3.16", pos=2, created=t0 + 1, updated=t0 + 1)}).status, 200)
+        email, pw = H.account("memdup", "Memorize: import keeps the line")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Memory Line").status, 201)
+        own = {k: new_memory_id() for k in ("cur", "john")}
+        self.assertEqual(self.changes(c, {own["cur"]: self.verse(own["cur"], ref="45.8.28", pos=1, step=3, due="2026-10-27"),
+                                          own["john"]: self.verse(own["john"], ref="43.3.16", pos=2)}).status, 200)
+        r = c.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        mine = self.memory(c)["memory"]
+        self.assertEqual([v["id"] for v in mine.values() if v["ref"] == "43.3.16"], [own["john"]], "one entry per passage")
+        line = sorted((v for v in mine.values() if not v["heart"]), key=lambda v: (v["pos"], v["created"], v["id"]))
+        self.assertEqual(line[0]["id"], own["cur"], "the profile's current verse stays current")
+        self.assertLess(mine[own["cur"]]["pos"], min(v["pos"] for k, v in mine.items() if k != own["cur"] and not v["heart"]))
+        self.assertIn(gid["first"], mine)
+        r2 = c.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual((r2.json["imported"]["memory"], r2.json["changed"]), (0, False), "idempotent")
+        self.assertEqual(self.memory(c)["memory"], mine)
 
 
 class T99_Hygiene(Base):

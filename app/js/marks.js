@@ -13,6 +13,9 @@ const libFn = name => (library && typeof library[name] === 'function' ? library[
 // study.js (the [[ picker in the comment card: study-build-brief §1.1) likewise
 let study = null;
 import('./study.js').then(m => { study = m; }, e => { console.error('study.js failed to load', e); });
+// memory.js (the bubble's Memorize: memorize-brief §4) likewise; without it the bubble has no Memorize
+let mem = null;
+import('./memory.js').then(m => { mem = m; }, e => { console.error('memory.js failed to load', e); });
 const safe = (fn, ...a) => { try { return typeof fn === 'function' ? fn(...a) : undefined; } catch (e) { console.error(e); return undefined; } };
 
 export const marks = { loaded: false, scope: null, rev: 0, byId: new Map(), byVerse: new Map(), offline: false };
@@ -862,12 +865,28 @@ function live(el) {
 }
 const say = msg => { const el = document.getElementById('mark-say'); if (el) { el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 60); } };
 
-function bubbleHtml(m) {
+/**
+ * The verses a draft touches as a memory verse's ref ('43.3.16', '43.3.16-18') and their label, and the memory verse
+ * already there (any translation) or null.
+ */
+function mzOf(d) {
+  const s = parseRef(d && d.start), e = parseRef(d && d.end); if (!s || !e) return null;
+  const w = e.v > s.v ? e.v : s.v, ref = w > s.v ? `${s.b}.${s.c}.${s.v}-${w}` : `${s.b}.${s.c}.${s.v}`;
+  return { b: s.b, c: s.c, v: s.v, w, label: refLabel(s.b, s.c, s.v, w > s.v ? w : 0), have: safe(mem && mem.findByRef, ref) || null };
+}
+/** The bubble's last button (§4): Memorize the verses, or Practise them when they already are a memory verse ('' without memory.js). */
+function mzBtnHtml(d) {
+  const z = mem && mzOf(d); if (!z) return '';
+  const [act, l] = z.have ? ['practise', 'Practise'] : ['memorize', 'Memorize'];
+  return `<button type="button" class="mb-btn mb-mz" data-mk-act="${act}"${z.have ? ` data-practise="${esc(z.have.id)}"` : ''} tabindex="-1" aria-label="${l}" title="${esc(`${l} ${z.label}`)}">${icon('memorize')}<span class="mb-l">${l}</span></button>`;
+}
+function bubbleHtml(m, d) {
   const dots = COLORS.map(c => `<button type="button" class="mb-dot" data-mk-color="${c}" tabindex="-1" aria-label="Highlight ${c}" title="Highlight ${c}"${m ? ` aria-pressed="${m.color === c}"` : ''}><i></i></button>`).join('');
-  const com = m && m.note ? 'Edit comment' : 'Comment';
+  const com = m && m.note ? 'Edit comment' : 'Comment', mz = mzBtnHtml(d);
   return `${dots}<span class="mb-sep" aria-hidden="true"></span>`
     + `<button type="button" class="mb-btn" data-mk-act="comment" tabindex="-1">${commentIcon()}<span class="mb-l">${com}</span></button>`
     + `<button type="button" class="mb-btn" data-mk-act="copy" tabindex="-1">${COPY_SVG}<span class="mb-l">Copy</span></button>`
+    + mz
     + (m && m.color ? `<span class="mb-sep" aria-hidden="true"></span><button type="button" class="mb-btn mb-danger" data-mk-act="remove" tabindex="-1">${icon('trash')}<span class="mb-l">Remove highlight</span></button>` : '');
 }
 /** The roving tab stop of the toolbar: the pressed colour, else the first. */
@@ -883,7 +902,8 @@ function showBubble(draft, range, how) {
   const a = document.activeElement;
   const origin = a && a !== root && root.contains(a) ? a : (pending && pending.origin) || document.getElementById('v' + vOf(draft.start));
   pending = { draft, range: range.cloneRange(), ranges: anchorRanges(draft, root), mark: containing(draft), origin, touch: how === 'touch', b, c };
-  el.innerHTML = bubbleHtml(pending.mark);
+  el.innerHTML = bubbleHtml(pending.mark, draft);
+  el.setAttribute('aria-label', `Selected words in ${markLabel(draft)}`);
   rove(el);
   el.classList.toggle('touch', pending.touch);
   el.hidden = false; bubbleShown = true;
@@ -967,6 +987,19 @@ async function clip(text) {
     ta.remove(); if (a && a !== document.body && a.isConnected) a.focus({ preventScroll: true });
     return ok;
   }
+}
+/**
+ * Memorize (§4): the verses the selection touches become one memory verse, in the selection's translation; memory.js
+ * says what happened (added, already there, the line full, too many verses) and refuses a hosted guest. When they
+ * already are a memory verse, its practice opens instead. The bubble closes first, the focus back on the words' verse;
+ * a verse just added flashes (as in the mock-up), beside its new gutter badge and the toast.
+ */
+function memorizePending() {
+  const p = pending, z = p && mem && mzOf(p.draft); if (!z) return;
+  window.getSelection?.()?.removeAllRanges();
+  closeBubble({ restore: true });
+  if (z.have) safe(mem.practise, z.have.id);
+  else if (safe(mem.memorize, { b: z.b, c: z.c, v: z.v, ve: z.w, tr: p.draft.tr })) safe(A && A.flash, Array.from({ length: z.w - z.v + 1 }, (_, i) => z.v + i), { scroll: false });
 }
 async function copyPending() {
   const p = pending; if (!p) return;
@@ -1096,6 +1129,7 @@ function bindFloats() {
       const dot = e.target.closest('[data-mk-color]'); if (dot) { applyColor(dot.dataset.mkColor); return; }
       const act = e.target.closest('[data-mk-act]')?.dataset.mkAct;
       if (act === 'comment') openCard(); else if (act === 'copy') copyPending(); else if (act === 'remove') removePending();
+      else if (act === 'memorize' || act === 'practise') memorizePending();
     });
     bub.addEventListener('keydown', e => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -1516,11 +1550,19 @@ export function initMarks(actions) {
       const m = containing(pending.draft);
       if ((m && m.id) !== (pending.mark && pending.mark.id) || (m && m.color !== pending.mark.color)) {
         const el = bubbleEl(), i = [...el.querySelectorAll('button')].indexOf(document.activeElement);
-        pending.mark = m; el.innerHTML = bubbleHtml(m);
+        pending.mark = m; el.innerHTML = bubbleHtml(m, pending.draft);
         const f = rove(el, i >= 0 ? Math.min(i, el.querySelectorAll('button').length - 1) : undefined);
         if (i >= 0 && f) f.focus();
       }
     }
+  });
+  // a memory verse added or removed (here, another tab): the bubble's Memorize or Practise follows, in place
+  document.addEventListener('bs:memory-changed', () => {
+    const el = bubbleEl(), cur = bubbleShown && pending && el ? el.querySelector('.mb-mz') : null; if (!cur) return;
+    const z = mzOf(pending.draft); if (!z || (cur.dataset.practise || '') === (z.have ? z.have.id : '')) return;
+    const had = document.activeElement === cur, ti = cur.tabIndex;
+    cur.insertAdjacentHTML('afterend', mzBtnHtml(pending.draft)); cur.remove();
+    const nb = el.querySelector('.mb-mz'); if (nb) { nb.tabIndex = ti; if (had) nb.focus(); }
   });
   document.addEventListener('bs:auth-changed', () => { if (cardShown) closeCard({ restore: false, why: 'scope' }); else closeBubble(); closeMarkPop({ back: false }); });
   // a reference chip to a mark in another chapter: its popover once the chapter is drawn (after revealMark's flash)

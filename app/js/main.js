@@ -8,8 +8,8 @@ import * as viz from './viz.js';
 import { initAuth, initAccountUI, renderAccountButton, openAuth, openProfile, signOut } from './account.js';
 import { closeDialog, showDialog, menuOpen as uiMenuOpen, relTime } from './ui.js';
 
-// Optional modules, loaded in parallel with the rest: a missing or broken library.js, tracker.js, art.js, links.js or marks.js
-// must never stop the reader (every call goes through modCall).
+// Optional modules, loaded in parallel with the rest: a missing or broken library.js, tracker.js, art.js, links.js, marks.js
+// or memory.js must never stop the reader (every call goes through modCall).
 const optional = (p, name) => p.catch(e => { console.error(`${name} failed to load`, e); return null; });
 const modsP = Promise.all([
   optional(import('./library.js'), 'library.js'),
@@ -17,8 +17,9 @@ const modsP = Promise.all([
   optional(import('./art.js'), 'art.js'),
   optional(import('./links.js'), 'links.js'),
   optional(import('./marks.js'), 'marks.js'),
+  optional(import('./memory.js'), 'memory.js'),
 ]);
-let library = null, tracker = null, art = null, lnk = null, mrk = null;
+let library = null, tracker = null, art = null, lnk = null, mrk = null, mem = null;
 function modCall(mod, name, ...args) {
   const fn = mod && mod[name]; if (typeof fn !== 'function') return undefined;
   try { const r = fn(...args); return r && typeof r.then === 'function' ? r.then(x => x, e => { console.error(e); return undefined; }) : r; }
@@ -29,6 +30,7 @@ const trkCall = (name, ...args) => modCall(tracker, name, ...args);
 const artCall = (name, ...args) => modCall(art, name, ...args);
 const lnkCall = (name, ...args) => modCall(lnk, name, ...args);
 const mrkCall = (name, ...args) => modCall(mrk, name, ...args);
+const memCall = (name, ...args) => modCall(mem, name, ...args);
 // Home (home-build brief §1): home.js is imported the first time Home shows, never at boot for the reader
 let homeMod = null, homeP = null;
 const homeCall = (name, ...args) => modCall(homeMod, name, ...args);
@@ -168,13 +170,13 @@ const A = {
     if (!has(library, 'toggleBookmark')) { toast('Bookmarks are unavailable right now. Reload to try again.'); return undefined; }
     return libCall('toggleBookmark', b, c, v);
   },
-  /** The Library: home, a book ({book}), a bookmark ({bookmark: id}), My map ({view: 'map', tag}: a link card's tag chip)
-   *  or the Study views ({view: 'study'}: the iOS app's Study tab). */
+  /** The Library: home, a book ({book}), a bookmark ({bookmark: id}), My map ({view: 'map', tag}: a link card's tag chip),
+   *  the Study views ({view: 'study'}: the iOS app's Study tab) or Memory ({view: 'memory'}: memorize-brief §6). */
   openLibrary(opts = {}) {
     if (!has(library, 'openLibrary')) { toast('The Library is unavailable right now. Reload to try again.'); return; }
     hideResume();
     const { book = null, bookmark = null, view = null, tag = null } = opts || {};
-    libCall('openLibrary', { book, bookmark, view: view === 'map' || view === 'study' ? view : null, tag: view === 'map' && typeof tag === 'string' ? tag : null });
+    libCall('openLibrary', { book, bookmark, view: view === 'map' || view === 'study' || view === 'memory' ? view : null, tag: view === 'map' && typeof tag === 'string' ? tag : null });
   },
   resume(pos, opts = {}) { resumeTo(pos, opts); },
   markRead(b, c, read) { return markRead(b, c, read); },
@@ -268,7 +270,7 @@ function toggleOrig() { state.showOrig = !state.showOrig; if (toReader()) return
 const homeHash = () => !location.hash || location.hash === '#' || location.hash === '#home';
 let homeFocusNext = false, readerReturn = null;
 function loadHome() {
-  if (!homeP) homeP = import('./home.js').then(m => { homeMod = m; m.init(A, () => ({ library, tracker, art, lnk, mrk })); return m; })
+  if (!homeP) homeP = import('./home.js').then(m => { homeMod = m; m.init(A, () => ({ library, tracker, art, lnk, mrk, mem })); return m; })
     .catch(e => { homeP = null; console.error('home.js failed to load', e); return null; });
   return homeP;
 }
@@ -1403,7 +1405,7 @@ async function onScopeChange(d = {}) {
   hideResume();
   // hosted, what GET /api/config allows depends on who is signed in (the owner's ESV and NLT): ask again
   const cfg = state.auth.hosted && d.reason !== 'import' ? loadConfig() : null;
-  await Promise.all([loadNotes(), libCall('loadLibrary'), lnkCall('loadLinks'), mrkCall('loadMarks'), cfg]);
+  await Promise.all([loadNotes(), libCall('loadLibrary'), lnkCall('loadLinks'), mrkCall('loadMarks'), memCall('loadMemory'), cfg]);
   if (seq !== scopeSeq) return; // superseded by a newer switch
   if (cfg) syncTranslations();
   render({ keepScroll: true });
@@ -1540,16 +1542,16 @@ async function boot() {
   loadAnalytics();
   const meta = await data.meta(); state.meta = meta; state.books = meta.books; state.translations = meta.translations || [];
   applyLicensed(); // the NASB beside the NIV and NKJV, all three Bible Gateway links until /api/config says otherwise
-  [library, tracker, art, lnk, mrk] = await modsP;
+  [library, tracker, art, lnk, mrk, mem] = await modsP;
   artCall('init', A);
   artCall('load'); // art.json in the background; never throws
-  // serve.py is asked who is studying and for their notes, highlights, links and library alongside the first paint: the
+  // serve.py is asked who is studying and for their notes, highlights, links, memory verses and library alongside the first paint: the
   // chapter comes from the static files, and what the server holds is drawn in when it answers (never blocked on /api)
   // These start-up GETs give up at BOOT_CAP (a redeploying server must not hold the first paint or the savers' start
   // for long); a reload later keeps api()'s 30 s, which a large profile on a slow link needs.
   setApiTimeout(BOOT_CAP);
   const authP = initAuth();
-  const loadsP = authP.then(() => Promise.all([loadNotes(), loadConfig(), libCall('loadLibrary'), lnkCall('loadLinks'), mrkCall('loadMarks')])).catch(e => console.error(e)).finally(() => setApiTimeout(0));
+  const loadsP = authP.then(() => Promise.all([loadNotes(), loadConfig(), libCall('loadLibrary'), lnkCall('loadLinks'), mrkCall('loadMarks'), memCall('loadMemory')])).catch(e => console.error(e)).finally(() => setApiTimeout(0));
   let landed = false; loadsP.then(() => { landed = true; });
   applyTheme(state.theme);
   const fz = lsGet('bs-font'); if (fz && +fz >= 12 && +fz <= 32) document.documentElement.style.setProperty('--read-size', fz + 'px');
@@ -1577,7 +1579,7 @@ async function boot() {
   bindChrome(); bindTranslations(); bindPicker(); buildPicker(); bindSettings(); bindDialogs(); bindToast(); bindSheetDrag(); bindKeyboard();
   bindSearchResults(); bindResume(); bindProfileEvents();
   initAccountUI(A); libCall('initLibrary', A); bindNotesLifecycle();
-  const initSavers = () => { trkCall('initTracker', A); lnkCall('initLinks', A); mrkCall('initMarks', A); }; // their scope is who is studying
+  const initSavers = () => { trkCall('initTracker', A); lnkCall('initLinks', A); mrkCall('initMarks', A); memCall('initMemory', A); }; // their scope is who is studying
   if (landed) initSavers();
   // the address bar always names the chapter shown: a clamped hash ('#99/99/99'), a resumed position or a bare URL
   syncDrawer(); updateBar(); updateHash(); renderPanel();

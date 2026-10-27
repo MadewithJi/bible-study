@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Memorize: practice</title>
+<script>(function(){var q=location.search,m=q.match(/[?&]theme=(light|dark)\b/),t=m?m[1]:null,e=/[?&]embed\b/.test(q);if(!t&&!e)try{t=localStorage.getItem('mz-mock-theme')}catch(x){}if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;document.documentElement.classList.add(e?'mz-embed':'mz-has-strip')})()</script>
+<link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32.png">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/home.css">
+<link rel="stylesheet" href="memorize-shell.css">
+<style>
+  /* the practice: a centred dialog like the app's modals (a full sheet on a phone) */
+  body.mz-body { overflow: hidden; }
+  /* desktop: a fixed height, so the dialog does not grow, shrink or move between steps (a phone is a full sheet) */
+  .mz-pr { max-width: 600px; }
+  @media (min-width: 700px) { .mz-pr { height: min(600px, calc(100dvh - var(--mz-top) - 48px)); } }
+  .mz-pr .modal-head { padding: 20px 18px 8px 26px; }
+  .mz-pr .lib-sub { font-variant-numeric: tabular-nums; }
+  .mz-pr-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 26px 8px; }
+  .mz-pr .segmented { margin: 4px 0 24px; }
+  .mz-pane { min-height: 300px; }
+  .mz-v { margin: 0; font: 400 26px/1.55 var(--serif); letter-spacing: 0; color: var(--read); text-wrap: pretty; }
+  .mz-hint { margin: 16px 0 0; font-size: 14px; line-height: 1.45; color: var(--label-2); }
+  /* Fade: a hidden word is a soft blank of its own width; tap it to peek */
+  .mz-gap { position: relative; display: inline; padding: 0 .12em; margin: 0 -.02em; border-radius: 0; background: none; box-shadow: inset 0 -1.5px 0 var(--label-3); color: transparent; font: inherit; letter-spacing: inherit; line-height: inherit; vertical-align: baseline; transition: background-color var(--d-2), color var(--d-2); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .mz-gap:hover { background: var(--fill-3); }
+  .mz-gap.peek { color: var(--lamp-ink); background: var(--lamp-tint); box-shadow: none; }
+  .mz-gap:focus-visible { outline-offset: 1px; }
+  /* First letters */
+  .mz-v.mz-fl { word-spacing: .3em; }
+  .mz-l { display: inline; padding: 0 .06em; border-radius: 6px; font: inherit; color: var(--read); letter-spacing: inherit; line-height: inherit; transition: background-color var(--d-1); }
+  .mz-l:hover { background: var(--fill-2); }
+  .mz-l.peek { color: var(--lamp-ink); background: var(--lamp-tint); }
+  /* Recall: an empty space to say it into, with a text box on a computer */
+  .mz-blank { position: relative; display: grid; min-height: 156px; border-radius: 16px; border: 1.5px dashed var(--sep-2); transition: border-color var(--d-2), box-shadow var(--d-2); }
+  .mz-blank:focus-within { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint-2); }
+  .mz-blank textarea { width: 100%; min-height: 152px; padding: 14px 16px; border: 0; border-radius: 14px; outline: none; resize: none; background: transparent; font: 400 21px/1.5 var(--serif); letter-spacing: 0; color: var(--read); }
+  .mz-blank textarea::placeholder { color: var(--label-3); }
+  .mz-hint .ph { display: none; }
+  @media (forced-colors: active) { .mz-gap > span { visibility: hidden; } .mz-gap.peek > span { visibility: visible; } }
+  .mz-typed { margin: 18px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--fill-3); }
+  .mz-typed p { margin: 0; font: 400 16px/1.5 var(--serif); color: var(--label-2); white-space: pre-wrap; }
+  .mz-typed small { display: block; margin-bottom: 3px; font: 600 12px/1.3 var(--sans); color: var(--label-2); }
+  /* the footer: what to do next */
+  .mz-pr-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 20px 20px 26px; }
+  .mz-pr-foot .btn { height: 40px; padding: 0 20px; font-size: 15px; font-weight: 600; }
+  .mz-pr-foot .btn .i { width: 16px; height: 16px; stroke-width: 2; }
+  .mz-pr-foot .mz-step { font-size: 13px; color: var(--label-2); }
+  .mz-pr-foot .mz-r { display: flex; gap: 8px; margin-left: auto; }
+  .mz-judge { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; width: 100%; }
+  .mz-judge .btn { height: 58px; flex-direction: column; gap: 4px; border-radius: 16px; font-size: 16px; }
+  .mz-judge .btn small { font: 500 12.5px/1 var(--sans); letter-spacing: -.005em; opacity: .86; }
+  /* the end of a practice */
+  .mz-end { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 300px; text-align: center; }
+  .mz-end .tile-i { width: 48px; height: 48px; border-radius: 50%; margin-bottom: 4px; background: var(--lamp-tint); color: var(--lamp-ink); }
+  .mz-end .tile-i .i { width: 24px; height: 24px; stroke-width: 1.8; }
+  .mz-end h2 { margin: 0; font: 600 30px/1.15 var(--serif); letter-spacing: -.015em; }
+  .mz-end p { margin: 0; font-size: 16px; color: var(--label-2); }
+  .mz-end .mz-steps { margin-top: 6px; }
+  /* Written on the heart: quiet; the verse, the line, the date and Proverbs 3:3 */
+  .mz-heart { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 6px 4px; }
+  .mz-heart .mz-v { font-size: 24px; }
+  .mz-heart hr { width: 48px; height: 1px; margin: 26px auto 22px; border: 0; background: var(--lamp); opacity: .7; }
+  .mz-heart .mz-wh { margin: 0; font: italic 500 22px/1.3 var(--serif); letter-spacing: 0; color: var(--lamp-ink); }
+  .mz-heart .mz-date { margin: 6px 0 0; font-size: 14px; color: var(--label-2); }
+  .mz-heart .mz-date + .mz-date { margin-top: 2px; }
+  .mz-heart blockquote { margin: 22px 0 0; font: italic 400 15px/1.5 var(--serif); letter-spacing: 0; color: var(--label-2); }
+  .mz-heart blockquote cite { display: block; margin-top: 2px; font: 500 12.5px/1.3 var(--sans); font-style: normal; }
+  /* closed: a way back in (mock-only) */
+  .mz-closed { position: fixed; z-index: 60; inset: var(--mz-top) 0 0; display: grid; place-items: center; }
+  .mz-closed[hidden] { display: none; }
+  .mz-closed > div { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 18px; border-radius: var(--r-pill); background: var(--bg-elev); box-shadow: var(--sh-pop); font-size: 14px; color: var(--label-2); }
+  @media (max-width: 699px) {
+    .mz-pr .modal-head { padding: 16px 14px 6px 20px; }
+    .mz-pr-body { padding: 4px 20px 8px; }
+    .mz-v { font-size: 22px; }
+    .mz-heart .mz-v { font-size: 21px; }
+    .mz-pane { min-height: 0; }
+    .mz-pr-foot { padding: 12px 16px calc(16px + env(safe-area-inset-bottom)) 20px; }
+    .mz-pr-foot .btn { height: 48px; padding: 0 22px; }
+    .mz-pr-foot .mz-judge .btn { height: 58px; }
+    .mz-pr-foot .mz-r { flex: 1; justify-content: flex-end; }
+    .mz-pr .segmented { height: 36px; }
+    .mz-pr .segmented > button::after { content: ""; position: absolute; inset: -4px 0; }
+    /* touch: roomier letters and blanks, so each target is about 40 px without overlapping its neighbour */
+    .mz-v.mz-fl { word-spacing: .75em; line-height: 1.95; }
+    .mz-gap::after { content: ""; position: absolute; inset: -6px -2px; }
+    .mz-l::after { content: ""; position: absolute; inset: -8px -.4em; }
+    .mz-l { position: relative; }
+    .mz-gap { display: inline-block; min-width: 1.6em; text-align: center; line-height: 1.3; }
+    /* no text box on a phone: say it aloud */
+    .mz-blank textarea { display: none; }
+    .mz-blank { min-height: 132px; border: 0; background: var(--fill-3); }
+    .mz-hint .pc { display: none; }
+    .mz-hint .ph { display: inline; }
+  }
+</style>
+</head>
+<body class="mz-body">
+<div class="mz-behind" aria-hidden="true">
+  <div class="mz-behind-t"><h2>John 3</h2><p>And as Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up: That whosoever believeth in him should not perish, but have eternal life. For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life. For God sent not his Son into the world to condemn the world; but that the world through him might be saved.</p></div>
+</div>
+<div class="mz-scrim" aria-hidden="true"></div>
+
+<div class="mz-dlg mz-pr" id="pr" role="dialog" aria-modal="true" aria-labelledby="pr-title" aria-describedby="pr-sub">
+  <header class="modal-head">
+    <div class="lib-titles"><h1 class="modal-title" id="pr-title">John 3:16</h1><p class="lib-sub" id="pr-sub">KJV · review 3 of 6 · about a minute</p></div>
+    <button type="button" class="close-btn" data-act="close" aria-label="Close" data-icon="xmark"></button>
+  </header>
+  <div class="mz-pr-body">
+    <div class="segmented" id="steps" role="radiogroup" aria-label="Step">
+      <button type="button" role="radio" data-v="read" aria-checked="true" tabindex="0">Read</button>
+      <button type="button" role="radio" data-v="fade" aria-checked="false" tabindex="-1">Fade</button>
+      <button type="button" role="radio" data-v="letters" aria-checked="false" tabindex="-1">First letters</button>
+      <button type="button" role="radio" data-v="recall" aria-checked="false" tabindex="-1">Recall</button>
+    </div>
+    <div class="mz-pane" id="pane"></div>
+  </div>
+  <footer class="mz-pr-foot" id="foot"></footer>
+  <p class="mz-sr" id="say" aria-live="polite"></p>
+</div>
+<div class="mz-closed" id="closed" hidden><div><span>Practice closed (mock-up).</span><button type="button" class="btn btn-tinted" data-act="again">Start again</button></div></div>
+
+<script type="module">
+import { initShell, icon, esc, scripture, segmented, params, embedded } from './memorize-shell.js';
+
+const HEART = params.get('state') === 'heart';
+const TEXT = 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.';
+const $ = s => document.querySelector(s);
+const pane = $('#pane'), foot = $('#foot'), segEl = $('#steps'), say = m => { $('#say').textContent = ''; setTimeout(() => { $('#say').textContent = m; }, 40); };
+const STEPS = ['read', 'fade', 'letters', 'recall'], NAMES = { read: 'Read', fade: 'Fade', letters: 'First letters', recall: 'Recall' };
+const words = TEXT.split(' ').map(t => { const m = t.match(/^([A-Za-z’']+)(.*)$/); return { w: m ? m[1] : t, p: m ? m[2] : '' }; });
+const arrow = icon('arrow-right');
+let step = 'read', fade = 1, typed = '';
+
+const next = (label = 'Next') => `<button type="button" class="btn btn-primary" data-act="next">${label}${arrow}</button>`;
+function render(focus = null) {
+  segEl.hidden = false;
+  if (step === 'read') {
+    pane.innerHTML = `<p class="mz-v">${scripture(TEXT)}</p><p class="mz-hint">Read it through slowly, aloud if you can.</p>`;
+    foot.innerHTML = `<div class="mz-r">${next()}</div>`;
+  } else if (step === 'fade') {
+    // a third of the words hidden, then two thirds (never the first word)
+    const hide = i => fade === 1 ? i % 3 === 1 : i % 3 !== 0;
+    pane.innerHTML = `<p class="mz-v">${words.map((x, i) => hide(i) ? `<button type="button" class="mz-gap" aria-label="Hidden word. Peek"><span>${esc(x.w)}</span></button>${esc(x.p)}` : esc(x.w + x.p)).join(' ')}</p>`
+      + `<p class="mz-hint">${fade === 1 ? 'A third of the words are hidden.' : 'Two thirds of the words are hidden.'} Tap a gap to peek.</p>`;
+    foot.innerHTML = `<div class="mz-r">${fade === 1 ? '<button type="button" class="btn btn-tinted" data-act="more">Hide more</button>' : ''}${next()}</div>`;
+  } else if (step === 'letters') {
+    pane.innerHTML = `<p class="mz-v mz-fl">${words.map(x => `<button type="button" class="mz-l" aria-label="${esc(x.w[0])}. Peek"><span>${esc(x.w[0])}</span></button>${esc(x.p)}`).join(' ')}</p>`
+      + `<p class="mz-hint">The first letter of each word. Say the verse as you go; tap a letter to peek.</p>`;
+    foot.innerHTML = `<div class="mz-r">${next()}</div>`;
+  } else if (step === 'recall') {
+    pane.innerHTML = `<div class="mz-blank"><label class="mz-sr" for="typed">Type the verse (optional)</label><textarea id="typed" rows="4" placeholder="Type it here, if you like" spellcheck="false">${esc(typed)}</textarea></div>`
+      + `<p class="mz-hint"><span class="pc">Say it aloud, or type it. Then show the verse to check.</span><span class="ph">Say it aloud, then show the verse to check.</span></p>`
+      + `<p class="mz-note">${icon('info')}<span><b>Not decided yet:</b> tap to check is the default everywhere (shown); typing is optional, offered only on a computer.</span></p>`;
+    foot.innerHTML = `<div class="mz-r"><button type="button" class="btn btn-primary" data-act="show">Show the verse</button></div>`;
+  } else if (step === 'check') {
+    segEl.hidden = true;
+    pane.innerHTML = `<p class="mz-v">${scripture(TEXT)}</p>${typed.trim() ? `<div class="mz-typed"><small>You typed</small><p>${esc(typed.trim())}</p></div>` : ''}<p class="mz-hint">How did it go?</p>`;
+    foot.innerHTML = `<div class="mz-judge"><button type="button" class="btn btn-gray" data-act="notyet">Not yet<small>Again tomorrow</small></button><button type="button" class="btn btn-primary" data-act="gotit">Got it<small>Next review in 4 days</small></button></div>`;
+  } else if (step === 'got' || step === 'notyet') {
+    segEl.hidden = true;
+    const got = step === 'got';
+    pane.innerHTML = `<div class="mz-end"><span class="tile-i">${icon(got ? 'check' : 'clock')}</span><h2>${got ? 'Well done.' : 'No hurry.'}</h2><p>${got ? 'Next review Thursday 29 October.' : 'Again tomorrow, Monday 26 October.'}</p>`
+      + `<span class="mz-steps" role="img" aria-label="${got ? 'Review 3 of 6 done' : 'Review 3 of 6'}">${[0, 1, 2, 3, 4, 5].map(i => `<i class="${i < (got ? 3 : 2) ? 'd' : i === (got ? 3 : 2) ? 'n' : ''}"></i>`).join('')}</span></div>`;
+    foot.innerHTML = `<div class="mz-r"><button type="button" class="btn btn-primary" data-act="close">Done</button></div>`;
+  }
+  if (focus) foot.querySelector(focus)?.focus();
+}
+function heart() {
+  $('#pr-title').textContent = 'Proverbs 3:5–6';
+  $('#pr-sub').textContent = 'KJV · review 6 of 6';
+  segEl.hidden = true;
+  pane.innerHTML = `<div class="mz-heart"><p class="mz-v">${scripture('Trust in the LORD with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.')}</p>`
+    + `<hr><p class="mz-wh">Written on the heart</p><p class="mz-date">Monday 12 October 2026</p><p class="mz-date">Next up: John 3:16</p>`
+    + `<blockquote><span>“write them upon the table of thine heart”</span><cite>Proverbs 3:3</cite></blockquote></div>`;
+  foot.innerHTML = `<span class="mz-step">From now on, a review about every three months</span><div class="mz-r"><button type="button" class="btn btn-primary" data-act="close">Done</button></div>`;
+}
+
+const seg = segmented(segEl, v => { step = v; if (v === 'fade') fade = 1; render(); say(`Step ${STEPS.indexOf(v) + 1} of 4: ${NAMES[v]}`); });
+const goStep = v => { step = v; seg.set(v); if (v === 'fade') fade = 1; render(); say(`Step ${STEPS.indexOf(v) + 1} of 4: ${NAMES[v]}`); segEl.querySelector('[aria-checked="true"]').focus(); };
+const peek = b => {
+  const w = b.querySelector('span').textContent, full = b.classList.contains('mz-l') ? words[[...pane.querySelectorAll('.mz-l')].indexOf(b)].w : w;
+  b.classList.add('peek'); b.setAttribute('aria-label', full); say(full);
+  if (b.classList.contains('mz-l')) b.querySelector('span').textContent = full;
+  clearTimeout(b._t);
+  b._t = setTimeout(() => { b.classList.remove('peek'); if (b.classList.contains('mz-l')) { b.querySelector('span').textContent = full[0]; b.setAttribute('aria-label', `${full[0]}. Peek`); } else b.setAttribute('aria-label', 'Hidden word. Peek'); }, 1600);
+};
+document.addEventListener('input', e => { if (e.target.id === 'typed') typed = e.target.value; });
+document.addEventListener('click', e => {
+  const g = e.target.closest('.mz-gap, .mz-l'); if (g) { peek(g); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'next') goStep(STEPS[STEPS.indexOf(step) + 1]);
+  else if (act === 'more') { fade = 2; render('[data-act="next"]'); say('Two thirds of the words are hidden'); }
+  else if (act === 'show') { step = 'check'; render('[data-act="gotit"]'); say('The verse is shown. Got it, or not yet?'); }
+  else if (act === 'gotit' || act === 'notyet') { step = act === 'gotit' ? 'got' : 'notyet'; render('[data-act="close"]'); say(step === 'got' ? 'Well done. Next review Thursday 29 October.' : 'Again tomorrow.'); }
+  else if (act === 'close') { $('#pr').hidden = true; document.querySelector('.mz-scrim').hidden = true; $('#closed').hidden = false; $('#closed button').focus(); }
+  else if (act === 'again') {
+    $('#closed').hidden = true; $('#pr').hidden = false; document.querySelector('.mz-scrim').hidden = false;
+    if (HEART) heart(); else { step = 'read'; typed = ''; seg.set('read'); render(); }
+    segEl.hidden ? $('#pr .close-btn').focus() : segEl.querySelector('[aria-checked="true"]').focus();
+  }
+});
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#pr').hidden) document.querySelector('#pr [data-act="close"]').click(); });
+
+initShell({ states: [['John 3:16', ''], ['On the heart', 'heart']], state: HEART ? 'heart' : '', onState: () => location.reload() });
+if (HEART) heart(); else render();
+// the dialog takes focus as it opens, as showModal() would: the step control, or Close in the heart moment
+const focusIn = () => { if (!$('#pr').hidden) (segEl.hidden ? $('#pr [data-act="close"]') : segEl.querySelector('[aria-checked="true"]')).focus(); };
+if (!embedded) focusIn();
+else addEventListener('focus', () => { if (!$('#pr').contains(document.activeElement)) focusIn(); });
+</script>
+</body>
+</html>
