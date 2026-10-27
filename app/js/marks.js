@@ -1024,8 +1024,16 @@ function memorizePending() {
 }
 async function copyPending() {
   const p = pending; if (!p) return;
-  // a clicked verse is copied with its reference, as several selected verses are
-  const ok = await clip(p.whole ? `${p.draft.quote.replace(/\s+/g, ' ').trim()}\n${markLabel(p.draft)} (${trInfo(p.draft.tr).abbr})` : copyText(p.draft));
+  // a clicked verse is copied with its reference, as several selected verses are, and its words as the reader's copy
+  // handler gives them: a verse folded in keeps its own number ('…face to face. 15 Peace be to thee')
+  let words = '';
+  if (p.whole && p.at && p.at.isConnected) {
+    const f = p.at.cloneNode(true);
+    f.querySelectorAll('.sr, .om-why').forEach(x => x.remove());
+    f.querySelectorAll('.vx').forEach(x => x.append(' '));
+    words = f.textContent.replace(/\s+/g, ' ').trim();
+  }
+  const ok = await clip(p.whole ? `${words || p.draft.quote.replace(/\s+/g, ' ').trim()}\n${markLabel(p.draft)} (${trInfo(p.draft.tr).abbr})` : copyText(p.draft));
   closeBubble({ restore: true });
   toast(ok ? (p.whole ? `Copied ${markLabel(p.draft)}.` : 'Copied the words.') : 'Couldn’t copy. The browser blocked the clipboard.');
 }
@@ -1148,6 +1156,7 @@ function bindFloats() {
   if (bub) {
     bub.addEventListener('mousedown', e => e.preventDefault()); // the selection and the focus stay in the text
     bub.addEventListener('click', e => {
+      if (blocked()) { closeBubble(); return; } // pick mode (My links) began with the bubble open: it chooses verses now
       const dot = e.target.closest('[data-mk-color]'); if (dot) { applyColor(dot.dataset.mkColor); return; }
       const act = e.target.closest('[data-mk-act]')?.dataset.mkAct;
       if (act === 'comment') openCard(); else if (act === 'copy') copyPending(); else if (act === 'remove') removePending();
@@ -1499,7 +1508,7 @@ export function initMarks(actions) {
   document.addEventListener('pointerdown', e => {
     lastPointer = e.pointerType || 'mouse';
     const t = e.target;
-    reclick = bubbleShown && pending && pending.whole && t instanceof Element && t.closest('#reader .verse') ? pending.draft : null;
+    reclick = (bubbleShown || cardShown) && pending && pending.whole && t instanceof Element && t.closest('#reader .verse') ? pending.draft : null;
     if (bubbleShown && !bubbleEl()?.contains(t)) closeBubble();
     if (cardShown && !cardEl()?.contains(t) && !cardDirty()) closeCard({ restore: false }); // typed words wait for Cancel or Save
   }, true);
@@ -1562,7 +1571,8 @@ export function initMarks(actions) {
     if (!root || root.dataset.ch !== `${pending.b}.${pending.c}` || blocked() || colFor(root, pending.draft.tr) < 0) { gone(); return; }
     const r = anchor(pending.draft, root);
     if (!r) { gone(); return; }
-    pending.range = r; pending.ranges = anchorRanges(pending.draft, root); repaintPending();
+    pending.range = r; pending.ranges = pending.whole ? [] : anchorRanges(pending.draft, root); repaintPending();
+    if (pending.whole) pending.at = vtextOf(document.getElementById('v' + parseRef(pending.draft.start).v), colFor(root, pending.draft.tr)) || pending.at;
     if (pending.origin && !pending.origin.isConnected) pending.origin = document.getElementById('v' + parseRef(pending.draft.start).v);
     if (bubbleShown) { if (!place(bubbleEl())) closeBubble(); } else place(cardEl(), { keep: true });
   });
@@ -1586,6 +1596,10 @@ export function initMarks(actions) {
     const had = document.activeElement === cur, ti = cur.tabIndex;
     cur.insertAdjacentHTML('afterend', mzBtnHtml(pending.draft)); cur.remove();
     const nb = el.querySelector('.mb-mz'); if (nb) { nb.tabIndex = ti; if (had) nb.focus(); }
+  });
+  document.addEventListener('bs:verse-selected', e => {
+    const d = e.detail || {};
+    if (bubbleShown && pending && pending.whole && (d.b !== pending.b || d.c !== pending.c || +d.v !== vOf(pending.draft.start))) closeBubble();
   });
   document.addEventListener('bs:auth-changed', () => { if (cardShown) closeCard({ restore: false, why: 'scope' }); else closeBubble(); closeMarkPop({ back: false }); });
   // a reference chip to a mark in another chapter: its popover once the chapter is drawn (after revealMark's flash)

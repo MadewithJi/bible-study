@@ -238,7 +238,8 @@ const bookmarkTarget = () => ({ b: state.book, c: state.chapter, v: state.drawer
 function renderMemorizeBtn() {
   const btn = document.getElementById('btn-memorize'); if (!btn) return;
   const b = state.book, c = state.chapter, v = state.selected || 0;
-  const omitted = !!document.querySelector(`#reader .verses > .verse[data-v="${v}"] .vtext.omitted`);
+  const row = `#reader .verses > .verse[data-v="${v}"]`; // the main column's text: memorizeSelected keeps state.tr
+  const omitted = !!document.querySelector(`${row} > .vtext.omitted, ${row} > .vcols > :first-child .vtext.omitted`);
   const hide = !mem || !v || state.drawerTab === 'search' || omitted;
   if (hide && document.activeElement === btn) document.getElementById('drawer-close')?.focus({ preventScroll: true });
   btn.hidden = hide; if (hide) { fitTitle(); return; }
@@ -250,14 +251,13 @@ function renderMemorizeBtn() {
   fitTitle();
 }
 /**
- * A phone's header (styles.css @max-width 699px) has five buttons beside the reference: a long one ('2 Thessalonians
- * 3:18' at 375 px) shrinks to fit, as an iOS title does, down to 16 px; then it ends in an ellipsis. Never a search title.
+ * The header has five buttons beside the reference (on a phone and on the 420 px side panel): a long one ('2
+ * Thessalonians 3:18') shrinks to fit, as an iOS title does, down to 16 px; then it ends in an ellipsis. Never a search title.
  */
-const PHONE = typeof matchMedia === 'function' ? matchMedia('(max-width: 699px)') : null;
 function fitTitle() {
   const t = document.getElementById('drawer-title'); if (!t) return;
   if (t.style.fontSize) t.style.fontSize = '';
-  if (!PHONE || !PHONE.matches || state.drawerTab === 'search') return;
+  if (state.drawerTab === 'search') return;
   const w = t.clientWidth; if (!w || t.scrollWidth <= w) return;
   let fs = parseFloat(getComputedStyle(t).fontSize) * (w - 1) / t.scrollWidth;
   // the width is not quite proportional to the size (rounding, letter spacing): a step down until it fits

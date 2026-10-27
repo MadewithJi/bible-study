@@ -881,7 +881,6 @@ export function bindReader() {
   el.addEventListener('dblclick', e => {
     const verse = e.target.closest('.verse'); if (!verse || e.target.closest('.xc, .iw, button')) return;
     try { window.getSelection()?.removeAllRanges(); } catch (err) { /* ignore */ }
-    safeCall(mrk && mrk.closeBubble);
     safeCall(mrk && mrk.closeMarkPop, { back: false });
     A.select(+verse.dataset.v, { tab: 'notes', focus: true });
   });

@@ -189,6 +189,7 @@ const A = {
     const from = ref && ref.v ? ref : (state.selected ? { b: state.book, c: state.chapter, v: state.selected } : null);
     if (!from) { toast('Select a verse first, then press c.'); return false; }
     hideResume();
+    mrkCall('closeBubble'); // a clicked verse's bubble would stay over the verses while choosing (its buttons still save)
     return !!lnkCall('startPick', from);
   },
   /** The sign-in dialog, saying why (a hosted site's guest tried to save: hosting brief §2). */
@@ -1271,7 +1272,7 @@ function bindKeyboard() {
     else if (k === 'o') onPage(toggleOrig);
     else if (k === 't') toggleTheme();
     else if (k === 'a' || k === 'g' || k === 'm' || k === 'i') onPage(() => A.showPanel({ a: 'arcs', g: 'graph', m: 'map', i: 'art' }[k]));
-    else if (k === 'n') { e.preventDefault(); if (state.selected) A.select(state.selected, { tab: 'notes', focus: true }); else A.openTab('notes', { focus: true }); }
+    else if (k === 'n') { e.preventDefault(); if ($('#mark-card')?.hidden !== false) mrkCall('closeBubble'); if (state.selected) A.select(state.selected, { tab: 'notes', focus: true }); else A.openTab('notes', { focus: true }); }
     else if (k === 'b') { e.preventDefault(); A.toggleBookmark(); }
     else if (k === 'c') { e.preventDefault(); A.startLinkPick(); }
     else if (k === 'l') { e.preventDefault(); A.openLibrary(); }
