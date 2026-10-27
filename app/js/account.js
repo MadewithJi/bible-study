@@ -777,7 +777,7 @@ function renderProfile() {
 <div class="actions"><button type="button" class="btn btn-tinted sm" data-prof="password">Change password</button></div>
 <h3 class="group-h">Your data</h3>
 <ul class="group av">
-  <li><button class="cell" type="button" data-prof="export"><span class="tile-i blue">${icon('export')}</span><span class="cell-body"><span class="cell-title">Export profile</span><span class="cell-sub">Notes, bookmarks, links, highlights and progress as JSON</span></span></button></li>
+  <li><button class="cell" type="button" data-prof="export"><span class="tile-i blue">${icon('export')}</span><span class="cell-body"><span class="cell-title">Export profile</span><span class="cell-sub">Notes, bookmarks, links, highlights, memory verses and progress as JSON</span></span></button></li>
   <li><button class="cell" type="button" data-prof="obsidian"><span class="tile-i indigo">${icon('export')}</span><span class="cell-body"><span class="cell-title">Export notes for Obsidian</span><span class="cell-sub">Markdown with [[John 3.16|John 3:16]] links</span></span></button></li>
   ${importRow}
   ${fileRow}
@@ -1065,8 +1065,8 @@ async function deleteProfile() {
   const uid = state.auth.scope;
   await confirmDialog({
     title: 'Delete this profile?',
-    body: state.auth.hosted ? `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this site. It’s erased straight away and can’t be undone.`
-      : `This removes ${u.name}’s notes, bookmarks, links, highlights and reading progress from this computer. Guest notes are not affected.`,
+    body: state.auth.hosted ? `This removes ${u.name}’s notes, bookmarks, links, highlights, memory verses and reading progress from this site. It’s erased straight away and can’t be undone.`
+      : `This removes ${u.name}’s notes, bookmarks, links, highlights, memory verses and reading progress from this computer. Guest notes are not affected.`,
     ok: 'Delete profile', danger: true, password: true,
     onConfirm: async password => {
       if (DRY) return MSG.dry;

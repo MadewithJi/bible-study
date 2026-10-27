@@ -1008,8 +1008,8 @@ function actText(a) {
     case 'profile.import': {
       // the words of the import's toast and the sign-up preview (account.js): chapters = reading progress, not 'read'
       const parts = [+x.notes > 0 ? plural(+x.notes, 'note') : '', +x.bookmarks > 0 ? plural(+x.bookmarks, 'bookmark') : '', +x.links > 0 ? plural(+x.links, 'link') : '', +x.marks > 0 ? plural(+x.marks, 'highlight') : '',
-        +x.chapters > 0 ? `reading progress for ${plural(+x.chapters, 'chapter')}` : ''].filter(Boolean);
-      // no counts: only guest study days, activity or the last-read place came over
+        +x.memory > 0 ? plural(+x.memory, 'memory verse') : '', +x.chapters > 0 ? `reading progress for ${plural(+x.chapters, 'chapter')}` : ''].filter(Boolean);
+      // no counts: only guest study days, activity or the last-read place came over (memory verses are counted)
       const sub = parts.join(' · ');
       return sub ? ['Brought over guest notes and progress', sub[0].toUpperCase() + sub.slice(1)] : ['Brought over guest reading history'];
     }

@@ -6198,6 +6198,29 @@ class T31_Memory(Base):
         finally:
             stop_proc(proc)
 
+    def test_m12_import_keeps_one_entry_per_passage_and_the_current_verse(self):
+        g, t0 = Client(), now_ms() - 3_600_000
+        gid = {k: new_memory_id() for k in ("first", "john")}
+        self.assertEqual(self.changes(g, {gid["first"]: self.verse(gid["first"], ref="19.23.1", pos=1, step=2, created=t0, updated=t0),
+                                          gid["john"]: self.verse(gid["john"], ref="43.3.16", pos=2, created=t0 + 1, updated=t0 + 1)}).status, 200)
+        email, pw = H.account("memdup", "Memorize: import keeps the line")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Memory Line").status, 201)
+        own = {k: new_memory_id() for k in ("cur", "john")}
+        self.assertEqual(self.changes(c, {own["cur"]: self.verse(own["cur"], ref="45.8.28", pos=1, step=3, due="2026-10-27"),
+                                          own["john"]: self.verse(own["john"], ref="43.3.16", pos=2)}).status, 200)
+        r = c.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        mine = self.memory(c)["memory"]
+        self.assertEqual([v["id"] for v in mine.values() if v["ref"] == "43.3.16"], [own["john"]], "one entry per passage")
+        line = sorted((v for v in mine.values() if not v["heart"]), key=lambda v: (v["pos"], v["created"], v["id"]))
+        self.assertEqual(line[0]["id"], own["cur"], "the profile's current verse stays current")
+        self.assertLess(mine[own["cur"]]["pos"], min(v["pos"] for k, v in mine.items() if k != own["cur"] and not v["heart"]))
+        self.assertIn(gid["first"], mine)
+        r2 = c.req("POST", "/api/profile/import-guest", {}, scoped=True)
+        self.assertEqual((r2.json["imported"]["memory"], r2.json["changed"]), (0, False), "idempotent")
+        self.assertEqual(self.memory(c)["memory"], mine)
+
 
 class T99_Hygiene(Base):
     restart = False

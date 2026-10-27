@@ -83,6 +83,8 @@ function dlg() {
   D = { d, title: q('#practice-title'), sub: q('#practice-sub'), seg: q('#practice-steps'), pane: q('#practice-pane'), meta: q('#practice-meta'), foot: q('#practice-foot'), live: q('#practice-say') };
   // a double or triple click acts once: its later clicks would land on the next screen's button (Show the verse → Got it)
   D.foot.addEventListener('click', e => { if (e.detail > 1) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // a held Enter or Space repeats: its repeats would land on the next screen's button too
+  D.foot.addEventListener('keydown', e => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); }, true);
   D.seg.addEventListener('click', e => { const b = e.target.closest('[role=radio]'); if (b) goStep(b.dataset.step, { focus: false }); });
   D.seg.addEventListener('keydown', e => radioKeys(e, D.seg, b => goStep(b.dataset.step, { focus: false })));
   if ('ResizeObserver' in window) new ResizeObserver(() => moveInd(D.seg)).observe(D.seg);
@@ -253,13 +255,15 @@ function onClick(e) {
   else if (act === 'got' || act === 'not') judge(act);
   else if (act === 'retry') load();
 }
+/** Got it and Not yet wait this long after the check appears: a second press of the key or click that showed it lands there. */
+const CHECK_MS = 500;
 function showCheck() {
   const p = P; if (!p || p.phase !== 'step') return;
   clearPeeks();
   const typed = p.typed.trim();
   p.cmp = typed ? S.compareTyped(p.words.map(w => w.t), typed) : null;
   p.due = memoryDue(p.entry); p.gotLabel = p.due ? memoryGotIt(p.entry) : '';
-  p.phase = 'check'; render(); toTop();
+  p.phase = 'check'; p.shownAt = performance.now(); render(); toTop();
   const c = p.cmp, score = c ? ` You had ${c.right} of ${c.total} ${c.total === 1 ? 'word' : 'words'}.` : '';
   if (!p.due) { focusIn('[data-close]:not(.close-btn)'); say(`The verse is shown.${score} A practice run.`); return; }
   focusIn(c && c.total && c.right / c.total < PASS ? '[data-act="not"]' : '[data-act="got"]');
@@ -267,7 +271,7 @@ function showCheck() {
 }
 /** Got it / Not yet: memory.js recordPractice once (a second click while it runs does nothing). */
 async function judge(kind) {
-  const p = P; if (!p || p.busy || p.phase !== 'check') return;
+  const p = P; if (!p || p.busy || p.phase !== 'check' || performance.now() - (p.shownAt || 0) < CHECK_MS) return;
   p.busy = true;
   D.foot.querySelectorAll('button').forEach(b => { b.disabled = true; });
   let r = null;

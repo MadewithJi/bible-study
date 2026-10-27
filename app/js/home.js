@@ -284,7 +284,8 @@ async function renderMem(my) {
   const host = $('#hm-mem'), M = getMods().mem, label = x => call(M, 'memoryLabel', x) || '';
   const o = call(M, 'organizedMemory');
   const held = later && call(M, 'getMemory', later.id);
-  if (!held || call(M, 'memoryDue', held)) later = null;   // undone elsewhere, removed, or due again: the band as usual
+  // undone elsewhere, removed, due again, or another verse is current now: the band as usual
+  if (!held || call(M, 'memoryDue', held) || (o && o.current && o.current.id !== held.id)) later = null;
   const x = held && later ? held : o ? o.current || o.dueHeart[0] || null : null;
   const first = x ? await call(M, 'memoryPreview', x) : '';
   if (my !== seq) return;
@@ -300,7 +301,8 @@ async function renderMem(my) {
   const put = !!later, due = !put && !!call(M, 'memoryDue', x), heart = !!x.heart, tr = trInfo(x.tr).abbr;
   const step = Math.min(STEPS, Math.max(0, Math.floor(+x.step || 0)));
   const where = heart ? `${tr} · Written on the heart${due ? ' · review due' : ''}` : `${tr} · Learning · ${reviewLabel(x)}`;
-  const when = put ? '' : due ? '<span class="mz-due">Due today</span> · about a minute' : esc(nextReview(call(M, 'memoryWhen', x)));
+  // the space stays outside the no-wrap span, so a narrow phone breaks after 'Due today', never before 'minute'
+  const when = put ? '' : due ? '<span class="mz-due">Due today</span> <span class="mz-nw">· about a minute</span>' : esc(nextReview(call(M, 'memoryWhen', x)));
   const id = esc(x.id), also = o ? o.dueHeart.find(h => h.id !== x.id) : null;
   const act = put
     ? `<div class="cont-b two mz-later"><span id="hm-mem-put">${esc(`Moved to tomorrow.${DRY ? ' Dry run: nothing is saved.' : ''}`)}</span><button type="button" class="mz-quiet" data-mz="undo" aria-describedby="hm-mem-put">Undo</button></div>`

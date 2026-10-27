@@ -40,19 +40,19 @@ dialog.practice .mz-blank textarea { width: 100%; min-height: 152px; padding: 14
 .mz-blank textarea::placeholder { color: var(--label-3); }
 
 /* ---------- the check: the verse with the missed words underlined in lamp, and what was typed ---------- */
-.mz-miss { padding: 0; background: none; color: inherit; text-decoration: underline 2px var(--lamp); text-underline-offset: .2em; text-decoration-skip-ink: none; }
+.mz-miss { padding: 0; background: none; color: inherit; text-decoration: underline 2px var(--lamp-ink); text-underline-offset: .2em; text-decoration-skip-ink: none; }   /* lamp ink: the only visual sign of a missed word, so ≥ 3:1 */
 .mz-score { margin: 16px 0 0; font: 600 15px/1.4 var(--sans); color: var(--label); font-variant-numeric: tabular-nums; }
 .mz-typed { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--fill-3); }
 .mz-typed p { margin: 0; font: 400 16px/1.5 var(--serif); color: var(--label-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .mz-typed small { display: block; margin-bottom: 3px; font: 600 12px/1.3 var(--sans); color: var(--label-2); }
-.mz-extra { text-decoration: line-through 1px color-mix(in srgb, var(--label-2) 70%, transparent); color: var(--label-3); }
+.mz-extra { text-decoration: line-through 1px var(--label-2); color: var(--label-2); }   /* struck lightly; the text and the line both ≥ 4.5:1 */
 
 /* ---------- licensed texts: the publisher's line; a verse shown in the KJV instead ---------- */
-.mz-meta { margin-top: 20px; }
+.mz-pr-meta { margin-top: 20px; }
 .mz-fb { display: flex; align-items: flex-start; gap: 7px; margin: 0; font: 400 13px/1.45 var(--sans); color: var(--label-2); }
 .mz-fb > .i { flex: none; width: 15px; height: 15px; margin-top: 1px; stroke-width: 1.8; }
 .practice .copyright.mz-copy { max-width: none; margin: 12px 0 0; padding-top: 12px; }
-.mz-meta > .mz-copy:first-child { margin-top: 0; }
+.mz-pr-meta > .mz-copy:first-child { margin-top: 0; }
 
 /* ---------- the footer: what to do next ---------- */
 .mz-pr-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 20px 20px 26px; }
@@ -62,8 +62,10 @@ dialog.practice .mz-blank textarea { width: 100%; min-height: 152px; padding: 14
 .mz-pr-foot .mz-step { font-size: 13px; color: var(--label-2); }
 .mz-pr-foot .mz-r { display: flex; gap: 8px; margin-left: auto; }
 .mz-judge { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; width: 100%; }
-.mz-pr-foot .mz-judge .btn { height: 58px; flex-direction: column; gap: 4px; border-radius: 16px; font-size: 16px; }
-.mz-judge .btn small { font: 500 12.5px/1 var(--sans); letter-spacing: -.005em; opacity: .86; }
+/* the labels may wrap ('Next review in about three months' on a narrow phone), so the buttons grow, never clip */
+.mz-pr-foot .mz-judge .btn { height: auto; min-height: 58px; padding: 8px 12px; flex-direction: column; gap: 4px; border-radius: 16px; font-size: 16px; white-space: normal; }
+.mz-judge .btn small { font: 500 12.5px/1.25 var(--sans); letter-spacing: -.005em; text-align: center; text-wrap: balance; }
+.mz-judge .btn-gray small { opacity: .86; }   /* Not yet only: white on --accent-fill needs full strength for 4.5:1 */
 
 /* ---------- the end of a practice ---------- */
 .mz-end { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 300px; text-align: center; }
@@ -104,16 +106,16 @@ dialog.practice .mz-blank textarea { width: 100%; min-height: 152px; padding: 14
   .mz-pane { min-height: 0; }
   .mz-pr-foot { padding: 12px 16px calc(16px + env(safe-area-inset-bottom)) 20px; }
   .mz-pr-foot .btn { height: 48px; padding: 0 22px; }
-  .mz-pr-foot .mz-judge .btn { height: 58px; }
   .mz-pr-foot .mz-r { flex: 1; justify-content: flex-end; }
   .practice .segmented { height: 36px; }
   .practice .segmented > button::after { content: ""; position: absolute; inset: -6px 0; }   /* 32 + 12 = 44 px */
-  /* touch: roomier letters and blanks, so each target is about 40 px without overlapping its neighbour */
-  .mz-v.mz-fl { word-spacing: .75em; line-height: 1.95; }
-  .mz-gap::after { content: ""; position: absolute; inset: -6px -2px; }
-  .mz-l::after { content: ""; position: absolute; inset: -8px -.4em; }
-  .mz-l { position: relative; }
-  .mz-gap { display: inline-block; min-width: 1.6em; text-align: center; line-height: 1.3; }
+  /* touch: blanks and letters get 44 px targets (memorize-brief §5) on a 44 px line pitch, without overlapping a neighbour */
+  .mz-v:has(.mz-gap) { line-height: 2; }
+  .mz-v.mz-fl { word-spacing: .95em; line-height: 2; }
+  .mz-gap { display: inline-block; min-width: 2em; text-align: center; line-height: 1.3; }
+  .mz-gap::after { content: ""; position: absolute; inset: calc(50% - 22px) -2px; }
+  .mz-l { position: relative; display: inline-block; min-width: .8em; text-align: center; }
+  .mz-l::after { content: ""; position: absolute; inset: calc(50% - 22px); }
   .mz-blank { min-height: 132px; }
   dialog.practice .mz-blank textarea { min-height: 128px; font-size: 19px; }
 }
@@ -148,11 +150,13 @@ dialog.library { --lamp-tint: color-mix(in srgb, var(--lamp) 15%, var(--bg-elev)
 .library .sc { font-variant-caps: small-caps; }
 .library .mz-when { font-weight: 500; color: var(--lamp-ink); }
 .library .mz-when.calm { font-weight: 400; color: var(--label-2); }
-/* the first words of a verse, fading as they go (a hint, not the whole text) */
-.library .mz-first { overflow: hidden; white-space: nowrap; text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); mask-image: linear-gradient(90deg, #000 35%, rgba(0,0,0,.28) 100%); }
+/* the first words of a verse (a hint, not the whole text): no fade here, as these words are grey on a light cell and a
+   fade takes them under 4.5:1; a narrow row ends in an ellipsis, never mid-word */
+.library .mz-first { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* ---------- the home's card (after Study's, and laid out as it is) ---------- */
 .lib-mem-card .lh > span:empty { display: none; }
+.lib-mem-card .lh { flex-wrap: wrap; row-gap: 2px; }   /* a narrow phone: the count goes under 'Memory', never over it */
 .lib-mem-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
 .lib-mem-card p { flex: 1 1 260px; margin: 0; font-size: 14px; line-height: 1.5; color: var(--label-2); max-width: 60ch; font-variant-numeric: tabular-nums; }
 .lib-mem-card p b { font-weight: 600; color: var(--label); }
@@ -179,8 +183,8 @@ dialog.library { --lamp-tint: color-mix(in srgb, var(--lamp) 15%, var(--bg-elev)
 .mz-row .cell { align-items: flex-start; padding-right: 58px; cursor: pointer; }
 .mz-row .cell-title .mz-tr { font-weight: 500; color: var(--label-2); }
 .mz-row .cell-sub.serif.mz-first { display: block; font-size: 15.5px; }
-.mz-meta { display: flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; line-height: 1.35; color: var(--label-2); font-variant-numeric: tabular-nums; }
-.mz-meta > * { white-space: nowrap; }   /* the separator travels with what follows it, so it never ends a line */
+.mz-row .mz-meta { display: flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; line-height: 1.35; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.mz-row .mz-meta > * { white-space: nowrap; }   /* the separator travels with what follows it, so it never ends a line */
 .mz-dot { margin-right: 8px; }
 .mz-more { position: absolute; top: 10px; right: 8px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--label-2); transition: background-color var(--d-1), color var(--d-1); }
 .mz-more .i { width: 18px; height: 18px; }
@@ -209,4 +213,3 @@ dialog.library { --lamp-tint: color-mix(in srgb, var(--lamp) 15%, var(--bg-elev)
   .lib-mem-card .btn { position: relative; }
   .lib-mem-card .btn::after { content: ""; position: absolute; inset: -8px 0; }
 }
-@media (forced-colors: active) { .library .mz-first { -webkit-mask-image: none; mask-image: none; } }

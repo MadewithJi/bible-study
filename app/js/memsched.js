@@ -103,9 +103,10 @@ export function gotItLabel(v, today, upnext = false) {
 export function tokenize(text) {
   return String(text ?? '').replace(/([—–])(?=\S)/g, '$1 ').split(/\s+/).filter(Boolean);
 }
-/** A word as typing is compared: lower case, no accents, curly apostrophes straight, punctuation dropped ('' for none). */
+/** A word as typing is compared: lower case, no accents, the KJV's æ and œ as ae and oe (Cæsar, Judæa: NFD keeps
+ *  them whole and most keyboards can't type them), curly apostrophes straight, punctuation dropped ('' for none). */
 export function normWord(w) {
-  return String(w ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[‘’ʼ`]/g, "'")
+  return String(w ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/æ/g, 'ae').replace(/œ/g, 'oe').replace(/[‘’ʼ`]/g, "'")
     .replace(/[^\p{L}\p{N}']/gu, '').replace(/^'+|'+$/g, '');
 }
 /** Which words to hide for Fade: level 1 every third from the second, level 2 two of every three; never the first. */
@@ -139,50 +140,60 @@ function oneEdit(a, b) {
 const TYPED_MAX = 3000;
 /**
  * What was typed against the verse's words (from tokenize): { right, total, missed, extra, typed }. An LCS alignment on
- * normalised words; a word of 5+ letters one edit away still counts (a typo is not a lapse of memory). missed: indexes
- * of verse words not matched; typed: the typed words (tokenize, with 'LORD--you' parted); extra: indexes of typed words
- * not matched. Words with no letters, and verse numbers typed along (digits the verse doesn't have), are not counted
- * either way.
+ * normalised words, apostrophes ignored ('Dont', 'Gods'); a word of 5+ letters one edit away still counts (a typo is
+ * not a lapse of memory), and so does spacing: the KJV's 'for ever' typed as 'forever' is both words, and 'forever'
+ * typed as 'for ever' is that word. missed: indexes of verse words not matched; typed: the typed words (tokenize, with
+ * 'LORD--you' parted); extra: indexes of typed words not matched. Words with no letters, and verse numbers typed along
+ * (digits the verse doesn't have), are not counted either way.
  */
 export function compareTyped(verseWords, typed) {
   const vw = Array.isArray(verseWords) ? verseWords : [];
+  // an apostrophe left out ('Dont', 'Gods', 'its') is not a lapse of memory either
+  const nw = w => normWord(w).replace(/'/g, '');
   const V = [], vi = [];
-  vw.forEach((w, i) => { const n = normWord(w); if (n) { V.push(n); vi.push(i); } });
+  vw.forEach((w, i) => { const n = nw(w); if (n) { V.push(n); vi.push(i); } });
   const have = new Set(V), T = [], ti = [];
   // a dash typed as '--' or '-' ('LORD--you', "land'--He") parts two words when a part is a verse word, unless the
   // joined word is a verse word or a typo of a hyphenated one: 'Beth-el', and 'Beth-al' or 'Jehovah-jirah', stay one
   const dash = /[\p{L}\p{N}][^\s\p{L}\p{N}]*-[^\s\p{L}\p{N}]*[\p{L}\p{N}]/u;
-  const H = vw.filter(w => dash.test(w)).map(normWord);
+  const H = vw.filter(w => dash.test(w)).map(nw);
   const whole = w => have.has(w) || H.some(v => letters(v) >= 5 && oneEdit(v, w));
   const tw = tokenize(typed).flatMap(t => {
-    if (!dash.test(t) || whole(normWord(t))) return [t];
+    if (!dash.test(t) || whole(nw(t))) return [t];
     const p = t.replace(/-+(?=[^\s\p{L}\p{N}]*[\p{L}\p{N}])/gu, '$& ').split(' '), parts = [];
     for (let i = 0, j; i < p.length; i = j + 1) {   // rejoin the longest run that is whole ('people--God-fearing')
-      for (j = Math.min(p.length - 1, i + 5); j > i && !whole(normWord(p.slice(i, j + 1).join(''))); j--);
+      for (j = Math.min(p.length - 1, i + 5); j > i && !whole(nw(p.slice(i, j + 1).join(''))); j--);
       parts.push(p.slice(i, j + 1).join(''));
     }
-    return parts.some(x => have.has(normWord(x))) ? parts : [t];
+    return parts.some(x => have.has(nw(x))) ? parts : [t];
   });
   for (let i = 0; i < tw.length && T.length < TYPED_MAX; i++) {
-    const n = normWord(tw[i]);
+    const n = nw(tw[i]);
     if (n && !(/^\d+$/.test(n) && !have.has(n))) { T.push(n); ti.push(i); }
   }
   const n = V.length, m = T.length, W = m + 1, EX = 4096; // a match scores EX, an exact one EX + 1: most words first, then exact
   const score = (i, j) => (V[i] === T[j] ? EX + 1 : letters(V[i]) >= 5 && oneEdit(V[i], T[j]) ? EX : 0);
-  const dp = new Float64Array((n + 1) * W);
+  // spacing is not a lapse of memory: the KJV's 'for ever' or 'to day' typed as one word count as both words, and a
+  // verse's 'forever' typed as 'for ever' as that word (two words that are both right there stay two)
+  const V2 = V.map((v, i) => (i + 1 < n ? v + V[i + 1] : null)), T2 = T.map((t, j) => (j + 1 < m ? t + T[j + 1] : null));
+  const dp = new Float64Array((n + 2) * (W + 1)), at = (i, j) => i * (W + 1) + j;
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      let best = Math.max(dp[(i + 1) * W + j], dp[i * W + j + 1]);
-      const s = score(i, j); if (s && dp[(i + 1) * W + j + 1] + s > best) best = dp[(i + 1) * W + j + 1] + s;
-      dp[i * W + j] = best;
+      let best = Math.max(dp[at(i + 1, j)], dp[at(i, j + 1)]);
+      const s = score(i, j); if (s && dp[at(i + 1, j + 1)] + s > best) best = dp[at(i + 1, j + 1)] + s;
+      if (V2[i] === T[j] && dp[at(i + 2, j + 1)] + 2 * EX > best) best = dp[at(i + 2, j + 1)] + 2 * EX;
+      if (T2[j] === V[i] && dp[at(i + 1, j + 2)] + EX > best) best = dp[at(i + 1, j + 2)] + EX;
+      dp[at(i, j)] = best;
     }
   }
   const missed = [], extra = [];
   let i = 0, j = 0, right = 0;
   while (i < n && j < m) {
-    const s = score(i, j);
-    if (s && dp[i * W + j] === dp[(i + 1) * W + j + 1] + s) { right++; i++; j++; }
-    else if (dp[i * W + j] === dp[(i + 1) * W + j]) { missed.push(vi[i]); i++; }
+    const s = score(i, j), d = dp[at(i, j)];
+    if (s && d === dp[at(i + 1, j + 1)] + s) { right++; i++; j++; }
+    else if (V2[i] === T[j] && d === dp[at(i + 2, j + 1)] + 2 * EX) { right += 2; i += 2; j++; }
+    else if (T2[j] === V[i] && d === dp[at(i + 1, j + 2)] + EX) { right++; i++; j += 2; }
+    else if (d === dp[at(i + 1, j)]) { missed.push(vi[i]); i++; }
     else { extra.push(ti[j]); j++; }
   }
   for (; i < n; i++) missed.push(vi[i]);

@@ -2005,9 +2005,25 @@ def memory_verse_versions(doc, keys, conflicts):
 
 def merge_memory(dst, src):
     """Guest -> profile merge (the notes rule of PS §1.8, as merge_marks; idempotent). Mutates dst. New ids stop at
-    the 1,000-verse limit. -> number of memory verses taken from src."""
+    the 1,000-verse limit. A passage the profile already has (another id, any translation) is not added again (brief
+    §3: one entry per passage; the profile's own is kept, as merge_library keeps its bookmark), and verses being
+    learned that come in join the end of the profile's line in their own order (brief §1, Add), so the profile's
+    current verse stays current. `updated` is kept, so a repeat import takes nothing. -> number of memory verses taken
+    from src."""
     mem = dst.setdefault("memory", {})
-    return len(_merge_keyed(mem, dst.setdefault("deleted", {}), src.get("memory") or {}, room=MAX_MEMORY - len(mem)))
+    have = {v.get("ref") for v in mem.values() if isinstance(v, dict)}
+    srcm = {k: v for k, v in (src.get("memory") or {}).items()
+            if k in mem or not (isinstance(v, dict) and v.get("ref") in have)}
+    pos = lambda v: v.get("pos") if _is_num(v.get("pos")) else 0  # noqa: E731
+    line, before = [pos(v) for v in mem.values() if isinstance(v, dict) and not v.get("heart")], set(mem)
+    taken = _merge_keyed(mem, dst.setdefault("deleted", {}), srcm, room=MAX_MEMORY - len(mem))
+    new = [mem[k] for k in taken if k not in before and not mem[k].get("heart")]
+    if line and new:
+        shift = max(line) + 1 - min(pos(v) for v in new)
+        if shift > 0:
+            for v in new:
+                v["pos"] = min(pos(v) + shift, MEMORY_POS_MAX)
+    return len(taken)
 
 
 def add_memory_verse_activity(lib, new_verses, day, now):
