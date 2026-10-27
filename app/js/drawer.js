@@ -258,10 +258,18 @@ function fitTitle() {
   const t = document.getElementById('drawer-title'); if (!t) return;
   if (t.style.fontSize) t.style.fontSize = '';
   if (state.drawerTab === 'search') return;
-  const w = t.clientWidth; if (!w || t.scrollWidth <= w) return;
-  let fs = parseFloat(getComputedStyle(t).fontSize) * (w - 1) / t.scrollWidth;
-  // the width is not quite proportional to the size (rounding, letter spacing): a step down until it fits
-  for (let i = 0; i < 6; i++) { fs = Math.max(16, Math.floor(fs * 10) / 10); t.style.fontSize = fs + 'px'; if (fs === 16 || t.scrollWidth <= t.clientWidth) break; fs -= .3; }
+  // measured without the save status, which takes the row's room only for a moment, and by the words' own width
+  // (scrollWidth rounds a fraction of a pixel away, and the ellipsis would still cut it)
+  const s = document.getElementById('save-status'), pos = s ? s.style.position : '';
+  if (s) s.style.position = 'absolute';
+  const r = document.createRange(); r.selectNodeContents(t);
+  const w = t.getBoundingClientRect().width, need = () => r.getBoundingClientRect().width;
+  if (w && need() > w) {
+    let fs = parseFloat(getComputedStyle(t).fontSize) * (w - 1) / need();
+    // the width is not quite proportional to the size (rounding, letter spacing): a step down until it fits
+    for (let i = 0; i < 6; i++) { fs = Math.max(16, Math.floor(fs * 10) / 10); t.style.fontSize = fs + 'px'; if (fs === 16 || need() <= w) break; fs -= .3; }
+  }
+  if (s) s.style.position = pos;
 }
 function memorizeSelected() {
   const btn = document.getElementById('btn-memorize'), b = state.book, c = state.chapter, v = state.selected || 0;

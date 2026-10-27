@@ -189,7 +189,7 @@ const A = {
     const from = ref && ref.v ? ref : (state.selected ? { b: state.book, c: state.chapter, v: state.selected } : null);
     if (!from) { toast('Select a verse first, then press c.'); return false; }
     hideResume();
-    mrkCall('closeBubble'); // a clicked verse's bubble would stay over the verses while choosing (its buttons still save)
+    if ($('#mark-card')?.hidden !== false) mrkCall('closeBubble'); // a clicked verse's bubble would stay over the verses while choosing (typed words wait for Cancel or Save)
     return !!lnkCall('startPick', from);
   },
   /** The sign-in dialog, saying why (a hosted site's guest tried to save: hosting brief §2). */
@@ -989,6 +989,7 @@ const SHEET_BODY = el => el; // renderDrawer focusTo: the sheet body itself (tab
 async function runSearch(qRaw) {
   const q = String(qRaw || '').trim(); if (!q) return;
   const bar = $('#topbar'); bar.classList.remove('searching'); $('#search').blur();
+  if ($('#mark-card')?.hidden !== false) mrkCall('closeBubble'); // the iOS app's own search sends no press: a clicked verse's bubble would float over the results
   const title = `“${q}”`;
   // H/G + digits is always a Strong's lookup (never a reference: 'G12345' is not Genesis 50)
   const strong = q.match(/^([HG])\s?0*(\d+)$/i);
