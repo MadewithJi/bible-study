@@ -6,7 +6,7 @@ The words of the KJV and BSB (app/data/bibles), the Hebrew and Greek (app/data/o
 hand, and no AI tool may change them (Ji, 2026-10-28): they change only when build.py rebuilds them from the
 sources, and then the owner updates the lock on purpose.
 
-  python3 tools/scripture_lock.py            check (exit 1 and the files that differ)
+  python3 tools/scripture_lock.py            check (exit 1 and the files that differ; --quiet: say nothing when intact)
   python3 tools/scripture_lock.py --update   rewrite the lock after a deliberate rebuild (owner only)
 """
 import hashlib
@@ -64,13 +64,21 @@ def update():
     return len(have)
 
 
+MIN_FILES = 250  # 66 books in each of the KJV, BSB and the Hebrew/Greek, and the words-of-Jesus ranges: an emptied lock fails
+
+
 def main(argv):
     if "--update" in argv:
         print(f"scripture lock: wrote {update()} files to tests/scripture.sha256")
         return 0
+    n = len(locked())
+    if n < MIN_FILES:
+        print(f"scripture lock: tests/scripture.sha256 lists {n} files, fewer than {MIN_FILES}: the lock itself was cut")
+        return 1
     diff = differences()
     if not diff:
-        print(f"scripture lock: {len(locked())} files intact")
+        if "--quiet" not in argv:
+            print(f"scripture lock: {n} files intact")
         return 0
     print("scripture lock: the Bible text differs from tests/scripture.sha256:")
     for p, why in diff:

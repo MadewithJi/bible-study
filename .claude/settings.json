@@ -14,13 +14,26 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell|Monitor|mcp__terminal__run_in_terminal",
         "hooks": [
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/tools/scripture_guard.py\"",
             "timeout": 10,
             "statusMessage": "Checking the Bible text is not changed"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell|Monitor|mcp__terminal__run_in_terminal",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"$CLAUDE_PROJECT_DIR/tools/scripture_lock.py\" ] || (cd \"$CLAUDE_PROJECT_DIR\" && python3 tools/scripture_lock.py --quiet >&2) || exit 2",
+            "timeout": 15,
+            "statusMessage": "Checking the Bible text is unchanged"
           }
         ]
       }
