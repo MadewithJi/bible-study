@@ -11,6 +11,7 @@ permissions:
   pull-requests: read
 jobs:
   untouched:
+    name: Scripture untouched  # the name to require on main (Settings › Rules › Rulesets)
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'scripture-rebuild') }}
     runs-on: ubuntu-latest
     steps:

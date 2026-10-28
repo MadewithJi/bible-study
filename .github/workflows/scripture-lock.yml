@@ -9,6 +9,7 @@ permissions:
   contents: read
 jobs:
   check:
+    name: Scripture lock  # the name to require on main (Settings › Rules › Rulesets)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
