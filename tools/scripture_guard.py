@@ -17,11 +17,8 @@ import sys
 
 LOCKED = r"(app/data/(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)|(tests/)?scripture\.sha256(?![\w.-]))"
 PROTECTED = re.compile(r"(^|[/\s'\"=`(])" + LOCKED, re.I)
-# a cd into the text's folders (or their parents) makes the relative writes after it count
-INSIDE = re.compile(r"(^|[;&|(]\s*)cd\s+['\"]?(\S*/)?(app/data(/(bibles|orig|redletter)(/\S*)?)?|app)/?['\"]?(\s|$)"
-                    r"|\bfor\b[^;]*\bin\b[^;]*" + LOCKED, re.I)
 INTO = re.compile(r"(>>?|>\||&>)\s*['\"]?[^\s'\"]*" + LOCKED, re.I)
-REDIRECT = re.compile(r"(^|[^0-9&<>])(>>?|>\||&>)\s*['\"]?(?![&/~])\S", re.I)  # to a relative path (after a cd inside)
+REDIRECT = re.compile(r"(^|[^0-9&<>])(>>?|>\||&>)\s*(?!['\"]?[&/~])['\"]?\S", re.I)  # to a relative path (after a cd inside)
 EDITORS = re.compile(r"\bsed\b[^|;&]*\s(-[a-zA-Z]*i|--in-place)|\bperl\b[^|;&]*\s-\w*i|\bawk\b[^|;&]*-i\s*inplace"
                      r"|\b(rm|rmdir|mv|truncate|shred|unlink)\b|\bgit\b(\s+-[Cc]\s+\S+)*\s+(checkout|restore|mv|rm|apply|am|stash|clean)\b|\bdd\b[^|;&]*\bof=|\bfind\b[^|;&]*\s-delete\b"
                      r"|\b(Set-Content|Add-Content|Clear-Content|Out-File|Remove-Item|Copy-Item|Move-Item|Rename-Item|New-Item)\b"
@@ -43,10 +40,18 @@ JSON_TOOL = re.compile(r"-m\s+json\.tool\s+\S+\s+['\"]?\S*" + LOCKED, re.I)
 PRETTIER_GLOB = re.compile(r"\bprettier\b[^|;&]*\s(--write|-w)\b[^|;&]*\s['\"]?(\S*/)?app(/data)?/(\*|\{)", re.I)
 COPY_REL = re.compile(r"^(\S*/)?(cp|rsync|install|ln)\b.*\s['\"]?(?![/~])[^\s'\"]+['\"]?\s*$")
 COPY_PARENT = re.compile(r"\b(cp\b(?=[^|;&]*\s-\w*[rRa])|rsync\b)[^|;&]*\s['\"]?(\S*/)?app(/data)?/?['\"]?\s*($|[;&|)])", re.I)
-CWD_INSIDE = re.compile(r"(^|/)app(/data(/(bibles|orig|redletter)(/.*)?)?)?$", re.I)
+# where a command runs: inside a text folder every relative write counts; in app/ or app/data/ relative paths are
+# read from there (data/bibles, bibles), so a cd or a working directory never hides the text, nor blocks other work
+TEXT_DIR = re.compile(r"(^|/)app/data/(bibles|orig|redletter)(/.*)?$", re.I)
+APP_DIR = re.compile(r"(^|/)app(/data)?$", re.I)
+CD = re.compile(r"^\s*cd\s+['\"]?([^'\"\s;&|]+)['\"]?\s*$")
+FOR_IN = re.compile(r"\bfor\b[^;]*\bin\b[^;]*" + LOCKED, re.I)
+QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\$`]|\\.|\$(?!\())*\"")  # literal text only: never one that runs $( ) or ` `
 SPLIT = re.compile(r"\s*(?:;|&&|\|\||\||\n)\s*")
 REASON = ("The Bible text (app/data/bibles, orig, redletter and tests/scripture.sha256) may not be changed by an AI "
-          "tool. It changes only when the owner rebuilds it from its published sources (see AGENTS.md).")
+          "tool. It changes only when the owner rebuilds it from its published sources (see AGENTS.md). If this command "
+          "only reads the text, or writes some other file while naming these paths, use the Read and Edit tools, or a "
+          "command that does not write and name the text at once.")
 
 
 def norm_path(p):
@@ -59,19 +64,51 @@ def norm_command(cmd):
     return re.sub(r"[^\s'\"=`(<>|;&]*/[^\s'\"`)<>|;&]*", lambda m: posixpath.normpath(m.group(0)), cmd)
 
 
-def writes(cmd, inside=False):
+def place(path):
+    """'text' inside a text folder, 'app' or 'app/data' there, else ''."""
+    path = norm_path(path)
+    if TEXT_DIR.search(path):
+        return "text"
+    m = APP_DIR.search(path)
+    return ("app/data" if m.group(2) else "app") if m else ""
+
+
+def from_root(part, where):
+    """A part's relative paths as from the project root: from app/, data/bibles is app/data/bibles; from app/data/, bibles is."""
+    if where == "app":
+        return re.sub(r"(?<![\w/.~-])(\./)?data/(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)", r"app/data/\2", part, flags=re.I)
+    if where == "app/data":
+        return re.sub(r"(?<![\w/.~-])(\./)?(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)", r"app/data/\2", part, flags=re.I)
+    return part
+
+
+def writes(cmd, here=""):
     cmd = norm_command(MESSAGE.sub(r"\1''", cmd))
-    if any(rx.search(cmd) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB)):
+    where = place(here)
+    whole = from_root(cmd, where)
+    if PROTECTED.search(whole) and CALLS.search(cmd):
         return True
-    if PROTECTED.search(cmd) and CALLS.search(cmd):
+    # the whole command too (a >| redirect, or a script's own ; between import and update()), then each part after a cd
+    if any(rx.search(whole) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB)):
         return True
+    looping = False
     for part in SPLIT.split(cmd):
-        if INSIDE.search(part):
-            inside = True
-        touches = inside or PROTECTED.search(part)
-        if touches and (EDITORS.search(part) or (inside and REDIRECT.search(part))):
+        m = CD.match(part)
+        if m:  # follow the cd, in and out
+            here = posixpath.join(here, m.group(1)) if here or not m.group(1).startswith("/") else m.group(1)
+            where = place(here)
+            continue
+        part = from_root(part, where)
+        if any(rx.search(part) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB)):
             return True
-        if COPY_ONTO.search(part) or COPY_PARENT.search(part) or (inside and COPY_REL.search(part)):
+        looping = looping or bool(FOR_IN.search(part))
+        inside = where == "text"
+        bare = QUOTED.sub("''", part)  # a grep pattern, a jq filter or a message: words, not commands
+        if (inside or looping or PROTECTED.search(part)) and EDITORS.search(bare):
+            return True
+        if inside and (REDIRECT.search(part) or COPY_REL.search(part)):
+            return True
+        if COPY_ONTO.search(part) or COPY_PARENT.search(part):
             return True
     return False
 
@@ -84,7 +121,7 @@ def denied(event):
     if tool == "PowerShell" and isinstance(cmd, str):
         cmd = cmd.replace("\\", "/")
     here = norm_path(posixpath.join(str(event.get("cwd") or ""), str(data.get("cwd") or "")))
-    return isinstance(cmd, str) and writes(cmd, bool(CWD_INSIDE.search(here)))
+    return isinstance(cmd, str) and writes(cmd, here)
 
 
 def main():
