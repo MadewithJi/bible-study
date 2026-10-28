@@ -44,9 +44,15 @@ COPY_PARENT = re.compile(r"\b(cp\b(?=[^|;&]*\s-\w*[rRa])|rsync\b)[^|;&]*\s['\"]?
 # read from there (data/bibles, bibles), so a cd or a working directory never hides the text, nor blocks other work
 TEXT_DIR = re.compile(r"(^|/)app/data/(bibles|orig|redletter)(/.*)?$", re.I)
 APP_DIR = re.compile(r"(^|/)app(/data)?$", re.I)
-CD = re.compile(r"^\s*cd\s+['\"]?([^'\"\s;&|]+)['\"]?\s*$")
+CD = re.compile(r"^\s*[({]?\s*(?:cd|pushd)\s+['\"]?([^'\"\s;&|()]+)['\"]?\s*(\d?>\s*/dev/null\s*)?$")
 FOR_IN = re.compile(r"\bfor\b[^;]*\bin\b[^;]*" + LOCKED, re.I)
 QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\$`]|\\.|\$(?!\())*\"")  # literal text only: never one that runs $( ) or ` `
+ANY_QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
+# 4. a script handed to a shell (bash -c '…', find -exec sh -c '…') is a command, not words
+SHELL_C = re.compile(r"\b(ba|z|da|k)?sh\b[^|;&]*\s-\w*c\b", re.I)
+# 2. emptying or filling a parent of the text: rm -rf app/data, or (from app/data) a copy into .
+PARENT = r"['\"]?(\S*/)?app(/data)?/?['\"]?"
+PARENT_DELETE = re.compile(r"\b(rm|rmdir)\b[^|;&]*\s" + PARENT + r"(\s|$)", re.I)
 SPLIT = re.compile(r"\s*(?:;|&&|\|\||\||\n)\s*")
 REASON = ("The Bible text (app/data/bibles, orig, redletter and tests/scripture.sha256) may not be changed by an AI "
           "tool. It changes only when the owner rebuilds it from its published sources (see AGENTS.md). If this command "
@@ -73,26 +79,44 @@ def place(path):
     return ("app/data" if m.group(2) else "app") if m else ""
 
 
-def from_root(part, where):
-    """A part's relative paths as from the project root: from app/, data/bibles is app/data/bibles; from app/data/, bibles is."""
+END = r"(?=[/\s'\"`;&|)]|$)(?!\s*[=(.])"  # a path word, not a variable (orig = …, orig.get)
+
+
+def from_root(part, where, strict=False):
+    """A part's relative paths as from the project root: from app/, data/bibles is app/data/bibles and data is app/data;
+    from app/data/, bibles is app/data/bibles and . is app/data. strict: only words that go on into the folder
+    (bibles/kjv/01.json), for a whole script whose bare words may be its variables (orig = …)."""
+    end = r"(?=/)" if strict else END
     if where == "app":
-        return re.sub(r"(?<![\w/.~-])(\./)?data/(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)", r"app/data/\2", part, flags=re.I)
+        part = re.sub(r"(?<![\w/.~-])(\./)?data/(bibles|orig|redletter)" + end, r"app/data/\2", part, flags=re.I)
+        return re.sub(r"(?<=\s)(\./)?data/?(?=\s*($|[;&|)]))", "app/data", part)
     if where == "app/data":
-        return re.sub(r"(?<![\w/.~-])(\./)?(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)", r"app/data/\2", part, flags=re.I)
+        part = re.sub(r"(?<![\w/.~-])(\./)?(bibles|orig|redletter)" + end, r"app/data/\2", part, flags=re.I)
+        return re.sub(r"(?<=\s)\.(/)?(?=\s*($|[;&|)]))", "app/data", part)
     return part
+
+
+def parts(cmd):
+    """The command cut where the shell cuts it (; && || | and new lines), never inside quotes."""
+    masked = ANY_QUOTED.sub(lambda m: "x" * len(m.group(0)), cmd)
+    out, at = [], 0
+    for m in SPLIT.finditer(masked):
+        out.append(cmd[at:m.start()]); at = m.end()
+    out.append(cmd[at:])
+    return [p for p in out if p.strip()]
 
 
 def writes(cmd, here=""):
     cmd = norm_command(MESSAGE.sub(r"\1''", cmd))
     where = place(here)
-    whole = from_root(cmd, where)
+    whole = from_root(cmd, where, strict=True)
     if PROTECTED.search(whole) and CALLS.search(cmd):
         return True
     # the whole command too (a >| redirect, or a script's own ; between import and update()), then each part after a cd
     if any(rx.search(whole) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB)):
         return True
     looping = False
-    for part in SPLIT.split(cmd):
+    for part in parts(cmd):
         m = CD.match(part)
         if m:  # follow the cd, in and out
             here = posixpath.join(here, m.group(1)) if here or not m.group(1).startswith("/") else m.group(1)
@@ -103,12 +127,12 @@ def writes(cmd, here=""):
             return True
         looping = looping or bool(FOR_IN.search(part))
         inside = where == "text"
-        bare = QUOTED.sub("''", part)  # a grep pattern, a jq filter or a message: words, not commands
+        bare = part if SHELL_C.search(part) else QUOTED.sub("''", part)  # a grep pattern or a message: words
         if (inside or looping or PROTECTED.search(part)) and EDITORS.search(bare):
             return True
         if inside and (REDIRECT.search(part) or COPY_REL.search(part)):
             return True
-        if COPY_ONTO.search(part) or COPY_PARENT.search(part):
+        if COPY_ONTO.search(part) or COPY_PARENT.search(part) or PARENT_DELETE.search(part):
             return True
     return False
 
