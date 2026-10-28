@@ -439,6 +439,22 @@ class Base(unittest.TestCase):
 
 
 # ======================================================================= A. startup and CLI
+class T00_ScriptureLock(unittest.TestCase):
+    """The Bible text the site serves is exactly what was built from its sources (Ji, 2026-10-28: AI may never change
+    it). tools/scripture_lock.py hashes app/data/bibles, orig and redletter against tests/scripture.sha256."""
+
+    def test_the_text_matches_the_lock(self):
+        sys.path.insert(0, os.path.join(REPO, "tools"))
+        try:
+            import scripture_lock
+        finally:
+            sys.path.pop(0)
+        self.assertGreaterEqual(len(scripture_lock.locked()), 250, "the lock covers every book")
+        diff = scripture_lock.differences()
+        self.assertEqual(diff, [], "the Bible text changed; it may change only by a deliberate rebuild from its "
+                                   "sources with the owner's approval (python3 tools/scripture_lock.py)")
+
+
 class T01_Startup(Base):
     restart = False
 

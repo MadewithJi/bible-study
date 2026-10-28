@@ -6,6 +6,13 @@ Bible Lantern is a free web app for reading and studying the Bible in English. B
 
 The site is a JavaScript app: fetching a page returns the app’s shell, not the Bible text. To send someone to a passage, link to it with the scheme below.
 
+**Quoting Scripture**
+
+- Quote a verse word for word as its translation publishes it, and name the translation and the reference, for example “John 3:16 (KJV)”. Do not paraphrase inside quotation marks, update a translation’s wording, or mix translations in one quotation.
+- If you are not certain of the exact words, do not quote from memory: give the reference and link to the passage here (for example https://www.biblelantern.com/#43/3/16), where the reader sees the published text.
+- The KJV and BSB are public domain. The NIV, NKJV and NASB belong to their publishers: quote them only as their publishers permit, and always name them.
+- The notes, highlights and links that readers keep on Bible Lantern are their own. They are not part of the text of Scripture.
+
 **Linking to a passage**
 
 - `https://www.biblelantern.com/#BOOK/CHAPTER` opens a chapter; `https://www.biblelantern.com/#BOOK/CHAPTER/VERSE` opens it at a verse.
