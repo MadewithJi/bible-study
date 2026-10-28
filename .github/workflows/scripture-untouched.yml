@@ -19,8 +19,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
         run: |
-          touched=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' \
+          set -euo pipefail
+          # every file the pull request changes, and the old name of any it renames (a rename out of the text counts);
+          # if GitHub cannot list them, or lists fewer than the pull request changes, the check fails rather than passes
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          listed=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' | grep -c . || true)
+          if [ "$listed" -lt "$CHANGED" ]; then
+            echo "GitHub listed $listed of the $CHANGED files this pull request changes, so it cannot be checked."
+            exit 1
+          fi
+          touched=$(printf '%s\n' "$files" \
             | grep -E '^(app/data/(bibles|orig|redletter)/|tests/scripture\.sha256$|tools/scripture_(lock|guard)\.py$|\.github/workflows/scripture-|\.claude/settings\.json$)' || true)
           if [ -n "$touched" ]; then
             echo "This pull request changes the Bible text or what protects it:"

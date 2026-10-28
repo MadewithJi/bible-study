@@ -15,4 +15,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python3 tools/scripture_lock.py
+      # -I: isolated, so nothing the pull request adds beside the checker (a tools/hashlib.py) can stand in for Python's own
+      - run: python3 -I tools/scripture_lock.py

@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ ! -f \"$CLAUDE_PROJECT_DIR/tools/scripture_lock.py\" ] || (cd \"$CLAUDE_PROJECT_DIR\" && python3 tools/scripture_lock.py --quiet >&2) || exit 2",
+            "command": "[ ! -f \"$CLAUDE_PROJECT_DIR/tools/scripture_lock.py\" ] || (cd \"$CLAUDE_PROJECT_DIR\" && python3 -I tools/scripture_lock.py --quiet >&2) || exit 2",
             "timeout": 15,
             "statusMessage": "Checking the Bible text is unchanged"
           }
