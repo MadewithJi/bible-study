@@ -12,11 +12,18 @@
       "destination": "https://www.biblelantern.com/:path*",
       "permanent": true
     },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "bible-study-seven-blond.vercel.app" }],
+      "destination": "https://www.biblelantern.com/",
+      "permanent": true
+    },
     { "source": "/donate", "destination": "https://buymeacoffee.com/biblelantern", "permanent": false },
     { "source": "/support", "destination": "https://buymeacoffee.com/biblelantern", "permanent": false }
   ],
   "rewrites": [
     { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/favicon.ico", "destination": "/icons/favicon-32.png" },
     { "source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*" }
   ],
   "headers": [
@@ -60,8 +67,13 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=86400" }]
     },
     {
+      "source": "/llms.txt",
+      "headers": [{ "key": "Content-Type", "value": "text/plain; charset=utf-8" }]
+    },
+    {
       "source": "/api/:path*",
       "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex" },
         { "key": "Cache-Control", "value": "no-store" },
         { "key": "x-vercel-enable-rewrite-caching", "value": "0" }
       ]

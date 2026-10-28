@@ -4588,14 +4588,15 @@ class T25_Release1Fixes(Base):
             v = json.load(f)
         alias = "bible-study-seven-blond.vercel.app"
         red = [r for r in v["redirects"] if any(h.get("type") == "host" and h.get("value") == alias for h in r.get("has", []))]
-        self.assertEqual(len(red), 1)
-        self.assertEqual((red[0]["source"], red[0]["destination"], red[0]["permanent"]),
-                         ("/:path*", "https://www.biblelantern.com/:path*", True))
+        # every path, and the root itself (which /:path* left on the alias: seo brief)
+        self.assertEqual([(r["source"], r["destination"], r["permanent"]) for r in red],
+                         [("/:path*", "https://www.biblelantern.com/:path*", True), ("/", "https://www.biblelantern.com/", True)])
         give = [r for r in v["redirects"] if r["source"] in ("/donate", "/support")]  # donate brief §1: never permanent
         self.assertEqual(give, [{"source": "/donate", "destination": DONATE, "permanent": False},
                                 {"source": "/support", "destination": DONATE, "permanent": False}])
         self.assertTrue(all(set(r) <= {"source", "destination", "permanent", "has", "missing"} for r in v["redirects"]))
         self.assertEqual(v["rewrites"], [{"source": "/privacy", "destination": "/privacy.html"},  # the privacy page (ios-brief §3)
+                                         {"source": "/favicon.ico", "destination": "/icons/favicon-32.png"},  # crawlers that ask for it (seo brief)
                                          {"source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*"}])
         noindex = [h for h in v["headers"] if any(c.get("type") == "host" for c in h.get("has", []))]
         self.assertEqual(len(noindex), 1)
