@@ -28,7 +28,7 @@ Book numbers, New Testament: 40 Matthew, 41 Mark, 42 Luke, 43 John, 44 Acts, 45 
 
 - Every chapter of all 66 books, with a second translation side by side if you like.
 - Links: over 340,000 cross-references from OpenBible.info, ranked by votes, each readable in its context. Each chapter’s cross-references are also drawn as arcs across the whole Bible, from Genesis to Revelation, and each verse’s as a link graph.
-- Context: the approximate year, the writer and when the book was written; the chapter’s events on a timeline; the people and places of the Bible, with Easton’s Bible Dictionary; and an introduction to each of the 66 books.
+- Context: the approximate year, the writer and when the book was written; the events a chapter tells, on a timeline; the people and places of the Bible, with Easton’s Bible Dictionary; and an introduction to each of the 66 books.
 - Original: the Hebrew or Greek word by word, with transliteration, meaning, parsing and Strong’s numbers, each leading to its definition and every place it occurs.
 - Maps of the places a chapter names, with terrain, a layer of the Roman world and Paul’s journeys.
 - Gustave Doré’s 1866 engravings, placed beside the passages they illustrate, with a gallery.
