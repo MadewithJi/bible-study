@@ -873,6 +873,9 @@ export function bindReader() {
         if (Array.isArray(ids) && ids.length && safeCall(mrk.openMarkPop, { v: +verse.dataset.v, ids, origin: verse })) return;
       }
       A.select(+verse.dataset.v, { open: false }); // a click selects; the study panel opens only when asked (Ji, 2026-10-07)
+      // and shows the verse's bubble: its colours, Comment, Copy and Memorize (Ji, 2026-10-27); a double click's
+      // second click leaves it to the note
+      if (mrk && e.detail < 2) safeCall(mrk.openVerseBubble, verse, { col: t.closest('.vcols > .alt') ? 1 : 0 });
     }
   });
   el.addEventListener('dblclick', e => {

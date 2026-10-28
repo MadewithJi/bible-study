@@ -62,8 +62,8 @@ export const ICONS = {
   // My links (links-spec §3.8): two verses joined by a curve; swap exchanges a link's ends
   'link-node': '<circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="7" r="2.5"/><path d="M8.2 15.8c3.3-1.3 4.3-6.3 7.6-7.6"/>',
   swap: '<path d="M4.5 8.5h14M15 5l3.5 3.5L15 12"/><path d="M19.5 15.5h-14M9 12l-3.5 3.5L9 19"/>',
-  // Memorize (memorize-brief §4): three lines of writing ending in a small heart (Proverbs 3:3); never the Support heart
-  memorize: '<path d="M3.5 5h17M3.5 9.5h17M3.5 14h7"/><path d="M16.6 21s-4.3-2.6-4.3-5.7a2.15 2.15 0 014.3-1.15 2.15 2.15 0 014.3 1.15c0 3.1-4.3 5.7-4.3 5.7z"/>',
+  // Memorize (memorize-brief §4): a brain seen from above, its outline, the centre line and a fold each side (Ji, 2026-10-27)
+  memorize: '<path d="M12 5.9A2.54 2.54 0 0 0 7.2 5.9 3.06 3.06 0 0 0 4.4 11 3.33 3.33 0 0 0 5.9 17 3.69 3.69 0 0 0 12 19.1 3.69 3.69 0 0 0 18.1 17 3.33 3.33 0 0 0 19.6 11 3.06 3.06 0 0 0 16.8 5.9 2.54 2.54 0 0 0 12 5.9z"/><path d="M12 5.9v13.2M4.4 11c1.8-.1 3.3.8 3.8 2.5M19.6 11c-1.8-.1-3.3.8-3.8 2.5"/>',
 };
 
 /** Markup for one icon. Filled variant: icon('play', 'f'). */

@@ -106,6 +106,7 @@ try { if (/BibleLantern\/iOS/.test(navigator.userAgent) || /[?&]app=ios(&|$)/.te
         <p id="drawer-sub"></p>
       </div>
       <span id="save-status" class="save" role="status" aria-live="polite"></span>
+      <button id="btn-memorize" class="close-btn mz-btn" type="button" aria-label="Memorize" title="Memorize" hidden><svg class="i" aria-hidden="true"><use href="#i-memorize"/></svg></button>
       <button id="btn-bookmark" class="close-btn plain bm-btn" type="button" aria-pressed="false" aria-label="Bookmark John 3" title="Bookmark (b)"><svg class="i" aria-hidden="true"><use href="#i-bookmark"/></svg></button>
       <button id="verse-prev" class="close-btn plain" type="button" aria-label="Previous verse" title="Previous verse (k)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
       <button id="verse-next" class="close-btn plain" type="button" aria-label="Next verse" title="Next verse (j)" hidden><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
@@ -178,7 +179,7 @@ try { if (/BibleLantern\/iOS/.test(navigator.userAgent) || /[?&]app=ios(&|$)/.te
       <dt><kbd class="k">n</kbd></dt><dd>Note for the selected verse (or double-click a verse)</dd>
       <dt><kbd class="k">b</kbd></dt><dd>Bookmark the selected verse (or the chapter)</dd>
       <dt><kbd class="k">c</kbd></dt><dd>Link the selected verse to another verse</dd>
-      <dt><kbd class="k">shift</kbd><kbd class="k">→</kbd></dt><dd>Select words to highlight or comment (or drag across them), then <kbd class="k">tab</kbd> to the options. Click highlighted words, or the speech bubble beside a verse, to open them</dd>
+      <dt><kbd class="k">shift</kbd><kbd class="k">→</kbd></dt><dd>Select words to highlight or comment (or drag across them, or click a verse for the whole verse), then <kbd class="k">tab</kbd> to the options. Click highlighted words, or the speech bubble beside a verse, to open them</dd>
       <dt><kbd class="k">h</kbd></dt><dd>Home: the verse of the day, where you left off and your recent study</dd>
       <dt><kbd class="k">l</kbd></dt><dd>Library: bookmarks, progress and history</dd>
       <dt><kbd class="k">r</kbd></dt><dd>Continue reading where you left off (while that prompt shows)</dd>

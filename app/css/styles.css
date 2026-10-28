@@ -1412,6 +1412,15 @@ dialog.confirm { max-width: 400px; }
 .btn-danger { background: var(--danger-fill); color: #fff; }
 .btn-danger:hover { filter: brightness(1.06); }
 
+/* the study panel's Memorize (drawer.js): blue beside the bookmark, so it is plain to see (Ji, 2026-10-27); tinted
+   when the verse already is a memory verse (it then opens the practice) */
+.close-btn.mz-btn { background: var(--accent-fill); color: #fff; }
+.close-btn.mz-btn:hover { background: var(--accent-fill-hover); color: #fff; filter: none; }
+.close-btn.mz-btn:active { background: var(--accent-fill-press); }
+.close-btn.mz-btn.have { background: var(--accent-tint-2); color: var(--accent-on-tint); }
+.close-btn.mz-btn .i { width: 18px; height: 18px; }
+@media (forced-colors: active) { .close-btn.mz-btn { border: 1px solid ButtonText; } }
+
 /* bookmarks */
 .bm-btn[aria-pressed="true"] { color: var(--bm, var(--bm-red)); }
 .bm-btn[aria-pressed="true"] .i { animation: bmIn .45s var(--spring); }
