@@ -15,7 +15,7 @@ import posixpath
 import re
 import sys
 
-LOCKED = r"(app/data/(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)|(tests/)?scripture\.sha256(?![\w.-]))"
+LOCKED = r"(app/data/(bibles|orig|redletter)(?=[/\s'\"`;&|)]|$)|app/data/\{[^}\s]*\b(bibles|orig|redletter)\b[^}\s]*\}|(tests/)?scripture\.sha256(?![\w.-]))"
 PROTECTED = re.compile(r"(^|[/\s'\"=`(])" + LOCKED, re.I)
 INTO = re.compile(r"(>>?|>\||&>)\s*['\"]?[^\s'\"]*" + LOCKED, re.I)
 REDIRECT = re.compile(r"(^|[^0-9&<>])(>>?|>\||&>)\s*(?!['\"]?[&/~])['\"]?\S", re.I)  # to a relative path (after a cd inside)
@@ -27,7 +27,7 @@ EDITORS = re.compile(r"\bsed\b[^|;&]*\s(-[a-zA-Z]*i|--in-place)|\bperl\b[^|;&]*\
 # write calls inside a one-line script (python -c, node -e, ruby -e): its ; are the script's, so the whole command counts
 CALLS = re.compile(r"\.write_(text|bytes)\(|\bos\.(replace|rename|remove|unlink|truncate)\(|\bshutil\.\w+\("
                    r"|\bwriteFile(Sync)?\(|\bFile\.write\b|\bopen\([^)]*,\s*(mode\s*=\s*)?['\"][rbt]*[wax+]"
-                   r"|\.open\(\s*(mode\s*=\s*)?['\"][rbt]*[wax+]", re.I)
+                   r"|\.open\(\s*(mode\s*=\s*)?['\"][rbt]*[wax+][rbt+]*['\"]", re.I)
 TEE_ONTO = re.compile(r"\btee\b(\s+-\w+)*\s+['\"]?\S*" + LOCKED, re.I)
 # what a commit, a pull request or a note only says: its message is not a command
 MSG = r"(\s(-m|--message|--body|--title|--notes)(\s+|=))"
@@ -37,6 +37,7 @@ COPY_ONTO = re.compile(r"\b(cp|rsync|install|ln)\b[^|;&]*\s['\"]?\S*" + LOCKED +
 UPDATE = re.compile(r"scripture_lock(\.py)?\b[^;&|]*--update|scripture_lock\b.*\.update\(", re.I | re.S)  # the owner's alone
 # cp -t / --target-directory, python -m json.tool IN OUT, prettier --write over a glob of app or app/data
 TARGET_DIR = re.compile(r"\b(cp|mv|install|ln)\b[^|;&]*\s(-t|--target-directory)(\s+|=)['\"]?\S*" + LOCKED, re.I)
+DOWNLOAD = re.compile(r"\bcurl\b[^|;&]*\s(-\w*o|--output)(\s+|=)['\"]?\S*" + LOCKED + r"|\bwget\b[^|;&]*\s(-O|--output-document)(\s*|=)['\"]?\S*" + LOCKED)
 JSON_TOOL = re.compile(r"-m\s+json\.tool\s+\S+\s+['\"]?\S*" + LOCKED, re.I)
 PRETTIER_GLOB = re.compile(r"\bprettier\b[^|;&]*\s(--write|-w)\b[^|;&]*\s['\"]?(\S*/)?app(/data)?/(\*|\{)", re.I)
 COPY_REL = re.compile(r"^(\S*/)?(cp|rsync|install|ln)\b.*\s['\"]?(?![/~])[^\s'\"]+['\"]?\s*$")
@@ -114,6 +115,22 @@ def parts(cmd):
     return [p for p in out if p.strip()]
 
 
+# a here-document fed to something that is not an interpreter (git commit -F -, gh … --body-file -, cat > /tmp/…) is
+# text: its lines are not commands. One fed to python, node, a shell … is a script and is read. An unquoted one that
+# runs $( ) or ` ` is read too.
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1([^\n]*)\n(.*?)\n\2(?=\n|$)", re.S)
+INTERPRETER = re.compile(r"\b(python[\d.]*|node|deno|bun|ruby|perl|php|osascript|(ba|z|da|k)?sh)\b")
+
+
+def strip_heredocs(cmd):
+    def one(m):
+        line = cmd[cmd.rfind("\n", 0, m.start()) + 1:m.start()] + m.group(3)  # the line that starts it
+        if INTERPRETER.search(line) or (not m.group(1) and ("$(" in m.group(4) or "`" in m.group(4))):
+            return m.group(0)
+        return m.group(0)[:m.start(4) - m.start()] + m.group(0)[m.end(4) - m.start():]
+    return HEREDOC.sub(one, cmd)
+
+
 def strip_messages(cmd):
     def heredoc(m):
         return m.group(0) if not m.group(4) and ("$(" in m.group(6) or "`" in m.group(6)) else m.group(1) + "''"
@@ -121,13 +138,13 @@ def strip_messages(cmd):
 
 
 def writes(cmd, here=""):
-    cmd = norm_command(strip_messages(cmd))
+    cmd = norm_command(strip_messages(strip_heredocs(cmd)))
     where = place(here)
     whole = from_root(cmd, where, strict=True)
     if PROTECTED.search(whole) and CALLS.search(cmd):
         return True
     # the whole command too (a >| redirect, or a script's own ; between import and update()), then each part after a cd
-    if any(rx.search(whole) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB)):
+    if any(rx.search(whole) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB, DOWNLOAD)):
         return True
     looping = False
     cut = parts(cmd)
@@ -148,7 +165,7 @@ def writes(cmd, here=""):
             if FEEDS.search(part) and PROTECTED.search(from_root(part, where)) and EDITORS.search(QUOTED.sub("''", inner)):
                 return True
         part = from_root(part, where)
-        if any(rx.search(part) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB)):
+        if any(rx.search(part) for rx in (UPDATE, INTO, UNPACK, TEE_ONTO, TARGET_DIR, JSON_TOOL, PRETTIER_GLOB, DOWNLOAD)):
             return True
         looping = looping or bool(FOR_IN.search(part))
         inside = where == "text"
@@ -157,7 +174,8 @@ def writes(cmd, here=""):
             return True
         if inside and (REDIRECT.search(part) or COPY_REL.search(part)):
             return True
-        if COPY_ONTO.search(part) or COPY_PARENT.search(part) or PARENT_DELETE.search(part):
+        words = re.sub(r"'[^']*\s[^']*'|\"(?:[^\"\\$`]|\\.|\$(?!\())*\s(?:[^\"\\$`]|\\.|\$(?!\())*\"", "''", part)  # a pattern or a sentence, not a path
+        if COPY_ONTO.search(words) or COPY_PARENT.search(words) or PARENT_DELETE.search(words):
             return True
     return False
 

@@ -4421,7 +4421,7 @@ class T25_Release1Fixes(Base):
         self.assertRegex(self.log(), r"bot-check-fail reason=\S+ ip=203\.0\.113\.77")
         # A wrong secret is no proof.
         self.assertIsNone(refused(3, {"X-Vercel-Forwarded-For": "203.0.113.78", "X-Forwarded-For": "13.57.253.51",
-                                      "X-BS-Proxy-Secret": self.secret[:-1] + "x"}))
+                                      "X-BS-Proxy-Secret": self.secret[:-1] + ("y" if self.secret.endswith("x") else "x")}))
         self.assertRegex(self.log(), r"bot-check-fail reason=\S+ ip=13\.57\.253\.51")
         self.assertNotRegex(self.log(), r"ip=203\.0\.113\.78")
         # Without X-Vercel-Forwarded-For, X-Real-IP; without either, X-Forwarded-For.
