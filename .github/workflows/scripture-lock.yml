@@ -1,0 +1,20 @@
+# The Bible text must stay exactly as built from its published sources (tools/scripture_lock.py). Every pull request
+# and every push to main is checked, so a change to the text by anyone, or any AI tool, shows as a failed check.
+name: Scripture lock
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    name: Scripture lock  # the name to require on main (Settings › Rules › Rulesets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # -I: isolated, so nothing the pull request adds beside the checker (a tools/hashlib.py) can stand in for Python's own
+      - run: python3 -I tools/scripture_lock.py

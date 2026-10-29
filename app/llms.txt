@@ -1,0 +1,61 @@
+# Bible Lantern
+
+> A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text. Free to read and study at https://www.biblelantern.com/.
+
+Bible Lantern is a free web app for reading and studying the Bible in English. Beside every chapter are its cross-references and the original Hebrew or Greek word by word, and, where the chapter has them, its places on a map, its events in order and Gustave Doré’s engravings. Reading needs no account. A free profile keeps notes, highlights, links, bookmarks, reading progress and memory verses. Contact: hello@biblelantern.com.
+
+The site is a JavaScript app: fetching a page returns the app’s shell, not the Bible text. To send someone to a passage, link to it with the scheme below.
+
+**Quoting Scripture**
+
+- Quote a verse word for word as its translation publishes it, and name the translation and the reference, for example “John 3:16 (KJV)”. Do not paraphrase inside quotation marks, update a translation’s wording, or mix translations in one quotation.
+- If you are not certain of the exact words, do not quote from memory: give the reference and link to the passage here (for example https://www.biblelantern.com/#43/3/16), where the reader sees the published text.
+- The KJV and BSB are public domain. The NIV, NKJV and NASB belong to their publishers: quote them only as their publishers permit, and always name them.
+- The notes, highlights and links that readers keep on Bible Lantern are their own. They are not part of the text of Scripture.
+
+**Linking to a passage**
+
+- `https://www.biblelantern.com/#BOOK/CHAPTER` opens a chapter; `https://www.biblelantern.com/#BOOK/CHAPTER/VERSE` opens it at a verse.
+- BOOK is the book’s number from 1 to 66, in the usual Protestant order (the list below). CHAPTER and VERSE follow the King James numbering.
+- Examples: [John 3:16](https://www.biblelantern.com/#43/3/16), [Psalm 119:105](https://www.biblelantern.com/#19/119/105), [Genesis 1](https://www.biblelantern.com/#1/1), [Romans 8](https://www.biblelantern.com/#45/8).
+- `https://www.biblelantern.com/#home` opens Home.
+
+Book numbers, Old Testament: 1 Genesis, 2 Exodus, 3 Leviticus, 4 Numbers, 5 Deuteronomy, 6 Joshua, 7 Judges, 8 Ruth, 9 1 Samuel, 10 2 Samuel, 11 1 Kings, 12 2 Kings, 13 1 Chronicles, 14 2 Chronicles, 15 Ezra, 16 Nehemiah, 17 Esther, 18 Job, 19 Psalms, 20 Proverbs, 21 Ecclesiastes, 22 Song of Songs, 23 Isaiah, 24 Jeremiah, 25 Lamentations, 26 Ezekiel, 27 Daniel, 28 Hosea, 29 Joel, 30 Amos, 31 Obadiah, 32 Jonah, 33 Micah, 34 Nahum, 35 Habakkuk, 36 Zephaniah, 37 Haggai, 38 Zechariah, 39 Malachi.
+
+Book numbers, New Testament: 40 Matthew, 41 Mark, 42 Luke, 43 John, 44 Acts, 45 Romans, 46 1 Corinthians, 47 2 Corinthians, 48 Galatians, 49 Ephesians, 50 Philippians, 51 Colossians, 52 1 Thessalonians, 53 2 Thessalonians, 54 1 Timothy, 55 2 Timothy, 56 Titus, 57 Philemon, 58 Hebrews, 59 James, 60 1 Peter, 61 2 Peter, 62 1 John, 63 2 John, 64 3 John, 65 Jude, 66 Revelation.
+
+**What is there**
+
+- Every chapter of all 66 books, with a second translation side by side if you like.
+- Links: over 340,000 cross-references from OpenBible.info, ranked by votes, each readable in its context. Each chapter’s cross-references are also drawn as arcs across the whole Bible, from Genesis to Revelation, and each verse’s as a link graph.
+- Context: the approximate year, the writer and when the book was written; the events a chapter tells, on a timeline; the people and places of the Bible, with Easton’s Bible Dictionary; and an introduction to each of the 66 books.
+- Original: the Hebrew or Greek word by word, with transliteration, meaning, parsing and Strong’s numbers, each leading to its definition and every place it occurs.
+- Maps of the places a chapter names, with terrain, a layer of the Roman world and Paul’s journeys.
+- Gustave Doré’s 1866 engravings, placed beside the passages they illustrate, with a gallery.
+- Search by reference (“rom 8:28”), words, Strong’s number (“G26”) or topic.
+- With a free profile: notes in Markdown with tags, highlights and comments, bookmarks, your own links between verses, studies built from your notes, reading progress and a streak, and memorizing verses with spaced reviews. Notes export for Obsidian.
+
+**Translations**
+
+- King James Version (KJV) and Berean Standard Bible (BSB): built in, public domain.
+- New International Version (NIV, © Biblica), New King James Version (NKJV, © Thomas Nelson) and New American Standard Bible (NASB, © The Lockman Foundation): read in the app through API.Bible.
+- Legacy Standard Bible (LSB): opens on read.lsbible.org.
+
+**Sources**
+
+- KJV and BSB (public domain)
+- OpenBible.info cross-references and topics (CC BY)
+- STEPBible TAHOT and TAGNT, the Hebrew and Greek (CC BY 4.0)
+- Strong’s via OpenScriptures (CC BY-SA)
+- Theographic Bible Metadata (CC BY-SA 4.0) and Easton’s Bible Dictionary (1897)
+- Maps: MapLibre GL JS (BSD), OpenFreeMap © OpenMapTiles © OpenStreetMap contributors (ODbL), Mapzen / AWS Terrain Tiles, Digital Atlas of the Roman Empire © Johan Åhlfeldt (CC BY 4.0), Pleiades (CC BY) and GeoNames (CC BY)
+- Engravings: Gustave Doré, 1866 (public domain), via Wikimedia Commons
+
+## Pages
+
+- [Bible Lantern](https://www.biblelantern.com/): the app. A first visit opens Home, which shows what is there.
+- [Privacy](https://www.biblelantern.com/privacy): what Bible Lantern keeps, where, and why. No advertising and no tracking across other sites.
+
+## Optional
+
+- [Support Bible Lantern](https://www.biblelantern.com/support): gifts keep it running and help it reach more people.

@@ -22,6 +22,77 @@
 <meta name="twitter:title" content="Bible Lantern">
 <meta name="twitter:description" content="A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.">
 <meta name="twitter:image" content="https://www.biblelantern.com/icons/og-image.jpg">
+<meta name="twitter:image:alt" content="The Bible Lantern mark, an engraved lantern with a cross shining at its heart, over The Creation of Light by Gustave Doré">
+<meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<!-- what search engines and AI assistants read about the site (seo brief): describes what the page shows, nothing more -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.biblelantern.com/#organization",
+      "name": "Bible Lantern",
+      "url": "https://www.biblelantern.com/",
+      "logo": { "@type": "ImageObject", "url": "https://www.biblelantern.com/icons/icon-512.png", "width": 512, "height": 512 },
+      "email": "hello@biblelantern.com",
+      "sameAs": ["https://buymeacoffee.com/biblelantern"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.biblelantern.com/#website",
+      "name": "Bible Lantern",
+      "alternateName": "biblelantern.com",
+      "url": "https://www.biblelantern.com/",
+      "description": "A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://www.biblelantern.com/#organization" }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.biblelantern.com/#webpage",
+      "url": "https://www.biblelantern.com/",
+      "name": "Bible Lantern",
+      "description": "A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.",
+      "inLanguage": "en",
+      "isPartOf": { "@id": "https://www.biblelantern.com/#website" },
+      "about": { "@type": "Book", "name": "The Bible", "sameAs": "https://www.wikidata.org/wiki/Q1845" },
+      "primaryImageOfPage": { "@type": "ImageObject", "url": "https://www.biblelantern.com/icons/og-image.jpg", "width": 1200, "height": 630 },
+      "mainEntity": { "@id": "https://www.biblelantern.com/#app" }
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://www.biblelantern.com/#app",
+      "name": "Bible Lantern",
+      "url": "https://www.biblelantern.com/",
+      "description": "A quiet place to read the Bible closely, with cross-references, maps, the original languages and Doré’s engravings beside the text.",
+      "applicationCategory": "ReferenceApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Requires JavaScript",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "image": "https://www.biblelantern.com/icons/og-image.jpg",
+      "publisher": { "@id": "https://www.biblelantern.com/#organization" },
+      "featureList": [
+        "The King James Version (KJV) and the Berean Standard Bible (BSB), built in and public domain",
+        "The NIV, NKJV and NASB, read through API.Bible",
+        "A second translation side by side",
+        "Over 340,000 cross-references from OpenBible.info, each chapter’s drawn as arcs across the whole Bible and each verse’s as a link graph",
+        "The original Hebrew and Greek word by word, with transliteration, meaning and Strong’s numbers",
+        "Maps of the places a chapter names, with a layer of the Roman world",
+        "The events a chapter tells, on a timeline of Bible history, the people and places of the Bible, and Easton’s Bible Dictionary",
+        "Introductions to all 66 books",
+        "Gustave Doré’s 1866 engravings beside the passages they illustrate",
+        "Search by reference, words, Strong’s number or topic",
+        "Notes, highlights, comments, bookmarks and your own links between verses, with export for Obsidian",
+        "Memorize verses with spaced reviews",
+        "Reading progress, a streak and a verse of the day"
+      ]
+    }
+  ]
+}
+</script>
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -196,7 +267,7 @@ try { if (/BibleLantern\/iOS/.test(navigator.userAgent) || /[?&]app=ios(&|$)/.te
   <form id="auth-form" class="modal-form" novalidate>
     <div class="modal-head"><h2 id="auth-title" class="modal-title">Sign in</h2><button type="button" class="close-btn" data-close aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-xmark"/></svg></button></div>
     <div class="modal-body">
-      <p class="auth-lede"><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg><span id="auth-lede">Your notes, bookmarks and reading progress, saved to a profile on this computer.</span></p>
+      <p class="auth-lede"><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg><span id="auth-lede">Your notes, bookmarks, highlights and reading progress, saved to your profile on this site.</span></p>
       <div id="auth-mode" class="segmented" role="radiogroup" aria-label="Sign in or create a profile"><span class="seg-ind" aria-hidden="true"></span><button type="button" role="radio" data-mode="signin" aria-checked="true">Sign in</button><button type="button" role="radio" data-mode="signup" aria-checked="false" tabindex="-1">Create profile</button></div>
       <p id="auth-off" class="auth-off" role="note" hidden></p>
       <p id="auth-err" class="form-err" role="alert" hidden></p>
@@ -206,14 +277,14 @@ try { if (/BibleLantern\/iOS/.test(navigator.userAgent) || /[?&]app=ios(&|$)/.te
         <li class="frow"><label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" maxlength="254"></li>
         <li class="frow"><label for="auth-password">Password</label><input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="256"><button type="button" id="auth-pw-eye" class="pw-eye" aria-label="Show password" title="Show password" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg></button></li>
       </ul>
-      <p class="group-foot" id="auth-pw-help" data-only="signup" hidden>At least 8 characters. Stored only on this computer, and only as a secure hash.</p>
+      <p class="group-foot" id="auth-pw-help" data-only="signup" hidden>At least 8 characters. Stored only as a secure hash.</p>
       <ul class="group frows auth-opts">
         <li class="frow"><label for="auth-remember">Keep me signed in<small class="frow-sub">For 30 days on this browser</small></label><input id="auth-remember" name="remember" type="checkbox" class="switch" role="switch" checked></li>
         <li class="frow" id="auth-import-row" data-only="signup" hidden><label for="auth-import">Bring over guest data<small class="frow-sub" id="auth-import-meta"></small></label><input id="auth-import" name="importGuest" type="checkbox" class="switch" role="switch" checked></li>
       </ul>
       <div id="auth-turnstile" class="auth-ts" hidden></div>
       <p id="auth-ts-err" class="form-err auth-ts-err" role="alert" hidden></p>
-      <p class="group-foot auth-foot" data-only="signin">Forgot your password? In Terminal run <code>python3 <span class="nw">~/bible-study/serve.py</span> <span class="nw">--reset-password</span> you@example.com</code></p>
+      <p class="group-foot auth-foot" data-only="signin">Forgot your password? Ask the owner of this site to reset it.</p>
     </div>
     <div class="modal-foot"><button type="button" class="btn btn-plain" data-close>Cancel</button><button type="submit" class="btn btn-primary" id="auth-submit">Sign in</button></div>
   </form>

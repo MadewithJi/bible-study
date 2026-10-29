@@ -408,14 +408,21 @@ export function openAuth(mode = 'signin', { email = '', reason = '' } = {}) {
     }
   });
 }
-/** A hosted site words two lines differently: no Terminal to reset a password, and nothing is 'on this computer'. */
-let authCopy = null; // the local wording, to put back
+/**
+ * The local serve.py words two lines differently: a Terminal resets a password, and the hash is 'on this computer'.
+ * index.html carries the site's wording, which is what search engines and AI crawlers read without running scripts.
+ */
+let authCopy = null; // the site's wording, to put back
+const LOCAL_COPY = {
+  help: 'At least 8 characters. Stored only on this computer, and only as a secure hash.',
+  foot: 'Forgot your password? In Terminal run <code>python3 <span class="nw">~/bible-study/serve.py</span> <span class="nw">--reset-password</span> you@example.com</code>',
+};
 function syncAuthCopy() {
   const help = $('#auth-pw-help'), foot = $('#auth .auth-foot'); if (!help || !foot) return;
   if (!authCopy) authCopy = { help: help.innerHTML, foot: foot.innerHTML };
   const h = state.auth.hosted;
-  const help2 = h ? 'At least 8 characters. Stored only as a secure hash.' : authCopy.help;
-  const foot2 = h ? 'Forgot your password? Ask the owner of this site to reset it.' : authCopy.foot;
+  const help2 = h ? authCopy.help : LOCAL_COPY.help;
+  const foot2 = h ? authCopy.foot : LOCAL_COPY.foot;
   if (help.innerHTML !== help2) help.innerHTML = help2;
   if (foot.innerHTML !== foot2) foot.innerHTML = foot2;
 }

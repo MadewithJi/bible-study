@@ -439,6 +439,22 @@ class Base(unittest.TestCase):
 
 
 # ======================================================================= A. startup and CLI
+class T00_ScriptureLock(unittest.TestCase):
+    """The Bible text the site serves is exactly what was built from its sources (Ji, 2026-10-28: AI may never change
+    it). tools/scripture_lock.py hashes app/data/bibles, orig and redletter against tests/scripture.sha256."""
+
+    def test_the_text_matches_the_lock(self):
+        sys.path.insert(0, os.path.join(REPO, "tools"))
+        try:
+            import scripture_lock
+        finally:
+            sys.path.pop(0)
+        self.assertGreaterEqual(len(scripture_lock.locked()), 250, "the lock covers every book")
+        diff = scripture_lock.differences()
+        self.assertEqual(diff, [], "the Bible text changed; it may change only by a deliberate rebuild from its "
+                                   "sources with the owner's approval (python3 tools/scripture_lock.py)")
+
+
 class T01_Startup(Base):
     restart = False
 
@@ -4405,7 +4421,7 @@ class T25_Release1Fixes(Base):
         self.assertRegex(self.log(), r"bot-check-fail reason=\S+ ip=203\.0\.113\.77")
         # A wrong secret is no proof.
         self.assertIsNone(refused(3, {"X-Vercel-Forwarded-For": "203.0.113.78", "X-Forwarded-For": "13.57.253.51",
-                                      "X-BS-Proxy-Secret": self.secret[:-1] + "x"}))
+                                      "X-BS-Proxy-Secret": self.secret[:-1] + ("y" if self.secret.endswith("x") else "x")}))
         self.assertRegex(self.log(), r"bot-check-fail reason=\S+ ip=13\.57\.253\.51")
         self.assertNotRegex(self.log(), r"ip=203\.0\.113\.78")
         # Without X-Vercel-Forwarded-For, X-Real-IP; without either, X-Forwarded-For.
@@ -4588,14 +4604,15 @@ class T25_Release1Fixes(Base):
             v = json.load(f)
         alias = "bible-study-seven-blond.vercel.app"
         red = [r for r in v["redirects"] if any(h.get("type") == "host" and h.get("value") == alias for h in r.get("has", []))]
-        self.assertEqual(len(red), 1)
-        self.assertEqual((red[0]["source"], red[0]["destination"], red[0]["permanent"]),
-                         ("/:path*", "https://www.biblelantern.com/:path*", True))
+        # every path, and the root itself (which /:path* left on the alias: seo brief)
+        self.assertEqual([(r["source"], r["destination"], r["permanent"]) for r in red],
+                         [("/:path*", "https://www.biblelantern.com/:path*", True), ("/", "https://www.biblelantern.com/", True)])
         give = [r for r in v["redirects"] if r["source"] in ("/donate", "/support")]  # donate brief §1: never permanent
         self.assertEqual(give, [{"source": "/donate", "destination": DONATE, "permanent": False},
                                 {"source": "/support", "destination": DONATE, "permanent": False}])
         self.assertTrue(all(set(r) <= {"source", "destination", "permanent", "has", "missing"} for r in v["redirects"]))
         self.assertEqual(v["rewrites"], [{"source": "/privacy", "destination": "/privacy.html"},  # the privacy page (ios-brief §3)
+                                         {"source": "/favicon.ico", "destination": "/icons/favicon-32.png"},  # crawlers that ask for it (seo brief)
                                          {"source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*"}])
         noindex = [h for h in v["headers"] if any(c.get("type") == "host" for c in h.get("has", []))]
         self.assertEqual(len(noindex), 1)

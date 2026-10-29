@@ -1,0 +1,42 @@
+# A pull request may not touch the Bible text, its lock or the guards around them (AGENTS.md). This check runs main's
+# own copy of this file (pull_request_target) and runs none of the pull request's code: it only lists the files the
+# pull request changes. When the owner rebuilds the text from its sources on purpose, the owner adds the label
+# "scripture-rebuild" to that pull request and the check stands aside.
+name: Scripture untouched
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  untouched:
+    name: Scripture untouched  # the name to require on main (Settings › Rules › Rulesets)
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'scripture-rebuild') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: The pull request leaves the Bible text alone
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          set -euo pipefail
+          # every file the pull request changes, and the old name of any it renames (a rename out of the text counts);
+          # if GitHub cannot list them, or lists fewer than the pull request changes, the check fails rather than passes
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          listed=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' | grep -c . || true)
+          if [ "$listed" -lt "$CHANGED" ]; then
+            echo "GitHub listed $listed of the $CHANGED files this pull request changes, so it cannot be checked."
+            exit 1
+          fi
+          touched=$(printf '%s\n' "$files" \
+            | grep -E '^(app/data/(bibles|orig|redletter)/|tests/scripture\.sha256$|tools/scripture_(lock|guard)\.py$|\.github/workflows/scripture-|\.claude/settings\.json$)' || true)
+          if [ -n "$touched" ]; then
+            echo "This pull request changes the Bible text or what protects it:"
+            echo "$touched"
+            echo "Only the owner may do that, after a deliberate rebuild from the sources (label: scripture-rebuild)."
+            exit 1
+          fi
+          echo "The Bible text and its lock are untouched."
