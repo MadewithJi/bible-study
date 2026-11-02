@@ -324,7 +324,7 @@ export async function renderReader(opts = {}) {
   chips.push(`<button class="chip" type="button" data-tab="xref" title="Cross-reference links leaving this chapter">${icon('link')}<span><b>${(bk.xo[c] || 0).toLocaleString()}</b> links</span></button>`);
   chips.push(`<button class="chip more" type="button" data-tab="context" data-intro="1">About ${esc(bk.name)}${icon('chev-right')}</button>`);
 
-  const introLine = [smart(intro.author), nobreak(smart(intro.date))].filter(Boolean).map(esc).join(' · ');
+  const introLine = [smart(intro.author), nobreak(smart(intro.dateShort || intro.date))].filter(Boolean).map(esc).join(' · ');
   const isRead = !!libCall('chapterState', b, c)?.read;
   const bms = libCall('bookmarksInChapter', b, c) || new Map();
   const title = bookTitle(bk);

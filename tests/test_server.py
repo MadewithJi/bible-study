@@ -6239,6 +6239,81 @@ class T31_Memory(Base):
         self.assertEqual(self.memory(c)["memory"], mine)
 
 
+class T32_BookIntros(unittest.TestCase):
+    """Who wrote each book (authorship audit, .design/authorship-brief.md). The hero line and the About card read
+    author, authorNote and date from src/book_intros.json, which build.py build_context merges into
+    app/data/context/books.json; the Context tab's Writer stat reads the chapter writers in app/data/context/NN.json."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(os.path.join(REPO, "src", "book_intros.json"), encoding="utf-8") as f:
+            cls.intros = json.load(f)
+        import build
+        cls.build = build
+
+    def ctx(self, n):
+        with open(os.path.join(REPO, "app", "data", "context", f"{n:02d}.json"), encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_every_book_has_an_author_line_and_a_note(self):
+        self.assertEqual(list(self.intros), [b[0] for b in self.build.BOOKS], "all 66 books, in canonical order")
+        for b, it in self.intros.items():
+            a, n = it.get("author"), it.get("authorNote")
+            self.assertTrue(isinstance(a, str) and a.strip(), b)
+            self.assertLessEqual(len(a), 100, f"{b}: the author line is the hero's intro line, so it stays short")
+            self.assertTrue(isinstance(n, str) and len(n.strip()) > 40, f"{b}: authorNote gives the basis")
+            for k in ("author", "authorNote", "date"):
+                self.assertNotRegex(it[k], r"['\"!]", f"{b} {k}: curly quotes and apostrophes, no exclamation marks")
+        heb = self.intros["Hebrews"]
+        self.assertTrue(heb["author"].startswith("Author uncertain; traditionally Paul"), heb["author"])
+        self.assertNotIn("John", heb["author"] + heb["authorNote"], "nothing may suggest John wrote Hebrews")
+
+    def test_the_writer_stat_never_states_a_tradition_as_fact(self):
+        """drawer.js labels the chapter writer 'Traditionally' when the author line matches TRADITIONAL; every other
+        line must be a writer the text names and scholars broadly accept ('Paul (named in 1:1)')."""
+        with open(os.path.join(REPO, "app", "js", "drawer.js"), encoding="utf-8") as f:
+            m = re.search(r"^const TRADITIONAL = /(.+)/i;$", f.read(), re.M)
+        trad = re.compile(m.group(1), re.I)
+        for b, it in self.intros.items():
+            a = it["author"]
+            if a.startswith("Author uncertain;") or re.search(r"tradition|\bdisputed\b", a, re.I):
+                self.assertRegex(a, trad, b)
+            else:
+                self.assertRegex(a, r"\(named in (1:\d|verse 1)", f"{b}: neither named nor marked as uncertain")
+        self.assertNotRegex("Paul (named in 1:1); undisputed", trad)
+
+    def test_books_json_carries_the_intros(self):
+        with open(os.path.join(REPO, "app", "data", "context", "books.json"), encoding="utf-8") as f:
+            books = json.load(f)
+        for i, (b, it) in enumerate(self.intros.items()):
+            for k, v in it.items():
+                self.assertEqual(books[i].get(k), v, f"{b} {k}: books.json is Theographic meta + the intros")
+
+    def test_hero_intro_line_stays_short(self):
+        """The chapter hero shows author · (dateShort or date): it must stay within two lines at 1440 px."""
+        for b, it in self.intros.items():
+            line = it["author"] + " · " + (it.get("dateShort") or it.get("date", ""))
+            self.assertLessEqual(len(line), 135, f"{b}: hero intro line is {len(line)} characters")
+            if "dateShort" in it: self.assertTrue(it["date"], f"{b}: dateShort without a full date")
+
+    def test_chapter_writer_overrides_survive_a_rebuild(self):
+        """build.py WRITER_FIX is applied in build_context; the generated context files must already carry it."""
+        for osis, fixes in self.build.WRITER_FIX.items():
+            ctx = self.ctx(self.build.book_idx(osis) + 1)
+            for chs, ids in fixes.items():
+                for c in chs:
+                    self.assertEqual(ctx[str(c)].get("w"), ids, f"{osis} {c}")
+        ps = self.ctx(19)
+        with open(os.path.join(REPO, "app", "data", "bibles", "kjv", "19-titles.json"), encoding="utf-8") as f:
+            sup = json.load(f)["sup"]
+        for p in range(1, 151):
+            if ps[str(p)].get("w"):
+                self.assertIn(str(p), sup, f"Psalm {p} has a writer but no heading")
+        count = lambda pid: sum(pid in ps[str(p)].get("w", []) for p in range(1, 151))
+        self.assertEqual((count(994), count(330)), (73, 12), "David in 73 headings, Asaph in 12 (the intro's line)")
+        self.assertEqual(sum(1 for p in range(1, 151) if ps[str(p)].get("w")), 90, "plus Heman, Ethan, Moses, Solomon 2")
+
+
 class T99_Hygiene(Base):
     restart = False
 

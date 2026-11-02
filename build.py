@@ -824,6 +824,21 @@ EVENT_FIX = {67: {"y": -1209, "sk": -1209},   # Judgeship of Jair (Judg 10:3–5
 # unknown; these are the lengths the text states.
 EVENT_DUR_FIX = {268: "40D",   # Temptations of Jesus (Matt 4:2)
                  460: "40D"}   # Resurrection and Ascension (Acts 1:3)
+# Chapter writers (Context 'Writer' / 'Traditionally' stat) where Theographic contradicts the text or the tradition
+# src/book_intros.json gives (authorship audit, .design/authorship-sources.json): OSIS book -> {chapters: person ids}.
+# 2108 Moses, 1727 Joshua, 1062 Eleazar, 2349 Phinehas, 2469 Samuel, 1263 Gad (the seer), 2153 Nathan (the prophet).
+WRITER_FIX = {
+    "Deut": {(34,): [2108, 1727]},         # Moses' death: Bava Batra 15a gives 34:5–12 to Joshua on one view
+    "Josh": {(24,): [1727, 1062, 2349]},   # Joshua's death: Eleazar, then Phinehas, finished it (Bava Batra 15a)
+    "1Sam": {tuple(range(1, 25)): [2469],  # Samuel dies at 25:1; Gad and Nathan finished the book (Bava Batra 15a)
+             tuple(range(25, 32)): [1263, 2153]},
+    "2Sam": {tuple(range(1, 25)): [1263, 2153]},   # Samuel is dead before 2 Samuel opens
+    "Esth": {tuple(range(1, 11)): []},     # Mordecai is a medieval view; the Talmud names the men of the Great Assembly
+    "Ps": {(2, 33, 95): []},               # their headings name no writer (KJV, app/data/bibles/kjv/19-titles.json)
+    "Prov": {(23, 24): []},                # 'the words of the wise' (22:17–24:34), not Solomon's
+    "Jer": {(52,): []},                    # after 'Thus far are the words of Jeremiah' (51:64)
+    "Jonah": {(1, 2, 3, 4): []},           # a story about Jonah told in the third person; it never names its writer
+}
 EVENT_TITLE_FIX = {
     # Context names no angel, demon or false god (Ji): these say what happens to the people instead
     253: "Joseph Takes Mary as His Wife", 283: "Jesus Heals a Man in the Capernaum Synagogue",
@@ -1267,6 +1282,13 @@ def build_context(raw, out, intros):
         bi = book_idx(p[0])
         if bi is None: continue
         per_book[bi][int(p[1])]["w"] = [rec2person.get(x) for x in f.get("writer", []) if x in rec2person]
+    for osis, fixes in WRITER_FIX.items():
+        bi = book_idx(osis)
+        for chs, ids in fixes.items():
+            assert all(i in people for i in ids), f"WRITER_FIX {osis}: unknown person {ids}"
+            for ch in chs:
+                assert ch in per_book[bi], f"WRITER_FIX {osis} {ch}: no such chapter"
+                per_book[bi][ch]["w"] = list(ids)
     for r in tv:
         f = r["fields"]; p = parse_osis(f.get("osisRef", ""))
         if not p: continue
