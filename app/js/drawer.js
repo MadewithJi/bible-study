@@ -577,10 +577,30 @@ function chapterEra(vmap) {
   for (const y of ys) { const n = (m.get(y) || 0) + 1; m.set(y, n); if (n > bc) { bc = n; best = y; } }
   return +best;
 }
-// Psalms whose heading names the sons of Korah (Theographic lists no writer for them; 88 it gives to Heman)
-const KORAH = new Set([42, 44, 45, 46, 47, 48, 49, 84, 85, 87]);
-// the intro calls the book anonymous or its author traditional/debated: the chapter writer is tradition, not fact
-const TRADITIONAL = /^(anonymous|the chronicler|associated)|tradition|debated/i;
+// Psalms whose heading names the sons of Korah (Theographic lists no writer for them, and 88, 'for the sons of
+// Korah … Maschil of Heman the Ezrahite', it gives to Heman alone)
+const KORAH = new Set([42, 44, 45, 46, 47, 48, 49, 84, 85, 87, 88]);
+// the intro calls the author uncertain, anonymous, traditional or disputed: the chapter writer is tradition, not fact
+// (\b: 'undisputed' is not 'disputed')
+const TRADITIONAL = /^(anonymous|author uncertain|the chronicler|associated)|tradition|debated|\bdisputed\b/i;
+// where the intro's doubt covers only some chapters: Zechariah 9–14; in Proverbs, Solomon's collections (Agur,
+// Lemuel and 'the wise' are named by their own headings)
+const TRAD_CH = { 20: c => c <= 22 || (c >= 25 && c <= 29), 38: c => c >= 9 };
+// books whose Written span is the traditional date (Moses, Solomon, Isaiah, Paul) of a book the intro calls
+// uncertain or disputed: the stat and the timeline say 'Traditionally written'
+const TRAD_WRITTEN = new Set([1, 2, 3, 4, 5, 21, 22, 23, 49, 51, 53, 54, 55, 56]);
+// Proverbs by its own headings (KJV, word for word): [last chapter, writer when Theographic gives none, tooltip]
+const PROV_HEAD = [
+  [9, '', '“The proverbs of Solomon the son of David, king of Israel” (1:1, KJV).'],
+  [21, '', '“The proverbs of Solomon” (10:1, KJV).'],
+  [22, '', '“The proverbs of Solomon” (10:1, KJV); from 22:17, “the words of the wise”.'],
+  [24, 'The wise (unnamed sages)', 'Proverbs 22:17 introduces “the words of the wise”, and 24:23 adds “These things also belong to the wise” (KJV).'],
+  [29, '', '“proverbs of Solomon, which the men of Hezekiah king of Judah copied out” (25:1, KJV).'],
+  [30, '', '“The words of Agur the son of Jakeh” (30:1, KJV).'],
+  [31, '', '“The words of king Lemuel, the prophecy that his mother taught him” (31:1, KJV); the poem in 31:10–31 names no writer.'],
+];
+// psalms whose heading names no writer but the New Testament ascribes to David (KJV, word for word)
+const PS_NT = { 2: ' Acts 4:25 (KJV) gives its words as spoken “by the mouth of thy servant David”.', 95: ' Hebrews 4:7 (KJV) quotes it as “saying in David”.' };
 /**
  * Theographic's place comment without the source editors' notes: URLs, provenance ("from tyndale", "esv map",
  * "KMZ:…"), open questions and words that only repeat the feature type ("; now Nehardea; http://…" -> "now Nehardea").
@@ -602,9 +622,9 @@ function placeNote(c, ft) {
 }
 
 async function contextTab(b, c, v, opts) {
-  const [ctx, intros, people, places, events] = await Promise.all([
+  const [ctx, intros, people, places, events, psTitles] = await Promise.all([
     data.context(b), data.bookIntros().catch(() => []), data.people().catch(() => ({})), data.places().catch(() => ({})), data.events().catch(() => ({})),
-    artLoad(),
+    data.titles('kjv', b).catch(() => ({})), artLoad(),
   ]);
   const bk = bookOf(b), intro = intros[b - 1] || {};
   const ch = ctx[String(c)] || {}; const vmap = ch.v || {};
@@ -623,23 +643,39 @@ async function contextTab(b, c, v, opts) {
   // stats
   const author = String(intro.author || '');
   let writer = (ch.w || []).map(i => people[i]?.t || people[i]?.n).filter(Boolean).join(', '), writerTip = author;
-  if (!writer && Object.values(ctx).some(x => (x?.w || []).length)) {
-    // a book with writers per chapter (Psalms) but none here: its heading, never the intro's first name ("David (73)")
-    writer = b === 19 && KORAH.has(c) ? 'Sons of Korah' : 'Unattributed';
-    writerTip = b === 19 ? (KORAH.has(c) ? 'The heading names the sons of Korah.' : 'No writer is named in this psalm’s heading.') : author;
-  } else if (!writer) writer = author.split(/[,;(]/)[0].replace(/^Traditionally\s+/i, '').trim();
+  if (b === 19) {
+    // Psalms: each psalm by its own heading, never the intro's line ("David (73 titles), …")
+    const head = psTitles?.sup?.[String(c)] || '';
+    if (KORAH.has(c)) writer = ['Sons of Korah', writer].filter(Boolean).join(', ');
+    if (!writer) writer = 'Unattributed';
+    writerTip = head ? `Heading (KJV): ${head}` : 'No writer is named in this psalm’s heading.' + (PS_NT[c] || '');
+  } else if (b === 20) {
+    const [, name, tip] = PROV_HEAD.find(r => c <= r[0]) || [];
+    if (!writer) writer = name || 'Unattributed';
+    writerTip = tip || author;
+  } else if (!writer && Object.values(ctx).some(x => (x?.w || []).length)) {
+    writer = 'Unattributed';   // a chapter the book's writer did not write (Jeremiah 52, after 51:64)
+  } else if (!writer) {
+    // no writer in any chapter (Esther, Jonah): the intro's tradition, else 'Uncertain', never 'Author uncertain' itself
+    const trad = author.match(/\btraditionally\s+([^;,(]+)/i)?.[1].trim();
+    writer = /^author uncertain/i.test(author) ? (trad ? trad[0].toUpperCase() + trad.slice(1) : 'Uncertain')
+      : author.split(/[,;(]/)[0].replace(/^Traditionally\s+/i, '').trim();
+  }
   writer = smart(writer);
-  const writerLabel = TRADITIONAL.test(author) && !/^(anonymous|unattributed)/i.test(writer) ? 'Traditionally' : 'Writer';
-  const written = Array.isArray(intro.written) && intro.written.length === 2 ? intro.written : null;   // [from, to], BC negative
+  const traditional = TRAD_CH[b] ? TRAD_CH[b](c) : TRADITIONAL.test(author);
+  const writerLabel = traditional && !/^(anonymous|unattributed|uncertain|the wise)/i.test(writer) ? 'Traditionally' : 'Writer';
+  // [from, to], BC negative; Zechariah 9–14 are undated, so the 520–518 BC span of 1–8 is not theirs
+  const written = Array.isArray(intro.written) && intro.written.length === 2 && !(b === 38 && c >= 9) ? intro.written : null;
   const writtenTxt = written ? spanLabel(written) : '';
+  const writtenLabel = TRAD_WRITTEN.has(b) ? 'Traditionally written' : 'Written';
   const stat = (label, val, tip) => `<div class="stat"${val ? '' : ' hidden'}${tip && val ? ` title="${esc(smart(tip))}"` : ''}><small>${label}</small><b>${esc(val || '')}</b></div>`;
   const whenTip = `Approximate year of the events in this ${verseYear !== null ? 'verse' : 'chapter'} (Theographic’s chronology; other chronologies differ)`;
   let h = artHtml('drawerHtml', b, c, v || 0); // Doré's engravings of this verse (or chapter) come first
-  if (when !== null || writer || writtenTxt) h += `<div class="stats">${stat('When', when !== null ? 'c. ' + yearLabel(when).replace(/ /g, '\u00a0') : '', whenTip)}${stat(writerLabel, writer, writerTip)}${stat('Written', writtenTxt)}</div>`;
+  if (when !== null || writer || writtenTxt) h += `<div class="stats">${stat('When', when !== null ? 'c. ' + yearLabel(when).replace(/ /g, '\u00a0') : '', whenTip)}${stat(writerLabel, writer, writerTip)}${stat(writtenLabel, writtenTxt, TRAD_WRITTEN.has(b) ? intro.date : '')}</div>`;
 
   // timeline (viz fills it after render; its arguments travel on the host so overlapping renders cannot mix them up)
   if (when !== null || written) {
-    const args = { era: when, written, eventIds: inV.e.size ? [...inV.e] : [...eIds], markLabel: verseYear !== null ? 'This verse' : 'This chapter' };
+    const args = { era: when, written, writtenLabel, eventIds: inV.e.size ? [...inV.e] : [...eIds], markLabel: verseYear !== null ? 'This verse' : 'This chapter' };
     h += `<div class="lh"><h3>Timeline</h3><span>${esc(refLabel(b, c))} in Bible history</span></div><div id="timeline" class="timeline-host" data-args="${esc(JSON.stringify(args))}"></div>`;
   }
 
@@ -700,7 +736,7 @@ async function contextTab(b, c, v, opts) {
     return `<li${cur ? ' class="cur"' : ''}><button type="button" ${one ? `data-select="${first}"` : `data-goch="${first}"`}${cur ? ' aria-current="location"' : ''}><span class="rng">${esc(r[0])}</span><span>${esc(smart(r[1]))}</span>${cur ? '<span class="here">You are here</span>' : ''}</button></li>`;
   }).join('')}</ol>` : '';
   h += `<details class="intro-card" id="intro-card"${open ? ' open' : ''}><summary><span class="tile-i blue">${icon('book')}</span><span class="cell-body"><span class="cell-title">About ${esc(bk.name)}</span><span class="cell-sub">Author, audience, purpose, themes and outline</span></span>${icon('chev-right', 'chev')}</summary>
-    <div class="intro-body"><dl class="kv">${kv('Author', intro.author)}${kv('Date', intro.date)}${kv('Audience', intro.audience)}${kv('Setting', intro.setting)}${kv('Purpose', intro.purpose)}${kv('Place written', intro.placeWritten)}</dl>
+    <div class="intro-body"><dl class="kv">${kv('Author', intro.author)}${kv('Authorship', intro.authorNote)}${kv('Date', intro.date)}${kv('Audience', intro.audience)}${kv('Setting', intro.setting)}${kv('Purpose', intro.purpose)}${kv('Place written', intro.placeWritten)}</dl>
     ${themes}${outline}
     <p class="credit">Introductions summarise mainstream scholarship; dates are approximate. People, places, events: Theographic Bible Metadata (CC BY-SA 4.0). Dictionary: Easton’s (1897).</p></div></details>`;
   return h;

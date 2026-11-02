@@ -1,0 +1,1046 @@
+{
+ "Genesis": {
+  "author": "Author uncertain; traditionally Moses; many scholars see later sources and editing",
+  "authorNote": "Genesis names no writer. Jewish and Christian tradition credits Moses with all five books of the Law: the Talmud says so (Bava Batra 14b), and the New Testament speaks of “the book of Moses” and “the law of Moses” (Mark 12:26; Luke 24:44, KJV). Many modern scholars, classically following Julius Wellhausen, see the five books as earlier sources (often labelled J, E, D and P) edited into a final form around the 6th–5th c. BC; that model is now much debated, and conservative scholars hold Moses to be the original author, with some later updating.",
+  "date": "Events c. 2000–1600 BC (patriarchs); composition traditionally 15th c. BC; many scholars date its final form to the 6th–5th c. BC",
+  "written": [
+   -1491,
+   -1451
+  ],
+  "sources": [
+   "Genesis names no writer — the text itself, app/data/bibles/kjv/01.json (no claim of authorship anywhere in the book)",
+   "Talmud credits Moses with the Torah — Babylonian Talmud, Bava Batra 14b:12 (baraita: Moses wrote his own book, the portion of Balaam and Job; segment 12 in Sefaria’s current numbering), William Davidson English via Sefaria API, https://www.sefaria.org/Bava_Batra.14b",
+   "New Testament phrases “the book of Moses” and “the law of Moses” — KJV Mark 12:26 (app/data/bibles/kjv/41.json) and Luke 24:44 (app/data/bibles/kjv/42.json), checked word for word",
+   "Traditional Jewish and Christian view is Mosaic authorship; documentary theory J, E, D, P; J and E oldest, D and P later, down to about the 5th c. BCE; the theory has been challenged but most scholars still accept its basic lines — Encyclopaedia Britannica, ‘Biblical literature: Old Testament literature’ and ‘Other Pentateuchal theories’, https://www.britannica.com/topic/biblical-literature/Old-Testament-literature and https://www.britannica.com/topic/biblical-literature/Other-Pentateuchal-theories (read through search-result summaries; the pages returned 403 when fetched)",
+   "Wellhausen’s analysis of the structure and dating of the Pentateuch argued that Moses did not write it — Britannica, ‘Julius Wellhausen’, https://www.britannica.com/biography/Julius-Wellhausen (search summary)",
+   "Britannica calls the claim that Moses wrote the whole Pentateuch untenable, though Moses may have kept some records — Britannica, ‘Moses’, https://www.britannica.com/biography/Moses-Hebrew-prophet (search summary)",
+   "J and E traditions edited in the 6th or 5th c. BC — NABRE, Introduction to Genesis, https://biblehub.com/nabre/genesis/intro.htm",
+   "Conservative view: Moses is the original human author, though not of every word; later updating; source theories ‘strongly attacked’; some date the Pentateuch to the 5th c. BC — ESV Study Bible, Introduction to the Pentateuch, https://www.biblestudytools.com/commentaries/esv-study-bible/introduction-to-the-pentateuch.html",
+   "Wellhausen concluded the extant Pentateuch did not exist before the 5th c. BC — Encyclopedia.com (as reported by the checker)"
+  ]
+ },
+ "Exodus": {
+  "author": "Author uncertain; traditionally Moses; many scholars see later sources and editing",
+  "authorNote": "Exodus does not name the writer of the whole book, though it records Moses being told to write, and writing, particular words and laws (17:14; 24:4; 34:27). The Talmud (Bava Batra 14b) and the New Testament (Mark 12:26; Luke 24:44) credit the books of the Law to Moses. Many modern scholars see several sources edited into a final form around the 6th–5th c. BC, a model now much debated; conservative scholars hold Moses to be the original author, with some later updating.",
+  "date": "Exodus c. 1491 BC (Ussher, as dated here); others c. 1446 BC (early) or c. 1270 BC (late)",
+  "written": [
+   -1491,
+   -1451
+  ],
+  "sources": [
+   "Moses told to write, and writing, particular words — KJV Exodus 17:14, 24:4, 34:27 (app/data/bibles/kjv/02.json), checked",
+   "Talmud credits Moses with the Torah — Bava Batra 14b:12, Sefaria, https://www.sefaria.org/Bava_Batra.14b",
+   "New Testament attribution — KJV Mark 12:26; Luke 24:44 (app/data/bibles/kjv/41.json, 42.json)",
+   "Source theory and dating; most scholars accept its basic lines though it is challenged — Britannica, ‘Biblical literature: Old Testament literature’ / ‘Other Pentateuchal theories’ (search summaries; 403 on fetch)",
+   "Final form in the 6th or 5th c. BC — NABRE, Introduction to Genesis, https://biblehub.com/nabre/genesis/intro.htm; ESV Study Bible, Introduction to the Pentateuch (some date it to the 5th c. BC)",
+   "Conservative view: Moses is the original author, with later updating — ESV Study Bible, Introduction to the Pentateuch, https://www.biblestudytools.com/commentaries/esv-study-bible/introduction-to-the-pentateuch.html",
+   "Ussher dates the Exodus to AM 2513 = 1491 BC — James Ussher, Annals of the World (reprint at https://www.swartzentrover.com/cotor/e-books/christ/ussher/ussher_age4.htm, through a search summary)"
+  ]
+ },
+ "Leviticus": {
+  "author": "Author uncertain; traditionally Moses; many scholars see later sources and editing",
+  "authorNote": "Leviticus names no writer; it presents its laws as given by the LORD to Moses at Sinai (1:1; 27:34). The Talmud (Bava Batra 14b) and the New Testament (Mark 12:26; Luke 24:44) credit the books of the Law to Moses. Scholars who trace sources assign it to the Priestly (P) material, gathered from various periods and put together perhaps during or after the exile, with its Holiness Code (chapters 17–26) often dated to the exile, by some earlier; conservative scholars hold Moses to be the original author.",
+  "date": "Received at Sinai, c. 1490 BC (Ussher); others c. 1446 or 1270 BC",
+  "written": [
+   -1490,
+   -1490
+  ],
+  "sources": [
+   "Laws presented as given to Moses at Sinai — KJV Leviticus 1:1; 27:34 (app/data/bibles/kjv/03.json), checked",
+   "Talmud credits Moses with the Torah — Bava Batra 14b:12, Sefaria, https://www.sefaria.org/Bava_Batra.14b",
+   "New Testament attribution — KJV Mark 12:26; Luke 24:44 (app/data/bibles/kjv/41.json, 42.json)",
+   "Scholars agree Leviticus belongs to the Priestly (P) source — Britannica, ‘Leviticus’, https://www.britannica.com/topic/Leviticus (search summary)",
+   "P material comes from various periods, some going back to Moses, and was put together possibly during or after the Babylonian Exile — Britannica, ‘Biblical literature’ (search summary; 403 on fetch)",
+   "Holiness Code (Lev 17–26): compilation often dated to the exile, by some before it; the laws themselves much earlier — Britannica, ‘Biblical literature: The Holiness Code’, https://www.britannica.com/topic/biblical-literature/The-Holiness-Code and ‘Code of Holiness’, https://www.britannica.com/topic/Code-of-Holiness (search summaries)",
+   "Conservative view: Moses is the original author — ESV Study Bible, Introduction to the Pentateuch, https://www.biblestudytools.com/commentaries/esv-study-bible/introduction-to-the-pentateuch.html"
+  ]
+ },
+ "Numbers": {
+  "author": "Author uncertain; traditionally Moses; many scholars see later sources and editing",
+  "authorNote": "Numbers names no writer, though it says Moses wrote down the stages of Israel’s journeys (33:2). The Talmud (Bava Batra 14b) credits Moses with the Torah, naming Balaam’s story (22–24) in particular. Many modern scholars see a composite of the J, E and Priestly (P) sources, edited into the five books by about the 5th c. BC; conservative scholars hold Moses to be the original author, with some later updating.",
+  "date": "Events c. 1490–1451 BC (Ussher); others c. 1446–1406 or 1270–1230 BC",
+  "written": [
+   -1490,
+   -1451
+  ],
+  "sources": [
+   "Moses wrote down the stages of the journeys — KJV Numbers 33:2 (app/data/bibles/kjv/04.json), checked",
+   "Talmud: Moses wrote his book and the portion of Balaam — Bava Batra 14b:12 and 15a, Sefaria, https://www.sefaria.org/Bava_Batra.14b",
+   "Numbers a composite of J, E and P — Britannica, biblical literature (Old Testament literature), https://www.britannica.com/topic/biblical-literature/Old-Testament-literature (search summary; 403 on fetch)",
+   "D and P sources down to about the 5th c. BCE — Britannica, ‘Biblical literature’ (search summary); ESV Study Bible, Introduction to the Pentateuch (some date it to the 5th c. BC)",
+   "Conservative view: Moses is the original author, with later updating — ESV Study Bible, Introduction to the Pentateuch, https://www.biblestudytools.com/commentaries/esv-study-bible/introduction-to-the-pentateuch.html"
+  ]
+ },
+ "Deuteronomy": {
+  "author": "Author uncertain; traditionally Moses; many scholars tie its core to Josiah’s reform, c. 622 BC",
+  "authorNote": "Deuteronomy presents itself as Moses’ speeches in Moab and says he wrote “this law” (1:1–5; 31:9, KJV), but a narrator frames them and chapter 34 tells of his death; the Talmud (Bava Batra 15a) records a dispute over its last eight verses (34:5–12), written by Joshua on one view and by Moses in tears on the other. Many modern scholars tie its core (chapters 12–26) to the law book found in the Temple under Josiah, c. 622 BC (2 Kings 22), with additions through the exile. Conservative scholars hold Moses to be the original author.",
+  "date": "Plains of Moab, c. 1451 BC (Ussher; others c. 1406 or 1230 BC); many scholars date its composition from the 8th c. BC to the exile and beyond, its core tied to the law book found c. 622 BC",
+  "written": [
+   -1451,
+   -1451
+  ],
+  "sources": [
+   "Moses’ words in Moab; Moses wrote this law; narrator; Moses’ death — KJV Deuteronomy 1:1–5; 31:9; 31:24; 34:5 (app/data/bibles/kjv/05.json; chapter 34 has 12 verses), checked",
+   "Dispute over the last eight verses: Rabbi Yehuda (some say Nehemiah) says Joshua wrote from 34:5; Rabbi Shimon says Moses wrote them with tears — Bava Batra 15a:4–5 (Sefaria’s current numbering), https://www.sefaria.org/Bava_Batra.15a; the baraita at 14b:12 follows the Joshua view",
+   "Law book found in the Temple — KJV 2 Kings 22:8 (app/data/bibles/kjv/12.json), checked",
+   "Presented as Moses’ address but scholars generally date it much later; an early edition identified with the law book found about 622 BC; later additions; final form by a historian — Britannica, ‘Deuteronomy’, https://www.britannica.com/topic/Deuteronomy (search summary); the law book identified with Deut 12–26 — Britannica, ‘Deuteronomic Reform’ and ‘Deuteronomic Code’ (search summaries)",
+   "Composed over about three centuries, from the 8th c. to the exile; ‘bears some relation’ to the book found c. 622 BC under Josiah; exile references in 4, 28, 29, 30 — NABRE, Introduction to Deuteronomy, https://biblehub.com/nabre/deuteronomy/intro.htm",
+   "Conservative view: Moses is the original author — ESV Study Bible, Introduction to the Pentateuch, https://www.biblestudytools.com/commentaries/esv-study-bible/introduction-to-the-pentateuch.html"
+  ]
+ },
+ "Joshua": {
+  "author": "Author uncertain; traditionally Joshua; many scholars date its final form to the 7th–6th c. BC",
+  "authorNote": "Joshua names no writer, though it says Joshua wrote words “in the book of the law of God” (24:26, KJV), and it goes on to record his death. The Talmud (Bava Batra 14b–15a) says Joshua wrote the book and that Eleazar, then Phinehas, finished it. Many modern scholars, following Martin Noth, see older traditions edited into a history running from Deuteronomy to Kings, addressed to a late pre-exilic audience on some views and completed after the fall of Jerusalem in 586 BC on others.",
+  "date": "Events c. 1451–1427 BC (as dated here); others from c. 1406 BC or in the 13th c. BC",
+  "written": null,
+  "sources": [
+   "Joshua wrote words in the book of the law of God; his death; Eleazar’s death — KJV Joshua 24:26, 24:29, 24:33 (app/data/bibles/kjv/06.json), checked",
+   "Joshua wrote his book; Eleazar completed it, then Phinehas — Bava Batra 14b:12 and 15a:7 (Sefaria’s current numbering), https://www.sefaria.org/Bava_Batra.14b and https://www.sefaria.org/Bava_Batra.15a",
+   "Later Jewish tradition credited Joshua, but the internal evidence gives no such indication; Noth: a Deuteronomist wrote Joshua as part of Deuteronomy–Kings after 586 BC, a view many critics accept — Britannica, ‘Book of Joshua’, https://www.britannica.com/topic/Book-of-Joshua (search summary)",
+   "Part of the Deuteronomistic History, addressed to ‘a late preexilic audience’; preserves older settlement traditions — NABRE, Introduction to Joshua, https://biblehub.com/nabre/joshua/intro.htm",
+   "Ussher: Jordan crossing 1451 BC, Joshua’s death 1443 BC; the 1427 end year is Theographic’s (Joshua 24 verse years; people.json Joshua d −1427), hence ‘as dated here’ — Ussher, Annals of the World (Fourth Age reprint, swartzentrover.com); app/data/context/06.json",
+   "Conquest c. 1406 BC; alternative 1220 BC — ESV Study Bible, Introduction to Joshua"
+  ]
+ },
+ "Judges": {
+  "author": "Author uncertain; traditionally Samuel; many scholars date its final form to the 7th–6th c. BC",
+  "authorNote": "Judges names no writer. The Talmud (Bava Batra 14b) says Samuel wrote it, along with Ruth and his own book. Many modern scholars see older stories of the judges, oral and perhaps written, framed by a later historian within the history running from Deuteronomy to Kings, which they date from the late pre-exilic period to after 586 BC.",
+  "date": "Events c. 1420–1120 BC (Ussher); others c. 1380–1050 BC",
+  "written": null,
+  "sources": [
+   "Samuel wrote his book, Judges and Ruth — Bava Batra 14b:12, Sefaria, https://www.sefaria.org/Bava_Batra.14b",
+   "A Deuteronomistic historian framed older stories that may have been written but come from oral tradition (2:1–3:6 and editorial notes) — NABRE, Introduction to Judges, https://biblehub.com/nabre/judges/intro.htm",
+   "Judges is the third of five books by the Deuteronomic historian, written after 586 BC (Noth) — Britannica, ‘Biblical literature: Judges’, https://www.britannica.com/topic/biblical-literature/Judges-importance-and-role and ‘The Nevi’im’ (search summaries)",
+   "Deuteronomistic History addressed to a late pre-exilic audience — NABRE, Introduction to Joshua, https://biblehub.com/nabre/joshua/intro.htm"
+  ]
+ },
+ "Ruth": {
+  "author": "Author uncertain; traditionally Samuel; scholars date it to the early monarchy or after the exile",
+  "authorNote": "Ruth names no writer. The Talmud (Bava Batra 14b) says Samuel wrote it; its closing genealogy ends with David (4:17–22), which some scholars take as a later addition. Many date the book early in the monarchy, others after the exile (5th–4th c. BC), citing its language and reading its warm portrait of a Moabite woman as a counter to Ezra and Nehemiah’s measures against such marriages.",
+  "date": "Set in the judges period, c. 1308 BC (as dated here); written later, early in the monarchy or after the exile (5th–4th c. BC); scholars differ",
+  "written": null,
+  "sources": [
+   "Samuel wrote Judges and Ruth — Bava Batra 14b:12, Sefaria, https://www.sefaria.org/Bava_Batra.14b",
+   "Genealogy ends with David — KJV Ruth 4:17, 4:22 (app/data/bibles/kjv/08.json), checked",
+   "Date disputed: ‘Many authors date it early in the monarchy’; others argue for a postexilic date, reading it as a counter to Ezra and Nehemiah against marriage with Moabites (Ezr 9–10; Neh 13:23–29) — NABRE, Introduction to Ruth, https://biblehub.com/nabre/ruth/intro.htm",
+   "Dated to the late 5th or 4th c. BC; the genealogy of David (4:17–22) a late addition by a redactor; linguistic features point to a post-exilic present form — Britannica, ‘Book of Ruth’, https://www.britannica.com/topic/Book-of-Ruth and ‘Biblical literature: The Megillot’ (search summaries)",
+   "Ruth 1:5 has the year −1308 in Theographic’s chronology — app/data/context/08.json"
+  ]
+ },
+ "1 Samuel": {
+  "author": "Author uncertain; traditionally Samuel, then Gad and Nathan; many scholars see later editing",
+  "authorNote": "The book names no author; 1 and 2 Samuel were originally one book, and 1 Chronicles 29:29 mentions books of Samuel the seer, Nathan the prophet and Gad the seer. The Talmud (Bava Batra 14b–15a) says Samuel wrote it and, because it records his death, Gad and Nathan finished it. Many modern scholars see a work built from earlier sources, such as the ark story and the story of David’s succession, and given its final form by a Deuteronomistic compiler in the 6th c. BC.",
+  "date": "Events c. 1165–1056 BC (Ussher); others c. 1100–1010 BC",
+  "written": null,
+  "sources": [
+   "Samuel wrote his book; Gad the seer and Nathan the prophet finished it because it records his death — Babylonian Talmud, Bava Batra 14b:12 and 15a:8 (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Originally one book; not by a single author; ark story and David succession story among its sources; finished form from a Deuteronomic compiler in the 6th c. BCE; title reflects Samuel as first major figure, not authorship — Norman K. Gottwald, ‘Samuel, Book of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/samuel-book)",
+   "Noth (1943): one exilic Deuteronomistic author of Joshua–Kings, framed by Deuteronomy — J. Gordon McConville, ‘The Old Testament historical books in modern scholarship’, Themelios 22.3 (https://www.thegospelcoalition.org/themelios/article/the-old-testament-historical-books-in-modern-scholarship/)",
+   "Books of Samuel the seer, Nathan the prophet and Gad the seer — 1 Chronicles 29:29 (KJV, app/data/bibles/kjv/13.json)",
+   "Samuel’s death first recorded at 25:1 (‘And Samuel died’) and again at 28:3 — KJV, app/data/bibles/kjv/09.json"
+  ]
+ },
+ "2 Samuel": {
+  "author": "Author uncertain; traditionally Gad and Nathan; many scholars see later editing",
+  "authorNote": "The book names no author; it is the second half of the one book of Samuel. The Talmud (Bava Batra 15a) says Samuel wrote that book and that, since it records his death in 1 Samuel, Gad the seer and Nathan the prophet finished it. Many modern scholars see it as built from earlier sources, notably the story of David’s court and succession, and given its final form by a Deuteronomistic compiler in the 6th c. BC.",
+  "date": "Events c. 1055–1015 BC (Ussher); others c. 1010–970 BC",
+  "written": null,
+  "sources": [
+   "Gad and Nathan finished Samuel’s book after his death — Babylonian Talmud, Bava Batra 15a:8 (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Samuel was originally one book; built from sources including the David succession story; final form from a Deuteronomic compiler in the 6th c. BCE — Norman K. Gottwald, ‘Samuel, Book of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/samuel-book)",
+   "Deuteronomistic History thesis (Noth 1943; Joshua–Kings) — J. Gordon McConville, Themelios 22.3 (https://www.thegospelcoalition.org/themelios/article/the-old-testament-historical-books-in-modern-scholarship/)",
+   "Samuel’s death recorded in 1 Samuel 25:1 and 28:3 — KJV, app/data/bibles/kjv/09.json"
+  ]
+ },
+ "1 Kings": {
+  "author": "Author uncertain; traditionally Jeremiah; many scholars: part of the Deuteronomistic History",
+  "authorNote": "The book names no author but cites earlier records of Solomon’s reign and of the kings of Israel and Judah. The Talmud (Bava Batra 15a) says Jeremiah wrote it. Since Martin Noth (1943) many scholars have read Deuteronomy to Kings as one ‘Deuteronomistic History’ finished in the exile after 561 BC, some (following Frank Moore Cross) seeing a first edition under Josiah.",
+  "date": "Events c. 1015–897 BC (Ussher); others c. 970–850 BC; final form in the exile (after 561 BC)",
+  "written": [
+   -560,
+   -540
+  ],
+  "sources": [
+   "Jeremiah wrote his own book, the book of Kings and Lamentations — Babylonian Talmud, Bava Batra 15a:2 (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Called ‘the Deuteronomistic History’ since Noth (1943); sources include the Acts of Solomon (1 Kgs 11:41), the chronicles of the kings of Israel and Judah, and royal archives; the extant book postdates Evil-Merodach’s accession in 561 BCE; main redaction c. 550 most probable; Cross and Nelson argue for a first edition under Josiah, question unresolved — John Gray, ‘Kings, Book of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/kings-book)",
+   "Noth: a single exilic author of Joshua–Kings framed by Deuteronomy; Cross: a first edition under Josiah (628–609 BC) and an exilic second edition — J. Gordon McConville, ‘The Old Testament historical books in modern scholarship’, Themelios 22.3 (https://www.thegospelcoalition.org/themelios/article/the-old-testament-historical-books-in-modern-scholarship/)"
+  ]
+ },
+ "2 Kings": {
+  "author": "Author uncertain; traditionally Jeremiah; many scholars: part of the Deuteronomistic History",
+  "authorNote": "The book names no author and, like 1 Kings, cites the royal records of the kings of Israel and Judah. The Talmud (Bava Batra 15a) says Jeremiah wrote Kings. Since Martin Noth (1943) many scholars have read Deuteronomy to Kings as one ‘Deuteronomistic History’, finished in the exile after Jehoiachin’s release in 561 BC (25:27), some (following Frank Moore Cross) seeing a first edition under Josiah.",
+  "date": "Events c. 896–562 BC (Ussher); others c. 850–561 BC; final form in the exile (after 561 BC)",
+  "written": [
+   -560,
+   -540
+  ],
+  "sources": [
+   "Jeremiah wrote the book of Kings — Babylonian Talmud, Bava Batra 15a:2 (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Deuteronomistic History since Noth (1943); the extant books postdate Evil-Merodach’s accession, 561 BCE; main redaction c. 550; possible Josianic first edition (Cross, Nelson), unresolved — John Gray, ‘Kings, Book of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/kings-book)",
+   "Noth’s exilic Deuteronomist; Cross’s Josianic Dtr1 with exilic Dtr2 adding 2 Kings 23:26–25:30 — J. Gordon McConville, Themelios 22.3 (https://www.thegospelcoalition.org/themelios/article/the-old-testament-historical-books-in-modern-scholarship/)",
+   "Jehoiachin released by Evil-merodach in the 37th year of his captivity — 2 Kings 25:27 (KJV, app/data/bibles/kjv/12.json)"
+  ]
+ },
+ "1 Chronicles": {
+  "author": "Author uncertain; ‘the Chronicler’, traditionally Ezra, then Nehemiah; many scholars doubt this",
+  "authorNote": "The book names no author; its writer is known as ‘the Chronicler’, and 1 and 2 Chronicles were originally one book. The Talmud (Bava Batra 15a) says Ezra wrote its genealogies up to his own time and Nehemiah completed it, but many scholars doubt this tradition and date the book to the 4th c. BC. Scholars long held that the Chronicler also wrote Ezra–Nehemiah; many now treat them as separate works.",
+  "date": "Probably 4th c. BC; mid-5th c. BC if by Ezra",
+  "written": [
+   -400,
+   -300
+  ],
+  "sources": [
+   "Ezra wrote his own book and the genealogy of Chronicles up to his time; Nehemiah son of Hacaliah completed Chronicles — Babylonian Talmud, Bava Batra 15a (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Talmudic attribution doubted; anonymous ‘Chronicler’; a single book, divided in the Septuagint; composed within the 4th c. BCE (Aramaic influence, Persian loanwords, no Greek words); separate from Ezra–Nehemiah — Sara Japhet, ‘Chronicles, Book of’, Encyclopaedia Judaica, 2nd ed. (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/chronicles-book)",
+   "A rabbinic tradition that Ezra wrote Chronicles is doubtful; probably written in the 4th c. BC; author perhaps a Levite — Asbury Bible Commentary, Chronicles, ‘II. Authorship, date and composition’ (https://classic.biblegateway.com/resources/asbury-bible-commentary/ii-authorship-date-and-composition)",
+   "Consensus since Zunz (1832) that the Chronicler wrote Ezra–Nehemiah, still held by some; Japhet and others argue for separate works — David Marcus, ‘Ezra and Nehemiah, Books of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/ezra-and-nehemiah-books)",
+   "Ezra’s mission dated to Artaxerxes’ seventh year, 458 BCE (basis for ‘mid-5th c. BC if by Ezra’) — same Marcus EJ entry"
+  ]
+ },
+ "2 Chronicles": {
+  "author": "Author uncertain; ‘the Chronicler’, traditionally Ezra, then Nehemiah; many scholars doubt this",
+  "authorNote": "The book names no author; it is the second half of the one book of Chronicles, whose writer is known as ‘the Chronicler’. The Talmud (Bava Batra 15a) credits Ezra, with Nehemiah completing the work, but many scholars doubt this and date the book to the 4th c. BC. Its closing verses repeat the opening of Ezra, long taken as a sign of a single author, a view some still hold; many now treat Chronicles and Ezra–Nehemiah as separate works.",
+  "date": "Probably 4th c. BC; mid-5th c. BC if by Ezra",
+  "written": [
+   -400,
+   -300
+  ],
+  "sources": [
+   "Ezra wrote the genealogy of Chronicles up to his time; Nehemiah completed Chronicles — Babylonian Talmud, Bava Batra 15a (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Chronicles is one book, divided in the Septuagint; Talmudic attribution doubted; 4th c. BCE — Sara Japhet, ‘Chronicles, Book of’, Encyclopaedia Judaica, 2nd ed. (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/chronicles-book)",
+   "Ezra tradition doubtful; probably 4th c. BC — Asbury Bible Commentary, Chronicles, ‘II. Authorship, date and composition’ (https://classic.biblegateway.com/resources/asbury-bible-commentary/ii-authorship-date-and-composition)",
+   "The identical verses at the end of Chronicles and Ezra 1:1–3a support common authorship on the older view, which ‘still has its adherents’; Williamson sees them as borrowed; separate authorship argued by Japhet — David Marcus, ‘Ezra and Nehemiah, Books of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/ezra-and-nehemiah-books)",
+   "Closing verses repeat the opening of Ezra — KJV 2 Chronicles 36:22–23 and Ezra 1:1–3 (app/data/bibles/kjv/14.json, 15.json), compared"
+  ]
+ },
+ "Ezra": {
+  "author": "Author uncertain; traditionally Ezra; many scholars see a later compiler using his memoir",
+  "authorNote": "The book names no author; in Hebrew tradition Ezra and Nehemiah were one book, the book of Ezra, which the Talmud (Bava Batra 15a) says Ezra wrote. It includes Ezra’s memoir (chs 7–10), told in the first person at 7:27–9:15. Many scholars credit an unnamed compiler, long identified with ‘the Chronicler’ (others now argue for a separate hand), and proposed dates run from the end of the 5th c. BC to the 3rd c. BC.",
+  "date": "Events 538–457 BC; compiled with the book of Nehemiah, late 5th to 3rd c. BC",
+  "written": [
+   -420,
+   -200
+  ],
+  "sources": [
+   "Ezra wrote his own book — Babylonian Talmud, Bava Batra 15a (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "The book later called Nehemiah was included in the book of Ezra — Babylonian Talmud, Sanhedrin 93b with the Davidson translation’s note (https://www.sefaria.org/Sanhedrin.93b)",
+   "Masoretic tradition counted Ezra–Nehemiah as one book (Book of Ezra), divided from Origen on; Ezra’s first-person memoir; compiler the Chronicler (consensus since Zunz 1832, still held by some) or a separate author (Japhet); Ezra–Nehemiah dated to the end of the 5th c. BCE; Ezra’s mission 458 BCE, with later datings proposed — David Marcus, ‘Ezra and Nehemiah, Books of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/ezra-and-nehemiah-books)",
+   "An unnamed Jew who lived in the 4th or 3rd c. BC was responsible for these books; the compiler ‘is usually called the chronicler’; the Ezra memoir is Ezr 7–10 and perhaps Ne 8–10 — Asbury Bible Commentary, Ezra–Nehemiah, ‘II. Sources and authorship’ (https://classic.biblegateway.com/resources/asbury-bible-commentary/ii-sources-and-authorship)",
+   "First person begins at 7:27–28 and runs to the prayer ending 9:15; 10:1 returns to the third person (‘when Ezra had prayed’) — KJV, app/data/bibles/kjv/15.json",
+   "Nehemiah returned to the king in Artaxerxes’ 32nd year — Nehemiah 13:6 (KJV, app/data/bibles/kjv/16.json); 20th year = 445 BCE per Marcus, EJ"
+  ]
+ },
+ "Nehemiah": {
+  "author": "Author uncertain; built on Nehemiah’s memoir (named in 1:1); traditionally part of Ezra’s book",
+  "authorNote": "The book opens ‘The words of Nehemiah the son of Hachaliah’ (1:1, KJV), and much of it is his first-person memoir (chs 1–7 and most of 12–13). In Hebrew tradition it was part of one book of Ezra, which the Talmud says Ezra wrote (Bava Batra 15a), though it also says Nehemiah spoke its words and asks why the book was not named after him (Sanhedrin 93b). Many scholars credit a later compiler, long identified with ‘the Chronicler’ (others now argue for a separate hand), with adding material such as Ezra’s reading of the law (ch. 8) and lists of priests and Levites (12:1–26); proposed dates run from the end of the 5th c. BC to the 3rd c. BC.",
+  "date": "Events 445–430 BC; compiled with the book of Ezra, late 5th to 3rd c. BC",
+  "written": [
+   -420,
+   -200
+  ],
+  "sources": [
+   "The book opens ‘The words of Nehemiah the son of Hachaliah’ — Nehemiah 1:1 (KJV, app/data/bibles/kjv/16.json); Ezra’s reading of the law, 8:2; lists of priests and Levites, 12:1 (‘Now these are the priests and the Levites’) to 12:26, reaching ‘the reign of Darius the Persian’ (12:22); first person again at 12:31; Nehemiah’s return in Artaxerxes’ 32nd year, 13:6",
+   "Ezra wrote his own book — Babylonian Talmud, Bava Batra 15a (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Nehemiah son of Hacaliah said the matters of the book of Ezra; why the book was not called by his name — Babylonian Talmud, Sanhedrin 93b (William Davidson translation, https://www.sefaria.org/Sanhedrin.93b)",
+   "One book in the Masoretic tradition; Nehemiah’s work told as a first-person memoir; compiler the Chronicler or a separate editor; end of the 5th c. BCE; Nehemiah’s mission 445 BCE — David Marcus, ‘Ezra and Nehemiah, Books of’, Encyclopaedia Judaica (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/ezra-and-nehemiah-books)",
+   "Nehemiah’s memoir is Ne 1–7 and most of chs. 12 and 13; an unnamed compiler of the 4th or 3rd c. BC, usually called the Chronicler — Asbury Bible Commentary, Ezra–Nehemiah, ‘II. Sources and authorship’ (https://classic.biblegateway.com/resources/asbury-bible-commentary/ii-sources-and-authorship)"
+  ]
+ },
+ "Esther": {
+  "author": "Author uncertain; traditionally the men of the Great Assembly; some medieval rabbis: Mordecai",
+  "authorNote": "The book names no author. The Talmud (Bava Batra 15a) says the men of the Great Assembly wrote it; the medieval commentators Rashi and Ibn Ezra held that Mordecai did, Rashi reading ‘And Mordecai wrote these things’ (9:20, KJV) as the book itself. Modern scholars generally treat the author as unknown and date the book anywhere from the Persian period (before 333 BC) to the 2nd c. BC.",
+  "date": "Events c. 462–452 BC (Ussher); others c. 483–473 BC; written c. 465–333 BC, or as late as the 2nd c. BC",
+  "written": [
+   -465,
+   -333
+  ],
+  "sources": [
+   "The members of the Great Assembly wrote the Scroll of Esther — Babylonian Talmud, Bava Batra 15a:2 (William Davidson translation, https://www.sefaria.org/Bava_Batra.15a)",
+   "Mordecai wrote this scroll as it is (on 9:20) — Rashi on Esther 9:20 (Metsudah translation, https://www.sefaria.org/Rashi_on_Esther.9.20)",
+   "The book was composed by Mordecai — Abraham ibn Ezra, Introduction to Esther (Sefaria, https://www.sefaria.org/Ibn_Ezra_on_Esther,_Introduction)",
+   "The book does not name its author; dated between 465 and 333 BC because it shows no Greek influence — Asbury Bible Commentary, Esther, ‘II. Historical setting, authorship and date’ (https://search.biblegateway.com/resources/asbury-bible-commentary/ii-historical-setting-authorship-and-date-of-esther)",
+   "No author named; story grew from a nucleus of 300–150 BC and reached its present form c. 150–100 BC — E. A. Ballmann, ‘Esther, Book of’, New Catholic Encyclopedia (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/esther-book)",
+   "‘And Mordecai wrote these things’ — Esther 9:20 (KJV, app/data/bibles/kjv/17.json)"
+  ]
+ },
+ "Job": {
+  "author": "Author uncertain; traditionally Moses; the book names no writer",
+  "authorNote": "The book names no writer. The Talmud (Bava Batra 14b) says Moses wrote it, though the rabbis there (15a–b) disagreed about when Job lived, from Jacob’s day to the return from exile, and one sage held that his story was a parable. Most modern scholars regard the author as unknown; early dates in Moses’ or Solomon’s time are not widely held today, and most place the book’s final form between the 7th and 2nd centuries BC.",
+  "date": "Events often placed in the patriarchal era; by tradition written in Moses’ day, by most scholars in the 7th–2nd centuries BC",
+  "written": null,
+  "sources": [
+   "The book names no writer; it opens with Job himself — Job 1:1 and the whole text, app/data/bibles/kjv/18.json (KJV)",
+   "Moses wrote his own book, the portion of Balaam and the book of Job — Babylonian Talmud, Bava Batra 14b:12 (Sefaria, https://www.sefaria.org/api/v3/texts/Bava_Batra.14b)",
+   "Rabbis disagreed on when Job lived (time of Moses, R. Levi bar Lahma; time of the spies, Rava; among those who returned from exile, R. Yohanan and R. Elazar); a baraita has his life span Israel’s entry into Egypt to the Exodus; one sage held ‘Job never existed’ and the story was a parable — Bava Batra 15a (Sefaria, https://www.sefaria.org/api/v3/texts/Bava_Batra.15a)",
+   "Further views on when Job lived: the Judges, Ahasuerus, the kingdom of Sheba, the Chaldeans, and ‘some say’ the days of Jacob (Job married Dinah) — Bava Batra 15b (Sefaria, https://www.sefaria.org/Bava_Batra.15b)",
+   "‘The book of Job names no author; it is anonymous’; tradition ‘often attributes authorship to Moses (see b. Baba Batra 14b)’; Archer leans to a Mosaic date, E. J. Young to a Solomonic one, but ‘such early dates … are not widely held today’; ‘most scholars suggest a date between the seventh century and the second century BC for the final form of the book’ — Tremper Longman III, Job (Baker Commentary on the Old Testament Wisdom and Psalms, Baker Academic, 2012), Introduction, ‘Authorship and Date’, pp. 24–26 (preview PDF, christianstudylibrary.org/files/pub/book_previews/Tremper-Logman_Job_Introduction.pdf)",
+   "Author and date unknown; some scholars propose a 10th-century BC date from archaic-sounding language, Edward Greenstein argues the language only imitates archaic style; Dead Sea Scrolls copies set a latest date of about 200 BC — Brennan Breed, ‘Authorship of Job’, Bible Odyssey (https://www.bibleodyssey.org/articles/authorship-of-job/; the page returned 403, read from the search-index excerpt; not relied on for the final wording)",
+   "Nothing significant is at stake in not knowing the author or date — Tremper Longman III and Raymond B. Dillard, An Introduction to the Old Testament, p. 226, as cited in Thomas Constable, Notes on Job (secondary citation, search excerpt)",
+   "Author unknown; prose frame earlier, poetry dated between the 6th and 4th centuries BC — Encyclopaedia Britannica, ‘Biblical literature: Job’ (https://www.britannica.com/topic/biblical-literature/Job; 403, read from the search-index excerpt)",
+   "Events often placed in the patriarchal era — CSB Study Bible, Introduction to Job, timeline ‘Job 2100?–1900?’ (https://www.biblestudytools.com/commentaries/csb-study-bible/job-intro.html); Bava Batra 15a baraita (above)"
+  ]
+ },
+ "Psalms": {
+  "author": "David (73 titles), Asaph (12), sons of Korah (11), others; 50 unnamed; authorship widely disputed",
+  "authorNote": "Of the 150 psalms, 116 have a title and 100 name someone: David 73 times, Asaph 12, the sons of Korah 11, Solomon twice (the KJV reads ‘for Solomon’), and Heman, Ethan and Moses once each. The Talmud (Bava Batra 14b–15a) says David wrote the book, including psalms by ten elders such as Moses, Heman, Asaph and the sons of Korah, and most early church interpreters read the titles as naming the authors. Many modern scholars treat the titles as later additions and note that the Hebrew ‘of David’ can also mean ‘for’ or ‘belonging to’, so they do not take a title as proof of who wrote a psalm.",
+  "date": "c. 1490–400 BC, from Moses (Psalm 90’s title) to after the exile; collected in five books",
+  "written": [
+   -1490,
+   -400
+  ],
+  "sources": [
+   "Title counts: 116 psalms titled; David in 73 (3–9, 11–32, 34–41, 51–65, 68–70, 86, 101, 103, 108–110, 122, 124, 131, 133, 138–145), Asaph 12 (50, 73–83), sons of Korah 11 (42, 44–49, 84, 85, 87, 88), Solomon 2 (72, 127, ‘for Solomon’), Heman 88, Ethan 89, Moses 90; 50 psalms name no person — app/data/bibles/kjv/19-titles.json (KJV), counted",
+   "The Masoretic Text has 34 psalms without a superscription; the Septuagint adds ‘of David’ to 33, 43, 71, 91, 93–99, 104, 137 (citing VanGemeren); readings of the lamed include ‘of’, ‘for’, ‘for use of’, ‘belonging to’; most patristic interpreters assumed Davidic authorship of the 73 and read titles historically (except Theodore of Mopsuestia); Childs: titles ‘a relatively late addition’, by the mid-19th century ‘almost universally abandoned’ by critics — Ian J. Vaillancourt, ‘Reading Psalm Superscriptions through the Centuries’, Themelios 48.2 (https://www.thegospelcoalition.org/themelios/article/reading-psalm-superscriptions-through-the-centuries/)",
+   "David wrote the book of Psalms by means of ten elders: Adam, Melchizedek, Abraham, Moses, Heman, Jeduthun, Asaph and the three sons of Korah — Babylonian Talmud, Bava Batra 14b–15a (Sefaria)",
+   "Superscriptions naming David need not refer to authorship; psalms written over centuries, from the early monarchy to post-Exilic times; five books (1–41, 42–72, 73–89, 90–106, 107–150); authorship of most psalms unknown — Encyclopaedia Britannica, ‘Psalms’ and ‘Biblical literature: Psalms’; Britannica Students, ‘Bible’ (search-index excerpts; britannica.com pages return 403)",
+   "Acts 4:25 ascribes Psalm 2 to David; Hebrews 4:7 cites Psalm 95 ‘saying in David’ — app/data/bibles/kjv/44.json and 58.json (KJV)",
+   "‘The prayers of David the son of Jesse are ended.’ — Psalm 72:20, app/data/bibles/kjv/19.json (KJV)"
+  ]
+ },
+ "Proverbs": {
+  "author": "Solomon (named in 1:1), with ‘the wise’, Agur and Lemuel; authorship widely disputed",
+  "authorNote": "The book names its sources: Solomon (1:1; 10:1), ‘the words of the wise’ (22:17, KJV), proverbs of Solomon copied out by Hezekiah’s men (25:1), Agur (30:1) and King Lemuel (31:1); the closing poem on the virtuous woman (31:10–31) names no writer. The Talmud (Bava Batra 15a) credits Hezekiah and his colleagues with writing the book. Conservative scholars generally accept a Solomonic core compiled between about 700 and 400 BC, while critical scholars reject Solomonic authorship and commonly date chapters 1–9 after the exile; most scholars see 22:17–24:22 as drawing on the Egyptian Instruction of Amenemope.",
+  "date": "c. 1000–700 BC for the collections it names (Solomon to Hezekiah); final form c. 700–400 BC or later",
+  "written": [
+   -1000,
+   -700
+  ],
+  "sources": [
+   "Headings: 1:1 ‘The proverbs of Solomon the son of David, king of Israel’; 10:1 ‘The proverbs of Solomon’; 22:17 ‘the words of the wise’; 24:23 ‘These things also belong to the wise’; 25:1 ‘which the men of Hezekiah king of Judah copied out’; 30:1 ‘The words of Agur the son of Jakeh’; 31:1 ‘The words of king Lemuel, the prophecy that his mother taught him’; 31:10 ‘Who can find a virtuous woman?’ — app/data/bibles/kjv/20.json (KJV)",
+   "Hezekiah and his colleagues wrote Isaiah, Proverbs, Song of Songs and Ecclesiastes — Babylonian Talmud, Bava Batra 15a:2 (Sefaria)",
+   "Critical scholars reject Solomonic authorship and date the sections separately, usually much later; Murphy thinks chapters 1–9 post-exilic, Paterson a 3rd-century date likely; ‘the preponderance of scholarship views Proverbs as in some way dependent upon Amenemope’; conservatives usually date the final compilation between 700 and 400 BC, Fritsch possibly later than 400 BC; the outline separates ‘The words of Lemuel (31:1-9)’ from ‘The virtuous wife (31:10-31)’ — Encyclopedia of the Bible, ‘Book of Proverbs’ (https://www.biblegateway.com/resources/encyclopedia-of-the-bible/Book-Proverbs)",
+   "Third collection 22:17–24:22 closely akin to the Wisdom of Amenemope; 25:1–29:27 came into being about 700 BC; 1:1–9:18 latest, 4th century BC — Encyclopaedia Britannica, ‘Proverbs’ (search-index excerpt; the article itself was not fetched)"
+  ]
+ },
+ "Ecclesiastes": {
+  "author": "Author uncertain; traditionally Solomon; 1:1 names only ‘the Preacher, the son of David’",
+  "authorNote": "The book never names Solomon: its speaker is ‘the Preacher, the son of David, king in Jerusalem’ (1:1, KJV), and its epilogue (12:9–14) speaks of him in the third person. Tradition identifies him as Solomon (so Song of Songs Rabbah 1:1), while the Talmud (Bava Batra 15a) credits Hezekiah and his colleagues with writing the book. Because of its language, with many Aramaic forms, many modern scholars, some conservatives among them, doubt that Solomon wrote it, and critical scholars date it to the 4th–3rd centuries BC.",
+  "date": "c. 1000–975 BC if Solomon’s; critical scholars date it to the 4th–3rd centuries BC from its language",
+  "written": [
+   -1000,
+   -975
+  ],
+  "sources": [
+   "1:1 ‘The words of the Preacher, the son of David, king in Jerusalem.’; 1:12 ‘I the Preacher was king over Israel in Jerusalem.’; 12:9 ‘because the preacher was wise, he still taught the people knowledge’ (third person); Solomon is not named — app/data/bibles/kjv/21.json (KJV)",
+   "‘Traditionally Qoheleth has been identified as Solomon’; ‘son of David’ could refer to anyone in David’s line; the language differs from Solomon’s other writings; ‘evidence to the contrary is sufficient to make it doubtful’; the epilogue suggests ‘an unnamed author was presenting the wisdom of Qoheleth’; many conservatives treat the Hebrew as dialectal; dates proposed include the 8th–7th and the 4th–3rd centuries BC — Zondervan Academic, ‘Who Wrote Ecclesiastes and What Does It Mean?’ (2017), drawing on John H. Walton’s Old Testament Survey course (https://zondervanacademic.com/blog/who-wrote-ecclesiastes-and-what-does-it-mean)",
+   "Real author unknown; the frequency of Aramaic forms and the book’s content date it to about the second half of the 3rd century BC; ‘Biblical literature’ gives the later 4th or early 3rd century BC — Encyclopaedia Britannica, ‘Ecclesiastes’ and ‘Biblical literature: Wisdom literature’ (search-index excerpts; britannica.com returns 403)",
+   "Solomon wrote Song of Songs, Proverbs and Ecclesiastes; R. Yonatan: Ecclesiastes in old age — Song of Songs Rabbah 1:1:10 (Sefaria, https://www.sefaria.org/api/v3/texts/Shir_HaShirim_Rabbah.1.1.10)",
+   "Hezekiah and his colleagues wrote Ecclesiastes — Babylonian Talmud, Bava Batra 15a:2 (Sefaria)"
+  ]
+ },
+ "Song of Songs": {
+  "author": "Author uncertain; traditionally Solomon, from the title ‘which is Solomon’s’ (1:1)",
+  "authorNote": "The title calls it the song ‘which is Solomon’s’ (1:1, KJV); the Hebrew can mean by, for or about Solomon, and the NET Bible takes it as authorship. One rabbinic tradition (Song of Songs Rabbah 1:1) has Solomon writing it in his youth, while the Talmud (Bava Batra 15a) credits Hezekiah and his colleagues. Many modern scholars regard the author as unknown and date the book’s present form after the exile, though some of its poems may be as old as the 10th century BC.",
+  "date": "c. 1015–975 BC if Solomon’s; many scholars date its present form after the exile, with older poems",
+  "written": [
+   -1015,
+   -975
+  ],
+  "sources": [
+   "1:1 ‘The song of songs, which is Solomon’s.’ — app/data/bibles/kjv/22.json (KJV)",
+   "The lamed in ’asher lishlomoh may denote authorship (‘written by Solomon’), dedication (‘dedicated for Solomon’) or topic (‘about/concerning Solomon’); ‘The ל is most likely denoting authorship’ — NET Bible translator’s note on Song 1:1 (https://biblia.com/bible/gs-netbible/So1.1)",
+   "R. Yonatan: Solomon wrote Song of Songs first, in youth; R. Hiyya the Great puts Proverbs first — Song of Songs Rabbah 1:1:10 (Sefaria)",
+   "Hezekiah and his colleagues wrote Song of Songs — Babylonian Talmud, Bava Batra 15a:2 (Sefaria)",
+   "Author unknown; present form later than the Babylonian Exile, but its poems may go back to about the 10th century BC; modern scholars most often read it as a collection of love poems — Encyclopaedia Britannica, ‘Song of Solomon’ (https://www.britannica.com/topic/Song-of-Solomon; search-index excerpt, page returns 403)"
+  ]
+ },
+ "Isaiah": {
+  "author": "Isaiah son of Amoz (named in 1:1); authorship widely disputed, especially chs. 40–66",
+  "authorNote": "The book opens as “The vision of Isaiah the son of Amoz” (1:1, KJV), a prophet in Jerusalem from about 740 BC, and Jewish and Christian tradition received the whole book as his; John’s Gospel quotes both halves under Isaiah’s name (John 12:38–41). Critical scholars have questioned this since the late 18th century, and few now give him the whole book or even most of it: the long-standing view, going back to Bernhard Duhm, assigns chapters 40–55 to an unnamed prophet of the Babylonian exile (“Second Isaiah”) and chapters 56–66 to later writers after the return. Conservative scholars such as J. Alec Motyer and John N. Oswalt defend the unity of the book under Isaiah.",
+  "date": "c. 759–698 BC (Ussher); others c. 740–680 BC; many scholars date chs. 40–55 to the exile, 56–66 after it",
+  "written": [
+   -759,
+   -698
+  ],
+  "sources": [
+   "Text names Isaiah son of Amoz — Isaiah 1:1, app/data/bibles/kjv/23.json (KJV: “The vision of Isaiah the son of Amoz”)",
+   "Isaiah called c. 740 BC (6:1); lived to record Sennacherib’s death in 681 — ESV Global Study Bible, Introduction to Isaiah, ‘Author and Date’ (https://www.esv.org/resources/esv-global-study-bible/introduction-to-isaiah/)",
+   "John quotes Isa 53:1 and Isa 6:10 both under Isaiah’s name — John 12:38–41, app/data/bibles/kjv/43.json (KJV ‘Esaias’)",
+   "The rabbis did not take Isaiah as more than one author; Abraham ibn Ezra (12th c.) is the earliest rabbinic hint otherwise — TheTorah.com, ‘The Prologue to Deutero-Isaiah’ (https://www.thetorah.com/article/the-prologue-to-deutero-isaiah)",
+   "Talmud: Hezekiah and his colleagues wrote Isaiah (recorded, not used in the note) — Babylonian Talmud, Bava Batra 15a:2 (Sefaria, https://www.sefaria.org/Bava_Batra.15a)",
+   "Two-prophet theory first proposed by J. C. Döderlein in 1775 (‘since the late 18th century’) — R. J. Clifford, ‘Isaiah, Book of (Second Isaiah)’, Anchor Bible Dictionary 3:473, as cited in Wikipedia, ‘Book of Isaiah’ (https://en.wikipedia.org/wiki/Book_of_Isaiah)",
+   "Chs. 40–55 exilic (6th c. BC), 56–66 later and probably by several writers; three-part division — Encyclopaedia Britannica, ‘Book of Isaiah’, ‘Deutero-Isaiah’ and ‘Biblical literature: Deutero-Isaiah’ (britannica.com/topic/Book-of-Isaiah; /topic/Deutero-Isaiah), seen through search results because the pages refuse direct fetch",
+   "Few scholars today attribute the whole book, or even most of it, to one person; the three-part division (Duhm) the consensus through most of the 20th century and still widely held — D. L. Petersen, The Prophetic Literature, 47–48; M. Sweeney, ‘The Latter Prophets’, 76–79, as cited in Wikipedia, ‘Book of Isaiah’",
+   "Unity under Isaiah defended by Oswalt and Motyer — Themelios reviews of J. N. Oswalt, The Book of Isaiah 40–66 (NICOT) and J. A. Motyer, The Prophecy of Isaiah (https://www.thegospelcoalition.org/themelios/review/the-book-of-isaiah-chapters-40-66-the-new-international-commentary-on-the-old-testament/; https://www.thegospelcoalition.org/themelios/review/the-prophecy-of-isaiah/)"
+  ]
+ },
+ "Jeremiah": {
+  "author": "Jeremiah (named in 1:1), with his scribe Baruch (36:4)",
+  "authorNote": "The book presents itself as “The words of Jeremiah the son of Hilkiah” (1:1, KJV), and chapter 36 tells how Baruch the scribe wrote down Jeremiah’s words as he dictated them; the Talmud likewise says Jeremiah wrote his own book (Bava Batra 15a). Scholars broadly trace the poetic oracles to Jeremiah and much of the prose narrative to Baruch, with later editors shaping the whole: the Greek text is notably shorter and arranged differently, and chapter 52, which follows “Thus far are the words of Jeremiah” (51:64, KJV), closes the book with an account of Jerusalem’s fall that closely matches 2 Kings 24:18–25:30.",
+  "date": "c. 627 BC to after 586 BC; ch. 52 added after c. 560 BC",
+  "written": [
+   -627,
+   -560
+  ],
+  "sources": [
+   "Text names Jeremiah son of Hilkiah — Jeremiah 1:1, app/data/bibles/kjv/24.json (KJV)",
+   "Baruch wrote down Jeremiah’s words as he dictated them; rewritten roll ‘added besides’ — Jeremiah 36:4, 36:32 (KJV)",
+   "Ch. 52 follows ‘Thus far are the words of Jeremiah’ and matches 2 Kings 24:18–25:30 — Jeremiah 51:64, 52:1–34 compared with 2 Kings 24:18–25:30, app/data/bibles/kjv/24.json and 12.json (KJV)",
+   "Talmud: Jeremiah wrote his own book, Kings and Lamentations — Babylonian Talmud, Bava Batra 15a:2 (Sefaria API, https://www.sefaria.org/api/v3/texts/Bava_Batra.15a)",
+   "Call in Josiah’s 13th year, 627/626 BC; after the fall in 586 he was taken to Egypt and died there c. 570 — Encyclopaedia Britannica, ‘Jeremiah’ and ‘The Book of Jeremiah’ (britannica.com/biography/Jeremiah-Hebrew-prophet; /topic/The-Book-of-Jeremiah), via search results",
+   "Prose narratives (chs. 26–45) probably from Baruch; several redactors shaped the book; poetic oracles the earliest core; later (Deuteronomistic) editing; Greek text shorter and differently arranged — Encyclopaedia Britannica, ‘The Book of Jeremiah’; Wikipedia, ‘Book of Jeremiah’ (https://en.wikipedia.org/wiki/Book_of_Jeremiah), via search results",
+   "Jehoiachin released c. 560 BC by Nebuchadrezzar’s successor (Awil-Marduk/Evil-merodach, reigned 562–560) — Encyclopaedia Britannica, ‘Jehoiachin’ and ‘Awil-Marduk’, via search results; Jeremiah 52:31 (KJV)"
+  ]
+ },
+ "Lamentations": {
+  "author": "Author uncertain; traditionally Jeremiah; many scholars doubt it, some see more than one poet",
+  "authorNote": "The Hebrew poems name no author; the Greek Septuagint adds a preface saying that Jeremiah sat weeping and lamented over Jerusalem, and the Talmud says Jeremiah wrote Lamentations (Bava Batra 15a). The attribution was universal until the 18th century; since then many scholars have doubted it on grounds of content and style, some seeing more than one poet, and most date the poems to the exile that followed the fall of Jerusalem in 586 BC.",
+  "date": "After the fall of Jerusalem in 586 BC; most scholars date it before the return from exile (c. 537 BC)",
+  "written": [
+   -586,
+   -537
+  ],
+  "sources": [
+   "The poems name no author: the KJV text of Lamentations never mentions Jeremiah (the name ‘Jeremiah’ appears 0 times) — app/data/bibles/kjv/25.json",
+   "The Septuagint preface says Jeremiah sat weeping and lamented over Jerusalem — LXX Lamentations 1:1 (English at https://intertextual.bible/text/lamentations-1.1/lxx-lamentations-1.1); Brenton’s translation: ‘Jeremias sat weeping, and lamented’",
+   "Talmud: Jeremiah wrote Lamentations — Babylonian Talmud, Bava Batra 15a:2 (Sefaria API)",
+   "Universally ascribed to Jeremiah until the 18th century, backed by the Septuagint prologue; objections from content and style; some see more than one poet; most critics date it before the return of 537/536, during the exile after 586 — Encyclopaedia Britannica, ‘Biblical literature: Lamentations of Jeremiah’ and ‘Lamentations of Jeremiah’ (britannica.com/topic/biblical-literature/Lamentations-of-Jeremiah; /topic/Lamentations-of-Jeremiah), via search results (direct fetch refused)",
+   "Scholars divided between one author and several; other datings run later (Dobbs-Allsopp 586–520 BCE; Berlin, compilation in the late 6th c.) — Wikipedia, ‘Book of Lamentations’",
+   "Jeremiah died c. 570 BC in Egypt (why the old range assumed him) — Encyclopaedia Britannica, ‘Jeremiah’, via search results"
+  ]
+ },
+ "Ezekiel": {
+  "author": "Ezekiel (named in 1:3)",
+  "authorNote": "The book is told mostly in the first person by “Ezekiel the priest, the son of Buzi” (1:3, KJV), an exile in Babylonia, with oracles dated from the fifth year of King Jehoiachin’s captivity (1:2) to the twenty-seventh (29:17), that is 593–571 BC. Most scholars accept the basic authenticity of the book, with additions by a school of his later followers; in the first half of the 20th century a few critics, such as C. C. Torrey, dated it much later.",
+  "date": "593–571 BC",
+  "written": [
+   -593,
+   -571
+  ],
+  "sources": [
+   "Text names Ezekiel the priest, son of Buzi, among the captives by the river Chebar; first person from 1:1 — Ezekiel 1:1–3, app/data/bibles/kjv/26.json (KJV)",
+   "Dated from the fifth year of Jehoiachin’s captivity to the twenty-seventh — Ezekiel 1:2; 29:17 (KJV)",
+   "Presented as the words of Ezekiel ben-Buzi, an exile in Babylon, 593–571 BCE — P. M. Joyce, Ezekiel: A Commentary (2009), 16, as cited in Wikipedia, ‘Book of Ezekiel’ (https://en.wikipedia.org/wiki/Book_of_Ezekiel)",
+   "Most scholars accept the book’s basic authenticity with significant additions by a school of later followers; after the war, growing acceptance of its unity and exilic setting (W. Zimmerli, Ezekiel, Hermeneia) — Wikipedia, ‘Book of Ezekiel’; Encyclopaedia Britannica, ‘Biblical literature: Ezekiel’ (main body 6th c. BCE with some later glosses by loyal redactors), via search results",
+   "During the first half of the 20th century C. C. Torrey (Pseudo-Ezekiel and the Original Prophecy, 1930) and others placed authorship much later — Wikipedia, ‘Book of Ezekiel’"
+  ]
+ },
+ "Daniel": {
+  "author": "Daniel (named in 7:1); authorship and date widely disputed",
+  "authorNote": "Chapters 1–6 tell of Daniel in the third person; chapter 7 says that Daniel had a dream and “then he wrote the dream” (7:1, KJV), and the visions of chapters 7–12 are mostly in his own voice; Jesus speaks of “Daniel the prophet” (Matthew 24:15, KJV), and the Talmud says the men of the Great Assembly wrote the book (Bava Batra 15a). The philosopher Porphyry (c. 234–c. 305) argued, as Jerome reports, that it was written in Judaea under Antiochus IV Epiphanes, and most modern scholars date its final form to c. 167–164 BC, while conservative scholars such as Joyce Baldwin defend a 6th-century BC date.",
+  "date": "Events 605–536 BC; traditionally written in the 6th c. BC; most scholars date the final form c. 167–164 BC",
+  "written": null,
+  "sources": [
+   "Chs. 1–6 third person; 7:1 Daniel ‘wrote the dream’; first-person visions (8:1 ‘unto me Daniel’, 9:2 ‘I Daniel’); 7:1 and 10:1 in the third person — Daniel 1–12, app/data/bibles/kjv/27.json (KJV)",
+   "Events from Jehoiakim’s third year (1:1) to Cyrus’s third year (10:1) — Daniel 1:1; 10:1 (KJV)",
+   "Jesus refers to ‘Daniel the prophet’ — Matthew 24:15, app/data/bibles/kjv/40.json (KJV)",
+   "Talmud: the men of the Great Assembly wrote Ezekiel, the Twelve, Daniel and Esther — Babylonian Talmud, Bava Batra 15a:2 (Sefaria API)",
+   "Porphyry (12th book Against the Christians) denied that Daniel wrote it and placed the author in Judaea under Antiochus Epiphanes — Jerome, Commentary on Daniel, Prologue (tr. G. L. Archer, 1958; tertullian.org/fathers/jerome_daniel_02_text.htm), seen in the quoted text in search results",
+   "Porphyry’s dates c. 234–c. 305 — Encyclopaedia Britannica, ‘Porphyry’ (as reported by the checker)",
+   "Modern consensus dates the book to 167–164 BC (Antiochus IV crisis; language and resurrection belief as further evidence) — Encyclopaedia Britannica, ‘Biblical literature: Daniel’ (britannica.com/topic/biblical-literature/Daniel), via search results; Wikipedia, ‘Book of Daniel’ (167–163 BC, citing J. J. Collins, Daniel, Hermeneia)",
+   "Conservative case for a 6th-century date — Themelios review of J. G. Baldwin, Daniel (Tyndale OT Commentaries) (https://www.thegospelcoalition.org/themelios/review/daniel-2/); G. J. Wenham, ‘Daniel: The Basic Issues’, Themelios (https://www.thegospelcoalition.org/themelios/article/daniel-the-basic-issues/)"
+  ]
+ },
+ "Hosea": {
+  "author": "Hosea son of Beeri (named in 1:1)",
+  "authorNote": "The book gives the prophecies of Hosea son of Beeri, addressed chiefly to the northern kingdom and dated by its heading to the reigns of Uzziah to Hezekiah in Judah and of Jeroboam II in Israel (1:1). The prophecies are credited to Hosea himself; some scholars see editing in Judah, including most of the heading, and some also assign chapters 4–14 to a different hand from 1–3.",
+  "date": "c. 785–725 BC (Ussher); others c. 753–722 BC",
+  "written": [
+   -785,
+   -725
+  ],
+  "sources": [
+   "Hosea son of Beeri is named, with the kings of Judah and Jeroboam II — KJV Hosea 1:1 (app/data/bibles/kjv/28.json)",
+   "Hosea prophesied c. 753–722 BC; his audience the northern kingdom (Ephraim) — ESV Global Study Bible, Introduction to Hosea, Author and Date (https://www.esv.org/resources/esv-global-study-bible/introduction-to-hosea/)",
+   "Editing in Judah: the superscription’s opening phrase old and reliable, the rest of 1:1 a late combination, with Judahite glosses; chs 1–3 and 4–14 treated as separate works by Graetz, Kaufmann, Ginsberg — Encyclopaedia Judaica, ‘Hosea, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/hosea-book)",
+   "c. 785–725 BC (Ussher) — Theographic verse years for Hosea in app/data/context/28.json; build.py notes that Theographic yearNum follows Ussher’s chronology"
+  ]
+ },
+ "Joel": {
+  "author": "Joel son of Pethuel (named in 1:1)",
+  "authorNote": "Little is known of Joel beyond the name of his father (1:1). Proposed dates run from the 9th century BC, under the boy-king Joash, to c. 400–350 BC; most modern scholars date the book after the exile. Many treat it as one prophet’s work, though some, following Duhm (1911), give its later part (from 2:28 in English Bibles) to a second hand.",
+  "date": "Uncertain: from the 9th c. BC (under Joash) to c. 400–350 BC; most modern scholars date it after the exile",
+  "written": null,
+  "sources": [
+   "Joel son of Pethuel named — KJV Joel 1:1 (app/data/bibles/kjv/29.json)",
+   "Little is known about Joel; most scholars date the book after the exile — ESV Global Study Bible, Introduction to Joel, Author and Date (https://www.esv.org/resources/esv-global-study-bible/introduction-to-joel/)",
+   "Some date it to the 9th century under the boy-king Joash; most modern scholars date it between 400 and 350 BC — NET Bible translators’ note on Joel 1:1 (https://biblia.com/bible/gs-netbible/Joe1.1)",
+   "Unity debated: many recent critics favour a single author; Duhm (1911) proposed a Deutero-Joel for Hebrew chs 3–4 (KJV 2:28–3:21); c. 400 BC described as fairly unanimous — New Catholic Encyclopedia, ‘Joel, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/joel-book)"
+  ]
+ },
+ "Amos": {
+  "author": "Amos of Tekoa (named in 1:1)",
+  "authorNote": "The book gives the words of Amos, a herdsman of Tekoa, from the reigns of Uzziah and Jeroboam II (1:1; 7:14). Modern scholarship attributes the bulk of it to Amos but sees some later additions, such as the references to Judah (2:4–5), and perhaps the closing promise of restoration (from the end of 9:8).",
+  "date": "c. 787 BC (Ussher); others mid-8th c. BC, between 793 and 739 BC",
+  "written": [
+   -787,
+   -787
+  ],
+  "sources": [
+   "Amos among the herdmen of Tekoa, under Uzziah and Jeroboam II — KJV Amos 1:1; 7:14 (app/data/bibles/kjv/30.json)",
+   "Amos prophesied between 793 and 739 BC — ESV Global Study Bible, Introduction to Amos, Author and Date (https://www.esv.org/resources/esv-global-study-bible/introduction-to-amos/)",
+   "Bulk of the book attributed to Amos; ‘evidence of certain later additions’, e.g. the Judah references (1:2; 2:4–5); 9:8c–15 ‘perhaps added during the Exile’; mid-8th century under Jeroboam II — New Catholic Encyclopedia, ‘Amos, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/amos-book)",
+   "c. 787 BC (Ussher) — Theographic verse years in app/data/context/30.json (Ussher’s chronology per build.py)"
+  ]
+ },
+ "Obadiah": {
+  "author": "Obadiah (named in 1:1)",
+  "authorNote": "The book presents itself as Obadiah’s vision (1:1). Nothing more is known of him, and he cannot safely be identified with any of the other men of that name in the Old Testament. Most scholars now date it after Jerusalem’s fall in 586 BC and reject the 9th-century date proposed by some nineteenth-century scholars.",
+  "date": "After Jerusalem’s fall in 586 BC, probably before 553 BC (most reject a 9th-c. date)",
+  "written": [
+   -586,
+   -553
+  ],
+  "sources": [
+   "Headed as the vision of Obadiah — KJV Obadiah 1:1 (app/data/bibles/kjv/31.json)",
+   "Only his name is known; probably written after 586 BC and before Babylon attacked Edom in 553 BC — ESV Global Study Bible, Introduction to Obadiah, Author and Date (https://www.esv.org/resources/esv-global-study-bible/introduction-to-obadiah/)",
+   "Nineteenth-century scholars argued for a 9th-century date under Jehoram; most contemporary scholars reject it; none of the dozen men named Obadiah may be safely identified with the author — NET Bible translators’ notes on Obadiah 1 (https://biblia.com/bible/gs-netbible/Obad1.1)"
+  ]
+ },
+ "Jonah": {
+  "author": "Author uncertain; a story about Jonah son of Amittai (1:1), told in the third person",
+  "authorNote": "The book tells of the prophet Jonah son of Amittai, known from 2 Kings 14:25 in the reign of Jeroboam II, but it speaks of him in the third person and never names its writer. The Talmud (Bava Batra 15a) credits the men of the Great Assembly with writing down the Twelve Prophets. Proposed dates run from the 8th to the 3rd century BC: some scholars see no reason to deny that Jonah wrote it, while the best-known view links it to the time of Ezra and Nehemiah.",
+  "date": "Events c. 825 BC (Ussher; under Jeroboam II, 2 Kgs 14:25), others c. 760 BC; date of writing uncertain, 8th–3rd c. BC proposed",
+  "written": null,
+  "sources": [
+   "The word of the LORD came to Jonah the son of Amittai (third person throughout) — KJV Jonah 1:1–3 (app/data/bibles/kjv/32.json)",
+   "Jonah son of Amittai prophesied under Jeroboam II — KJV 2 Kings 14:25 (app/data/bibles/kjv/12.json)",
+   "The members of the Great Assembly wrote Ezekiel, the Twelve Prophets, Daniel and Esther — Babylonian Talmud, Bava Batra 15a:2 (Sefaria, https://www.sefaria.org/api/v3/texts/Bava_Batra.15a?version=english)",
+   "Third-person story; dates proposed from the 8th to the 3rd century BC; best-known opinion links it to Ezra and Nehemiah; Jonah apparently historical (2 Kgs 14:25) but the book written much later on the critical view — Encyclopaedia Judaica, ‘Jonah, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/jonah-book)",
+   "‘There is no compelling reason to deny that Jonah was the author of the book’; readers who take the book as history put its writing no later than c. 760 BC — Asbury Bible Commentary, ‘Historical Setting, Authorship, and Date of Jonah’ (Bible Gateway)",
+   "Jeroboam II reigned 782–753 BC; events c. 760 BC; no author named — ESV Global Study Bible, Introduction to Jonah (https://www.esv.org/resources/esv-global-study-bible/introduction-to-jonah/)",
+   "Events c. 825 BC (Ussher) — Theographic verse years in app/data/context/32.json"
+  ]
+ },
+ "Micah": {
+  "author": "Micah of Moresheth (named in 1:1)",
+  "authorNote": "The heading names Micah the Morasthite, of Moresheth-gath (1:1, 14), and Jeremiah 26:18 recalls his preaching under Hezekiah. His ministry is not in doubt, though some critics question whether certain passages are his, and the collection may have been arranged by a later editor.",
+  "date": "c. 750–700 BC (Jotham to Hezekiah)",
+  "written": [
+   -750,
+   -700
+  ],
+  "sources": [
+   "Micah the Morasthite, under Jotham, Ahaz and Hezekiah — KJV Micah 1:1; Moresheth-gath 1:14 (app/data/bibles/kjv/33.json)",
+   "Micah prophesied under Hezekiah — KJV Jeremiah 26:18 (app/data/bibles/kjv/24.json)",
+   "Reigns of Jotham (750–735 BC) to Hezekiah (715–687 BC) — ESV Global Study Bible, Introduction to Micah (https://www.esv.org/resources/esv-global-study-bible/introduction-to-micah/)",
+   "Ministry under Hezekiah incontestable; some critics doubt Mican authorship of certain passages; collection arranged by an anonymous post-exilic editor; Sennacherib passages 701 BC — New Catholic Encyclopedia, ‘Micah, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/micah-book)"
+  ]
+ },
+ "Nahum": {
+  "author": "Nahum of Elkosh (named in 1:1)",
+  "authorNote": "The book is headed as Nahum’s vision concerning Nineveh (1:1); nothing more is told of him. It looks back on the fall of Thebes (3:8, c. 664 BC) and forward to the fall of Nineveh in 612 BC, so it is dated between the two.",
+  "date": "c. 664–612 BC (between the fall of Thebes and of Nineveh)",
+  "written": [
+   -664,
+   -612
+  ],
+  "sources": [
+   "The burden of Nineveh, the vision of Nahum the Elkoshite — KJV Nahum 1:1; populous No (Thebes) 3:8 (app/data/bibles/kjv/34.json)",
+   "Thebes taken around 664 BC, Nineveh fell in 612 BC; the book composed between 664 and 612 BC — ESV Global Study Bible, Introduction to Nahum, Author and Date (https://www.esv.org/resources/esv-global-study-bible/introduction-to-nahum/)"
+  ]
+ },
+ "Habakkuk": {
+  "author": "Habakkuk (named in 1:1)",
+  "authorNote": "The book names Habakkuk the prophet in its heading (1:1) and again over the prayer of chapter 3 (3:1). It is dated to Babylon’s rise, either before the end of Josiah’s reign in 609 BC or c. 605–597 BC; some scholars date it much later and regard the psalm of chapter 3 as an editor’s work.",
+  "date": "c. 609–597 BC, as Babylon rose (some date it before 609)",
+  "written": [
+   -609,
+   -597
+  ],
+  "sources": [
+   "Habakkuk the prophet named in the heading and over the prayer — KJV Habakkuk 1:1; 3:1 (app/data/bibles/kjv/35.json)",
+   "Probably prophesied no later than the end of Josiah’s reign (640–609 BC) — ESV Global Study Bible, Introduction to Habakkuk (https://www.esv.org/resources/esv-global-study-bible/introduction-to-habakkuk/)",
+   "Prophecy placed c. 601 BC, after 605 and before 597 BC; later datings (c. 550 BC; Alexander’s era, c. 334) ‘for the most part consider the psalm to be the work of an editor who lived some time between 600 and 100 b.c.’ — New Catholic Encyclopedia, ‘Habakkuk, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/habakkuk-book)"
+  ]
+ },
+ "Zephaniah": {
+  "author": "Zephaniah son of Cushi (named in 1:1)",
+  "authorNote": "The heading traces Zephaniah’s descent over four generations to a Hizkiah, perhaps King Hezekiah, and places his preaching in the reign of Josiah (1:1). Many scholars set it early in that reign, before Josiah’s reforms.",
+  "date": "Under Josiah (640–609 BC), probably before his reforms; c. 630 BC (Ussher)",
+  "written": [
+   -630,
+   -630
+  ],
+  "sources": [
+   "Zephaniah son of Cushi … son of Hizkiah, in the days of Josiah — KJV Zephaniah 1:1 (app/data/bibles/kjv/36.json)",
+   "Prophesied during the reign of Josiah (640–609 BC) — ESV Global Study Bible, Introduction to Zephaniah (https://www.esv.org/resources/esv-global-study-bible/introduction-to-zephaniah/)",
+   "Genealogy leads to a Hezekiah, perhaps King Hezekiah; prophecy placed in Josiah’s early reign before his reform (c. 629 BC) — New Catholic Encyclopedia, ‘Zephaniah, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/zephaniah-book)",
+   "c. 630 BC (Ussher) — Theographic verse years in app/data/context/36.json"
+  ]
+ },
+ "Haggai": {
+  "author": "Haggai (named in 1:1)",
+  "authorNote": "The book dates Haggai’s messages to 520 BC, the second year of Darius (1:1), and reports them in the third person. An early editor framed them, and Haggai is reasonably regarded as their source; nothing is known of his family.",
+  "date": "520 BC",
+  "written": [
+   -520,
+   -520
+  ],
+  "sources": [
+   "The word of the LORD came by Haggai the prophet in the second year of Darius — KJV Haggai 1:1 (app/data/bibles/kjv/37.json)",
+   "Reasonable to consider Haggai its author; nothing is known of his genealogy; 520 BC — ESV Global Study Bible, Introduction to Haggai (https://www.esv.org/resources/esv-global-study-bible/introduction-to-haggai/)",
+   "An ancient editor of the book frames the sermons; second year of Darius I = 520 BC — New Catholic Encyclopedia, ‘Haggai, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/haggai-book)"
+  ]
+ },
+ "Zechariah": {
+  "author": "Zechariah son of Berechiah (named in 1:1); authorship of chapters 9–14 widely disputed",
+  "authorNote": "Chapters 1–8 give Zechariah’s dated visions and sermons from 520–518 BC (1:1; 7:1). Chapters 9–14 are undated, and most critical scholars assign them to one or more later writers; others defend Zechariah’s authorship of the whole book.",
+  "date": "Chapters 1–8: 520–518 BC; chapters 9–14 undated, placed by many later, in the Persian or Greek period",
+  "written": [
+   -520,
+   -518
+  ],
+  "sources": [
+   "Zechariah son of Berechiah, son of Iddo, second year of Darius — KJV Zechariah 1:1, 1:7; fourth year of Darius 7:1; chapters 9:1 and 12:1 open new undated ‘burden’ sections (app/data/bibles/kjv/38.json)",
+   "Scholars almost unanimous in attributing chs 9–14 to one or more authors other than Zechariah; his words confined to chs 1–8; preaching from 520 BC to at least 518 BC; later chapters placed in the Hellenistic age — New Catholic Encyclopedia, ‘Zechariah, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/zechariah-book)",
+   "Liberal scholars deny chs 9–14 to Zechariah; equally compelling arguments for unity of composition by Zechariah himself; chs 1–8 between 520 and 518 BC; chs 9–14 cannot be dated internally; original in the Persian period — Encyclopedia of the Bible (Zondervan), ‘Book of Zechariah’ (https://www.biblegateway.com/resources/encyclopedia-of-the-bible/Book-Zechariah)",
+   "Zechariah began his ministry in 520 BC — ESV Global Study Bible, Introduction to Zechariah (https://www.esv.org/resources/esv-global-study-bible/introduction-to-zechariah/)"
+  ]
+ },
+ "Malachi": {
+  "author": "Author uncertain; traditionally Malachi (1:1), though the name may be a title, ‘my messenger’",
+  "authorNote": "The heading ascribes the book to Malachi, a Hebrew word meaning ‘my messenger’ (compare 3:1). The Talmud records that the sages took it as his own name, while Rabbi Joshua ben Korha identified him with Ezra, as the Targum does. Some modern scholars read it as a title and the book as anonymous; others reply that an anonymous prophetic book would be without parallel.",
+  "date": "Uncertain: c. 500–430 BC, after the temple was rebuilt; c. 430 BC (Ussher)",
+  "written": [
+   -500,
+   -430
+  ],
+  "sources": [
+   "The burden of the word of the LORD to Israel by Malachi — KJV Malachi 1:1; ‘my messenger’ — KJV Malachi 3:1 (app/data/bibles/kjv/39.json)",
+   "Rabbi Joshua ben Korha: Malachi is Ezra; the Rabbis: Malachi was his real name — Babylonian Talmud, Megillah 15a (Sefaria, https://www.sefaria.org/api/v3/texts/Megillah.15a?version=english)",
+   "Mal’akhi means ‘my messenger’, probably not a personal name; book should be regarded as anonymous; Targum glosses ‘whose name is called Ezra the scribe’; date c. 500 BCE, after the temple was rebuilt and before Ezra — Encyclopaedia Judaica, ‘Malachi, Book of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/malachi-book)",
+   "Name or title in question; a title would make the book anonymous, ‘anomalous among all the prophetic literature of the OT’ — NET Bible translators’ note on Malachi 1:1 (https://biblia.com/bible/gs-netbible/Mal1.1)",
+   "The prophet Malachi (name means ‘my messenger’) probably lived at the same time as Ezra and Nehemiah, around 460 BC — ESV Global Study Bible, Introduction to Malachi (https://www.esv.org/resources/esv-global-study-bible/introduction-to-malachi/)",
+   "c. 430 BC (Ussher) — Theographic verse years in app/data/context/39.json"
+  ]
+ },
+ "Matthew": {
+  "author": "Author uncertain; traditionally the apostle Matthew, the tax collector; many scholars doubt it",
+  "authorNote": "The Gospel does not name its writer. Papias (quoted by Eusebius) said Matthew wrote the oracles in the Hebrew language, and Irenaeus said Matthew issued a Gospel among the Hebrews in their own dialect; the church received this Gospel as the apostle’s. Many modern scholars doubt that the apostle wrote it, chiefly because it draws heavily on Mark, while others still hold to Matthew.",
+  "date": "c. AD 60–85",
+  "written": [
+   60,
+   85
+  ],
+  "sources": [
+   "Text anonymous; Matthew the tax collector — KJV Matthew 9:9, 10:3 (app/data/bibles/kjv/40.json)",
+   "Papias: Matthew wrote the oracles in the Hebrew language — Eusebius, Church History 3.39.16 (https://www.newadvent.org/fathers/250103.htm)",
+   "Irenaeus: Matthew issued a written Gospel among the Hebrews in their own dialect — Irenaeus, Against Heresies 3.1.1 (https://www.newadvent.org/fathers/0103301.htm)",
+   "Attribution to the apostle untenable because it relies on Mark; written after 70, probably a decade later; author unknown — NABRE introduction to Matthew (https://www.bible.com/bible/463/MAT.INTRO1.NABRE)",
+   "Traditional view still held: Matthew (Levi) wrote it, late 50s or early 60s — ESV Global Study Bible, Introduction to Matthew (https://www.esv.org/resources/esv-global-study-bible/introduction-to-matthew/)"
+  ]
+ },
+ "Mark": {
+  "author": "Author uncertain; traditionally Mark, Peter’s interpreter, identified with John Mark of Acts",
+  "authorNote": "The Gospel does not name its writer; its ancient heading is ‘According to Mark’. Papias (quoted by Eusebius) and Irenaeus describe Mark as Peter’s interpreter, and tradition identifies him with John Mark of Acts, writing in Rome. Modern scholars often caution against overstating Peter’s influence, and many suggest an unknown Jewish Christian writer around AD 70.",
+  "date": "c. AD 55–75",
+  "written": [
+   55,
+   75
+  ],
+  "sources": [
+   "Anonymous apart from the ancient heading ‘According to Mark’; traditionally John Mark; Papias called Mark Peter’s interpreter; Petrine influence not to be exaggerated; modern research often proposes an unknown Hellenistic Jewish Christian, possibly in Syria, perhaps shortly after 70; traditionally written in Rome shortly before 70 — NABRE introduction to Mark (https://www.bible.com/bible/463/MRK.INTRO1.NABRE)",
+   "Papias: Mark, the interpreter of Peter, wrote down accurately what he remembered — Eusebius, Church History 3.39.15 (https://www.newadvent.org/fathers/250103.htm)",
+   "Mark wrote Peter’s preaching at Rome (Clement, Papias) — Eusebius, Church History 2.15.1–2 (https://www.newadvent.org/fathers/250102.htm)",
+   "Mark, disciple and interpreter of Peter — Irenaeus, Against Heresies 3.1.1 (https://www.newadvent.org/fathers/0103301.htm)",
+   "Conservative date mid-to-late 50s, mid- or late 60s possible — ESV Global Study Bible, Introduction to Mark (https://www.esv.org/resources/esv-global-study-bible/introduction-to-mark/)"
+  ]
+ },
+ "Luke": {
+  "author": "Author uncertain; traditionally Luke, the physician and companion of Paul",
+  "authorNote": "The Gospel does not name its writer; its preface, addressed to Theophilus, says the account rests on those ‘which from the beginning were eyewitnesses’ (1:2, KJV). Irenaeus and the Muratorian fragment credit it to Luke, Paul’s companion, called ‘the beloved physician’ in Colossians 4:14 (KJV). Critical scholars have been roughly evenly divided on whether that Luke wrote it, but it is widely agreed that the same writer produced Acts.",
+  "date": "c. AD 60–90",
+  "written": [
+   60,
+   90
+  ],
+  "sources": [
+   "Preface to Theophilus; ‘which from the beginning were eyewitnesses’ — KJV Luke 1:2–3 (app/data/bibles/kjv/42.json)",
+   "‘Luke, the beloved physician’ — KJV Colossians 4:14 (app/data/bibles/kjv/51.json); also Philemon 24, 2 Timothy 4:11",
+   "Luke, companion of Paul, recorded the Gospel Paul preached — Irenaeus, Against Heresies 3.1.1 (https://www.newadvent.org/fathers/0103301.htm)",
+   "Third Gospel ‘according to Luke’; Luke had not seen the Lord in the flesh; Acts by Luke for Theophilus — Muratorian fragment, tr. Metzger (https://www.earlychristianwritings.com/text/muratorian-metzger.html)",
+   "Critical opinion assessed as roughly evenly divided near the end of the 20th century on Luke the physician as author — Wikipedia, Authorship of Luke–Acts, citing Raymond E. Brown, An Introduction to the New Testament (1997), 267–68 (https://en.wikipedia.org/wiki/Authorship_of_Luke%E2%80%93Acts)",
+   "Same author for Luke and Acts — same article, citing Udo Schnelle, The History and Theology of the New Testament Writings, 259",
+   "Tradition names Luke; many propose AD 80–90 — NABRE introduction to Luke (https://www.bible.com/bible/463/LUK.INTRO1.NABRE)",
+   "Conservative date c. AD 62; Luke a physician and companion of Paul — ESV Global Study Bible, Introduction to Luke (https://www.esv.org/resources/esv-global-study-bible/introduction-to-luke/)"
+  ]
+ },
+ "John": {
+  "author": "Author uncertain; ‘the disciple whom Jesus loved’ (21:20–24); traditionally John the apostle",
+  "authorNote": "The Gospel does not name its writer, but it closes by saying that ‘the disciple whom Jesus loved’ (21:20) ‘wrote these things’ (21:24, KJV). Irenaeus said John, the Lord’s disciple who leaned on his breast, published it at Ephesus, and tradition identifies him as John the son of Zebedee; most modern scholars find that the evidence does not support this, and some, such as Martin Hengel and Richard Bauckham, credit it to John the elder, whom Papias mentions. Many also see later editing, with chapter 21 added after the Gospel was finished.",
+  "date": "c. AD 70–100",
+  "written": [
+   70,
+   100
+  ],
+  "sources": [
+   "‘the disciple whom Jesus loved’; ‘wrote these things’ — KJV John 21:20, 21:24 (also 13:23, 19:26, 20:2, 21:7) (app/data/bibles/kjv/43.json)",
+   "John, the Lord’s disciple who leaned on his breast, published his Gospel at Ephesus — Irenaeus, Against Heresies 3.1.1 (https://www.newadvent.org/fathers/0103301.htm)",
+   "Papias names a second John, the presbyter (elder), apart from the apostle — Eusebius, Church History 3.39.4–6 (https://www.newadvent.org/fathers/250103.htm)",
+   "Tradition identified the author as John son of Zebedee; most modern scholars find the evidence does not support this; rests on an eyewitness; later editing, chapter 21 added; final form AD 90–100 — NABRE introduction to John (https://www.bible.com/bible/463/JHN.INTRO1.NABRE)",
+   "Hengel (The Johannine Question, 1989) identifies Papias’s John the elder with the beloved disciple and author, as a composite figure blending him with John son of Zebedee; Bauckham (The Testimony of the Beloved Disciple, 2007) develops it; a minority view — Michael Kok, Bible and Interpretation (2017), and web search summary of reviews incl. https://bibleinterp.arizona.edu/node/3117",
+   "Conservative view: John son of Zebedee, AD 70–100, Ephesus — ESV Global Study Bible, Introduction to John (https://www.esv.org/resources/esv-global-study-bible/introduction-to-john/)"
+  ]
+ },
+ "Acts": {
+  "author": "Author uncertain; the writer of Luke (1:1); traditionally Luke, Paul’s companion",
+  "authorNote": "Acts does not name its writer, but it begins by recalling ‘The former treatise’ written for Theophilus (1:1, KJV), so it comes from the writer of Luke, and some passages are told as ‘we’ (from 16:10). The Muratorian fragment and later tradition name Luke. Critical scholars have been roughly evenly divided on whether Paul’s companion Luke wrote it, reading the ‘we’ passages either as an eyewitness’s or as a source or literary device.",
+  "date": "c. AD 62–90",
+  "written": [
+   62,
+   90
+  ],
+  "sources": [
+   "‘The former treatise’ to Theophilus; ‘we’ from 16:10 — KJV Acts 1:1, 16:10 (app/data/bibles/kjv/44.json)",
+   "Acts compiled by Luke for Theophilus — Muratorian fragment, tr. Metzger (https://www.earlychristianwritings.com/text/muratorian-metzger.html)",
+   "Critical opinion assessed as roughly evenly divided near the end of the 20th century; ‘we’ passages read as eyewitness (Campbell), an earlier source (Sterling), or a rhetorical device (Robbins) — Wikipedia, Authorship of Luke–Acts, citing Brown, An Introduction to the New Testament (1997), 267–68, and Campbell (2007) (https://en.wikipedia.org/wiki/Authorship_of_Luke%E2%80%93Acts)",
+   "Acts is the second volume of Luke’s work; date: see Luke (AD 80–90) — NABRE introduction to Acts (https://www.bible.com/bible/463/ACT.INTRO1.NABRE)",
+   "Conservative date c. AD 62 (Acts ends with Paul under house arrest) — ESV Global Study Bible, Introduction to Acts (https://www.esv.org/resources/esv-global-study-bible/introduction-to-acts/)"
+  ]
+ },
+ "Romans": {
+  "author": "Paul (named in 1:1)",
+  "authorNote": "Paul names himself in 1:1, and Tertius, who wrote the letter down for him, adds his own greeting in 16:22. It is one of the seven letters that scholars almost universally accept as Paul’s own, and early Christian writers treated it as undisputed.",
+  "date": "c. AD 60, from Corinth (Ussher); others c. AD 57",
+  "written": [
+   60,
+   60
+  ],
+  "sources": [
+   "Paul named in 1:1 — KJV, app/data/bibles/kjv/45.json 1:1",
+   "Tertius wrote the letter down — KJV, app/data/bibles/kjv/45.json 16:22",
+   "One of the seven undisputed letters, almost universally accepted — Wikipedia, ‘Authorship of the Pauline epistles’ (lead: ‘rarely contested’; ‘Undisputed epistles’: ‘few scholars argue against this list of seven’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Joshua Schachterle, ‘How many books did Paul write?’ (bartehrman.com, 2025), https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "Early church treated Paul’s letters as undisputed (Hebrews excepted) — Eusebius, Church History 3.3.5, https://www.newadvent.org/fathers/250103.htm; Romans in the Muratorian fragment’s list — tr. Bruce M. Metzger, The Canon of the New Testament (1987), app. IV, https://www.earlychristianwritings.com/text/muratorian-metzger.html"
+  ]
+ },
+ "1 Corinthians": {
+  "author": "Paul (named in 1:1, with Sosthenes)",
+  "authorNote": "Paul names himself with Sosthenes in 1:1 and writes the closing greeting in his own hand (16:21). It is one of the seven letters that scholars almost universally accept as Paul’s own; Clement of Rome, writing to Corinth near the end of the 1st century, already directs the church to Paul’s letter.",
+  "date": "c. AD 59, from Ephesus (Ussher); others c. AD 53–55",
+  "written": [
+   59,
+   59
+  ],
+  "sources": [
+   "Paul and Sosthenes named in 1:1 — KJV, app/data/bibles/kjv/46.json 1:1",
+   "Greeting in Paul’s own hand — KJV, app/data/bibles/kjv/46.json 16:21",
+   "One of the seven undisputed letters — Wikipedia, ‘Authorship of the Pauline epistles’ (lead; ‘Undisputed epistles’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Schachterle, bartehrman.com/how-many-books-did-paul-write/",
+   "Clement of Rome points Corinth to Paul’s epistle — 1 Clement 47 (‘Take up the epistle of the blessed Apostle Paul’), https://www.newadvent.org/fathers/1010.htm; 1 Clement ‘written around the end of the 1st century’ and quotes 1 Corinthians — Wikipedia, ‘Authorship of the Pauline epistles’ (Language and style; History of the Pauline canon)"
+  ]
+ },
+ "2 Corinthians": {
+  "author": "Paul (named in 1:1, with Timothy)",
+  "authorNote": "Paul names himself with Timothy in 1:1. It is one of the seven letters that scholars almost universally accept as Paul’s own, and early Christian writers treated Paul’s letters as undisputed.",
+  "date": "c. AD 60, from Macedonia (Ussher); others c. AD 55–56",
+  "written": [
+   60,
+   60
+  ],
+  "sources": [
+   "Paul and Timothy named in 1:1 — KJV, app/data/bibles/kjv/47.json 1:1",
+   "One of the seven undisputed letters — Wikipedia, ‘Authorship of the Pauline epistles’ (lead; ‘Undisputed epistles’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "Paul’s letters undisputed in the early church — Eusebius, Church History 3.3.5, https://www.newadvent.org/fathers/250103.htm"
+  ]
+ },
+ "Galatians": {
+  "author": "Paul (named in 1:1)",
+  "authorNote": "Paul names himself in 1:1 and notes that he writes with his own hand (6:11). It is one of the seven letters that scholars almost universally accept as Paul’s own.",
+  "date": "c. AD 58 (Ussher); others c. AD 48–55",
+  "written": [
+   58,
+   58
+  ],
+  "sources": [
+   "Paul named in 1:1; own hand — KJV, app/data/bibles/kjv/48.json 1:1 and 6:11",
+   "One of the seven undisputed letters — Wikipedia, ‘Authorship of the Pauline epistles’ (lead; ‘Undisputed epistles’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "Galatians in the Muratorian list — tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html"
+  ]
+ },
+ "Ephesians": {
+  "author": "Paul (named in 1:1); authorship widely disputed",
+  "authorNote": "Paul names himself in 1:1 and writes as a prisoner (3:1), and the early church received the letter as his. Most critical scholars judge that a follower wrote it in Paul’s name after his death, on grounds of style and theology, while many evangelical scholars hold that Paul wrote it.",
+  "date": "c. AD 64, from prison in Rome (Ussher); others c. AD 60–62; if by a later follower, c. AD 80–100",
+  "written": [
+   64,
+   64
+  ],
+  "sources": [
+   "Paul named in 1:1; writes as prisoner — KJV, app/data/bibles/kjv/49.json 1:1 and 3:1",
+   "Received as Paul’s in the early church — Muratorian fragment (‘to the Ephesians second’), tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html; Eusebius, Church History 3.3.5, https://www.newadvent.org/fathers/250103.htm",
+   "Most critical scholars regard it as pseudepigraphical — Wikipedia, ‘Authorship of the Pauline epistles’ (lead, note 1), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Kümmel’s arguments ‘have persuaded most scholars to consider Ephesians to be deutero-Pauline’ — earlychristianwritings.com/ephesians.html (citing W. G. Kümmel, Introduction to the New Testament, pp. 358–361)",
+   "Grounds of style and theology — Wikipedia, ‘Authorship of the Pauline epistles’ (Language and style); R. Heard, quoted at https://earlychristianwritings.com/ephesians.html (‘another thinker on Pauline foundations’)",
+   "Prominent evangelical scholars hold Paul wrote it — Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "If not Paul, c. 80–100 — Kümmel, Introduction to the New Testament, p. 366 (‘sometime between 80 and 100’), quoted at https://earlychristianwritings.com/ephesians.html"
+  ]
+ },
+ "Philippians": {
+  "author": "Paul (named in 1:1, with Timothy)",
+  "authorNote": "Paul names himself with Timothy in 1:1 and writes from imprisonment (1:13). It is one of the seven letters that scholars almost universally accept as Paul’s own, and Polycarp of Smyrna, writing to the same church, recalls that Paul wrote to them.",
+  "date": "c. AD 64, from prison in Rome (Ussher); others c. AD 60–62",
+  "written": [
+   64,
+   64
+  ],
+  "sources": [
+   "Paul and Timothy (Timotheus) named in 1:1; bonds — KJV, app/data/bibles/kjv/50.json 1:1 and 1:13",
+   "One of the seven undisputed letters — Wikipedia, ‘Authorship of the Pauline epistles’ (lead; ‘Undisputed epistles’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "Polycarp recalls Paul wrote to the Philippians — Polycarp, To the Philippians 3 (‘when absent from you, he wrote you a letter’), https://www.newadvent.org/fathers/0136.htm"
+  ]
+ },
+ "Colossians": {
+  "author": "Paul (named in 1:1, with Timothy); authorship widely disputed",
+  "authorNote": "Paul names himself with Timothy in 1:1 and writes the closing greeting in his own hand (4:18), and the early church received the letter as his. Scholars are sharply divided: many judge that a follower wrote it after Paul’s death, on grounds of vocabulary, style and theology, while others hold that Paul wrote it, and some, such as James Dunn, suggest that Timothy wrote it on Paul’s behalf while Paul was still alive.",
+  "date": "c. AD 64, from prison in Rome (Ussher); others c. AD 60–62; if by a later follower, c. AD 70–80",
+  "written": [
+   64,
+   64
+  ],
+  "sources": [
+   "Paul and Timothy (Timotheus) named in 1:1; own-hand salutation (‘The salutation by the hand of me Paul’) — KJV, app/data/bibles/kjv/51.json 1:1 and 4:18",
+   "Received as Paul’s — Muratorian fragment (‘to the Colossians fourth’), tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html; Eusebius, Church History 3.3.5",
+   "About 60% of critical scholarship holds Paul did not write it — Raymond E. Brown, An Introduction to the New Testament, p. 610, quoted at https://earlychristianwritings.com/colossians.html",
+   "Roughly even split on Colossians and 2 Thessalonians — James D. G. Dunn (2006), p. 13 n. 39, cited in Wikipedia, ‘Second Epistle to the Thessalonians’ (Authorship), https://en.wikipedia.org/wiki/Second_Epistle_to_the_Thessalonians; Wikipedia, ‘Authorship of the Pauline epistles’ (lead: ‘Scholarly opinion is sharply divided on whether or not Colossians and 2 Thessalonians are genuine’)",
+   "Grounds: vocabulary, style, theology — Brown, Introduction, pp. 610–615, summarised at https://earlychristianwritings.com/colossians.html",
+   "Defended as Paul’s — W. G. Kümmel, Introduction to the New Testament, pp. 342–345, quoted at https://earlychristianwritings.com/colossians.html",
+   "Dunn: Timothy the principal writer, with Paul’s approval, within Paul’s lifetime — Ken Schenck on Dunn, NIGTC Colossians and Philemon, https://kenschenck.blogspot.com/2020/07/epistles-to-colossians-and-to-philemon-8.html; Dunn p. 38 on an amanuensis, ‘possibly Timothy’ — Wikipedia, ‘Epistle to the Colossians’ (Authorship), https://en.wikipedia.org/wiki/Epistle_to_the_Colossians",
+   "If Deutero-Pauline, ‘between AD 70 (Gnilka) and AD 80 (Lohse)’ — New Jerome Biblical Commentary, as quoted in Wikipedia, ‘Epistle to the Colossians’ (Authorship); 2011 survey of 109 scholars: 56 for, 17 against, 36 uncertain — same article"
+  ]
+ },
+ "1 Thessalonians": {
+  "author": "Paul (named in 1:1, with Silvanus and Timothy)",
+  "authorNote": "Paul names himself with Silvanus (Silas) and Timothy in 1:1. It is one of the seven letters that scholars almost universally accept as Paul’s own.",
+  "date": "c. AD 54, from Corinth (Ussher); others c. AD 50–51; one of the earliest NT books",
+  "written": [
+   54,
+   54
+  ],
+  "sources": [
+   "Paul, Silvanus and Timotheus named in 1:1 — KJV, app/data/bibles/kjv/52.json 1:1",
+   "Silas also called Silvanus — Easton’s Bible Dictionary entry ‘Silas’ in app/data/people.json (id 2740, aka Silvanus)",
+   "One of the seven undisputed letters — Wikipedia, ‘Authorship of the Pauline epistles’ (lead; ‘Undisputed epistles’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/"
+  ]
+ },
+ "2 Thessalonians": {
+  "author": "Paul (named in 1:1, with Silvanus and Timothy); authorship widely disputed",
+  "authorNote": "Paul names himself with Silvanus (Silas) and Timothy in 1:1 and stresses his own signature (3:17), and the early church received the letter as his. Scholars are roughly evenly divided: some see a later follower adapting 1 Thessalonians to a new situation, partly because its teaching on Christ’s coming differs from the first letter’s, while others hold that Paul wrote it.",
+  "date": "c. AD 54, from Corinth (Ussher); others c. AD 51; if by a later follower, late 1st century",
+  "written": [
+   54,
+   54
+  ],
+  "sources": [
+   "Paul, Silvanus and Timotheus named in 1:1; signature as token in every epistle — KJV, app/data/bibles/kjv/53.json 1:1 and 3:17",
+   "Received early: in Marcion’s canon and the Muratorian fragment; named by Irenaeus — Wikipedia, ‘Second Epistle to the Thessalonians’ (Authorship, citing Guthrie 1990, p. 593), https://en.wikipedia.org/wiki/Second_Epistle_to_the_Thessalonians",
+   "Roughly even split — Dunn (2006) p. 13 n. 39, cited ibid.; 2011 BNTC survey 63 for, 13 against, 35 uncertain — P. Foster, ‘Who Wrote 2 Thessalonians? A Fresh Look at an Old Problem’, JSNT 35 (2012) 150–175, as reported ibid.; Leon Morris (1986): most scholars then held to Paul’s authorship — ibid.",
+   "Later imitation of 1 Thessalonians for a later situation — Norman Perrin, The New Testament: An Introduction, pp. 119–120, quoted at https://earlychristianwritings.com/2thessalonians.html; differing Second Coming teaching — B. D. Ehrman, Forged (2011), pp. 121–122, cited in Wikipedia ibid.",
+   "Case for Paul ‘appears strong’ — Foster, JSNT 35 (2012), conclusion as quoted in search results for the article (article itself not opened; not relied on for the final wording)",
+   "If pseudonymous, end of the first century — Brown, Introduction, p. 595, cited in Wikipedia ibid.; Menken (2002) 80–115, cited ibid."
+  ]
+ },
+ "1 Timothy": {
+  "author": "Paul (named in 1:1); authorship widely disputed",
+  "authorNote": "Paul is named in 1:1, and from Irenaeus (c. 180) onwards the church received the three Pastoral letters (1 and 2 Timothy, Titus) as his, though Marcion’s collection (c. 140) left them out. Doubts were raised in the early 19th century, and most critical scholars now judge them the work of a later follower writing in Paul’s name, on grounds of vocabulary, style and church order; others, such as Carson and Moo, defend Paul’s authorship, some allowing for a secretary.",
+  "date": "c. AD 65 (Ussher); others c. AD 62–64; if by a later follower, late 1st to mid 2nd century",
+  "written": [
+   65,
+   65
+  ],
+  "sources": [
+   "Paul named in 1:1 — KJV, app/data/bibles/kjv/54.json 1:1",
+   "Irenaeus cites the epistles to Timothy (and Titus 3:10) as Paul’s — Irenaeus, Against Heresies 3.3.3–4, https://www.newadvent.org/fathers/0103303.htm; Against Heresies c. 180 — Wikipedia, ‘Pastoral epistles’, https://en.wikipedia.org/wiki/Pastoral_epistles",
+   "Marcion rejected the two to Timothy and the one to Titus — Tertullian, Against Marcion 5.21, https://www.newadvent.org/fathers/03125.htm; Marcion’s canon c. 140 — https://earlychristianwritings.com/1timothy.html",
+   "Muratorian fragment lists ‘one to Titus, and two to Timothy’ — tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html",
+   "Scholars have argued against Paul since Schleiermacher (1807); ‘typically regarded as pseudepigrapha’ — Wikipedia, ‘Pastoral epistles’ (Pauline authorship); most critical scholars today — Wikipedia, ‘Authorship of the Pauline epistles’ (lead, note 1); Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "Grounds: vocabulary, literary style, the apostle’s situation, emergent Catholicism — Norman Perrin, The New Testament: An Introduction, pp. 264–265, quoted at https://earlychristianwritings.com/1timothy.html; the three ‘treat of ecclesiastical discipline’ — Tertullian, Against Marcion 5.21",
+   "Carson and Moo defend Pauline authorship (‘careful reflection on the literary genre supports apostolic authorship’) — D. A. Carson and D. J. Moo, An Introduction to the New Testament, as quoted at christianapologeticsalliance.com (4 July 2015); Porter and Van Neste also defend it — Wikipedia, ‘Pastoral epistles’",
+   "‘Some scholars have proposed that Paul may have used an amanuensis, or secretary, in writing the disputed letters’ — Wikipedia, ‘Authorship of the Pauline epistles’ (lead, citing E. Randolph Richards, Paul and First-Century Letter Writing, 2004)",
+   "If not Paul, late 1st to mid 2nd century — Wikipedia, ‘Pastoral epistles’ (Pauline authorship: ‘late 1st-century CE to the mid 2nd-century CE’)"
+  ]
+ },
+ "2 Timothy": {
+  "author": "Paul (named in 1:1); authorship widely disputed",
+  "authorNote": "Paul is named in 1:1, and from Irenaeus (c. 180) onwards the church received the three Pastoral letters (1 and 2 Timothy, Titus) as his, though Marcion’s collection (c. 140) left them out. Doubts were raised in the early 19th century, and most critical scholars now judge them the work of a later follower writing in Paul’s name, on grounds of vocabulary, style and church order; others, such as Carson and Moo, defend Paul’s authorship, some allowing for a secretary.",
+  "date": "c. AD 64–67, from prison in Rome; if by a later follower, late 1st to mid 2nd century",
+  "written": [
+   64,
+   67
+  ],
+  "sources": [
+   "Paul named in 1:1; prisoner, in Rome, departure at hand — KJV, app/data/bibles/kjv/55.json 1:1, 1:8, 1:17, 4:6",
+   "Irenaeus: ‘Of this Linus, Paul makes mention in the Epistles to Timothy’ — Against Heresies 3.3.3, https://www.newadvent.org/fathers/0103303.htm",
+   "Marcion rejected the Pastorals — Tertullian, Against Marcion 5.21, https://www.newadvent.org/fathers/03125.htm",
+   "Muratorian fragment lists ‘two to Timothy’ — tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html",
+   "Majority critical view, grounds, defenders, secretary and later dating — as for 1 Timothy: Wikipedia, ‘Pastoral epistles’ and ‘Authorship of the Pauline epistles’ (lead, citing Richards 2004 for the secretary); Perrin pp. 264–265 via earlychristianwritings.com/1timothy.html; Carson and Moo as quoted at christianapologeticsalliance.com (4 July 2015)"
+  ]
+ },
+ "Titus": {
+  "author": "Paul (named in 1:1); authorship widely disputed",
+  "authorNote": "Paul is named in 1:1, and from Irenaeus (c. 180) onwards the church received the three Pastoral letters (1 and 2 Timothy, Titus) as his, though Marcion’s collection (c. 140) left them out. Doubts were raised in the early 19th century, and most critical scholars now judge them the work of a later follower writing in Paul’s name, on grounds of vocabulary, style and church order; others, such as Carson and Moo, defend Paul’s authorship, some allowing for a secretary.",
+  "date": "c. AD 65 (Ussher); others c. AD 62–64; if by a later follower, late 1st to mid 2nd century",
+  "written": [
+   65,
+   65
+  ],
+  "sources": [
+   "Paul named in 1:1 — KJV, app/data/bibles/kjv/56.json 1:1",
+   "Irenaeus quotes Titus 3:10 as Paul’s — Against Heresies 3.3.4, https://www.newadvent.org/fathers/0103303.htm",
+   "Marcion rejected ‘the one to Titus’ — Tertullian, Against Marcion 5.21, https://www.newadvent.org/fathers/03125.htm",
+   "Muratorian fragment lists ‘one to Titus’ — tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html",
+   "Majority critical view, grounds, defenders, secretary and later dating — as for 1 Timothy: Wikipedia, ‘Pastoral epistles’ and ‘Authorship of the Pauline epistles’ (lead, citing Richards 2004 for the secretary); Perrin pp. 264–265 via earlychristianwritings.com/1timothy.html; Carson and Moo as quoted at christianapologeticsalliance.com (4 July 2015)"
+  ]
+ },
+ "Philemon": {
+  "author": "Paul (named in verse 1, with Timothy)",
+  "authorNote": "Paul names himself with Timothy in verse 1 and writes his promise to repay in his own hand (verse 19). It is one of the seven letters that scholars almost universally accept as Paul’s own, and Marcion’s collection of Paul’s letters (c. 140) already included it.",
+  "date": "c. AD 64, from prison in Rome (Ussher); others c. AD 60–62",
+  "written": [
+   64,
+   64
+  ],
+  "sources": [
+   "Paul and Timothy named in verse 1; own hand in verse 19 (‘I Paul have written it with mine own hand, I will repay it’) — KJV, app/data/bibles/kjv/57.json 1:1 and 1:19",
+   "One of the seven undisputed letters — Wikipedia, ‘Authorship of the Pauline epistles’ (lead; ‘Undisputed epistles’), https://en.wikipedia.org/wiki/Authorship_of_the_Pauline_epistles; Schachterle, https://www.bartehrman.com/how-many-books-did-paul-write/",
+   "Marcion received it — Tertullian, Against Marcion 5.21 (‘To this epistle alone did its brevity avail to protect it...’; ‘he received (into his Apostolicon) this letter’), https://www.newadvent.org/fathers/03125.htm; Marcion’s canon c. 140 — https://earlychristianwritings.com/1timothy.html; Gamble on Marcion’s collection ending with Philemon — Wikipedia, ‘Authorship of the Pauline epistles’",
+   "Muratorian fragment lists ‘one to Philemon’ — tr. Metzger, https://www.earlychristianwritings.com/text/muratorian-metzger.html"
+  ]
+ },
+ "Hebrews": {
+  "author": "Author uncertain; traditionally Paul; also proposed: Barnabas, Apollos, Luke, Priscilla",
+  "authorNote": "The letter names no writer; the KJV title calls it Paul’s, but the oldest manuscripts head it simply ‘To Hebrews’. The Eastern church, from Clement of Alexandria and Origen, received it as Paul’s, though Origen judged that only God knows who wrote it; Tertullian named Barnabas, others Luke or Clement of Rome, and later Luther proposed Apollos and Harnack Priscilla. Most modern scholars doubt Paul wrote it, citing its polished Greek and the writer’s dependence on those who heard the Lord (2:3), and no alternative has won agreement.",
+  "date": "Before c. AD 96 (1 Clement probably cites it); many date it before AD 70",
+  "written": [
+   60,
+   96
+  ],
+  "sources": [
+   "No name in the text; writer depends on those that heard the Lord; Timothy mentioned — KJV Hebrews 2:3, 13:23–24 (app/data/bibles/kjv/58.json)",
+   "KJV title ‘the Epistle of Paul the Apostle to the Hebrews’; oldest manuscripts simply ‘To Hebrews’ — ISBE, ‘Epistle to the Hebrews’ (https://bible-history.com/linkpage/epistle-to-the-hebrews-in-the-bible-encyclopedia-isbe), via web search",
+   "Clement of Alexandria: Paul wrote in Hebrew, Luke translated; name omitted — Eusebius, Church History 6.14.2–3 (https://www.newadvent.org/fathers/250106.htm)",
+   "Origen: purer Greek than Paul’s; thoughts Paul’s, wording another’s; ‘who wrote the epistle, in truth, God knows’; some say Clement of Rome, some Luke — Eusebius, Church History 6.25.11–14 (same URL)",
+   "Tertullian: an Epistle to the Hebrews under the name of Barnabas — Tertullian, On Modesty 20 (https://www.newadvent.org/fathers/0407.htm)",
+   "Luther proposed Apollos; Harnack defended Priscilla; Pauline authorship should be rejected (no self-naming, style, 2:3); no theory has won the day — Thomas R. Schreiner, Hebrews (Evangelical Biblical Theology Commentary, 2021), excerpt at https://www.logos.com/grow/who-wrote-hebrews/",
+   "Harnack, ZNW 1900 (Priscilla); Clement of Rome via Hippolytus and Origen — Wikipedia, Authorship of the Epistle to the Hebrews (https://en.wikipedia.org/wiki/Authorship_of_the_Epistle_to_the_Hebrews)",
+   "Anonymous; Alexandria accepted it as Paul’s by the end of the 2nd century, common in the East; West contested it into the 4th century; modern consensus that Paul did not write it; Barnabas, Apollos, Priscilla and Aquila proposed without agreement; 1 Clement (c. AD 96) most probably cites it; many hold a pre-70 date — NABRE introduction to Hebrews (https://bible.usccb.org/bible/hebrews/0)",
+   "Author unknown; probably before AD 70 — ESV Global Study Bible, Introduction to Hebrews (https://www.esv.org/resources/esv-global-study-bible/introduction-to-hebrews/)"
+  ]
+ },
+ "James": {
+  "author": "James (named in 1:1), traditionally the Lord’s brother; authorship widely disputed",
+  "authorNote": "The writer calls himself ‘James, a servant of God and of the Lord Jesus Christ’ (1:1, KJV); tradition identifies him as James the Lord’s brother, leader of the church in Jerusalem, who died in AD 62. Eusebius records that the letter was disputed in the early church, since not many of the ancients mention it. Modern scholars are divided: some defend James as the writer (perhaps with a secretary), some see his teaching edited later, and others a later writer using his name.",
+  "date": "c. AD 40–62 if by James; many scholars c. AD 90–100",
+  "written": [
+   40,
+   100
+  ],
+  "sources": [
+   "‘James, a servant of God and of the Lord Jesus Christ’ — KJV James 1:1 (app/data/bibles/kjv/59.json); ‘James the Lord’s brother’ — KJV Galatians 1:19",
+   "James’s letter disputed; not many of the ancients mention it — Eusebius, Church History 2.23.25 (https://www.newadvent.org/fathers/250102.htm); listed among disputed books, 3.25.3 (https://www.newadvent.org/fathers/250103.htm)",
+   "Defenders (Mayor, Adamson, Bauckham) date it before James’s death in AD 62; mixed view (Martin, Davids, Painter): his tradition edited after 70; pseudonymous view (Dibelius): late 1st or 2nd century — New Catholic Encyclopedia, ‘James, Epistle of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/james-epistle)",
+   "James of Jerusalem may be the author, perhaps with a secretary; others see a later pseudonymous work; many recent interpreters date it AD 90–100 — NABRE introduction to James (https://www.bible.com/bible/463/JAS.INTRO1.NABRE)",
+   "Conservative date c. AD 40–45; James leader of the Jerusalem church — ESV Global Study Bible, Introduction to James (https://www.esv.org/resources/esv-global-study-bible/introduction-to-james/)"
+  ]
+ },
+ "1 Peter": {
+  "author": "Peter (named in 1:1); authorship widely disputed",
+  "authorNote": "The letter names ‘Peter, an apostle of Jesus Christ’ (1:1, KJV) and says it was written ‘By Silvanus’ (5:12), from ‘Babylon’ (5:13), traditionally read as Rome. Its authorship was never challenged in antiquity, and from Irenaeus on the church accepted it as Peter’s. Many modern scholars think it was written in Peter’s name after his death, citing its polished Greek, while others hold that Peter wrote it, perhaps with Silvanus shaping the wording.",
+  "date": "c. AD 64–67 if by Peter; many scholars c. AD 70–90",
+  "written": [
+   64,
+   90
+  ],
+  "sources": [
+   "‘Peter, an apostle of Jesus Christ’; ‘By Silvanus’; ‘Babylon’ — KJV 1 Peter 1:1, 5:12, 5:13 (app/data/bibles/kjv/60.json)",
+   "Written in Rome, called Babylon figuratively (reported as ‘they say’) — Eusebius, Church History 2.15.2 (https://www.newadvent.org/fathers/250102.htm)",
+   "Peter left one acknowledged epistle — Origen in Eusebius, Church History 6.25.8 (https://www.newadvent.org/fathers/250106.htm)",
+   "Never challenged in antiquity; debated today; critics cite polished Greek, Septuagint use, Pauline parallels; defenders cite Silvanus; many (Elliott, Brown) see a pseudonymous work of the 80s — New Catholic Encyclopedia, ‘Peter, Epistles of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/peter-epistles)",
+   "From Irenaeus the church held Peter as author; traditional date 64–67; critical late 1st or early 2nd century; middle view a Petrine group in Rome c. 70–90; Silvanus may have shaped the wording — NABRE introduction to 1 Peter (https://bible.usccb.org/bible/1peter/0)",
+   "Most critical scholars opt for pseudonymity — Word & World 24/4, ‘First Peter in Recent Study’ (https://wordandworld.luthersem.edu/wp-content/uploads/pdfs/24-4_First_Peter/First%20Peter%20in%20Recent%20Study.pdf), via web search"
+  ]
+ },
+ "2 Peter": {
+  "author": "Peter (named in 1:1); authorship widely disputed",
+  "authorNote": "The letter names ‘Simon Peter, a servant and an apostle of Jesus Christ’ (1:1, KJV) and recalls the voice heard at the transfiguration (1:16–18). It was slow to be accepted: Origen, its first certain witness, called a second letter of Peter doubtful, and Eusebius listed it among the disputed books. Most modern scholars see it as written in Peter’s name, probably in the early second century, though some still defend Peter’s authorship.",
+  "date": "c. AD 64–67 if by Peter; many scholars c. AD 100–150",
+  "written": [
+   64,
+   150
+  ],
+  "sources": [
+   "‘Simon Peter, a servant and an apostle of Jesus Christ’; voice from the excellent glory; ‘This second epistle’ — KJV 2 Peter 1:1, 1:16–18, 3:1 (app/data/bibles/kjv/61.json)",
+   "Origen: ‘perhaps also a second, but this is doubtful’ — Eusebius, Church History 6.25.8 (https://www.newadvent.org/fathers/250106.htm)",
+   "Second epistle of Peter among the disputed books — Eusebius, Church History 3.25.3 (https://www.newadvent.org/fathers/250103.htm)",
+   "Wide agreement that 2 Peter is pseudonymous; oldest certain reference Origen; dated to the first or second quarter of the 2nd century — NABRE introduction to 2 Peter (https://bible.usccb.org/bible/2peter/0)",
+   "General willingness to see it as pseudepigraphical; Bauckham places it in Rome at the turn of the century — New Catholic Encyclopedia, ‘Peter, Epistles of’ (https://www.encyclopedia.com/religion/encyclopedias-almanacs-transcripts-and-maps/peter-epistles)",
+   "Traditional view still defended: Peter, AD 64–67 — ESV Global Study Bible, Introduction to 2 Peter (https://www.esv.org/resources/esv-global-study-bible/introduction-to-2-peter/)"
+  ]
+ },
+ "1 John": {
+  "author": "Author uncertain; traditionally John the apostle; from the same circle as John’s Gospel",
+  "authorNote": "The letter does not name its writer; it opens with eyewitness language about ‘the Word of life’ (1:1, KJV). Tradition credited it to John the apostle, and Eusebius counted it, with the Gospel, among the undisputed books. Many modern scholars, without naming a writer, see it as coming from the same Johannine circle as the Gospel.",
+  "date": "c. AD 85–95",
+  "written": [
+   85,
+   95
+  ],
+  "sources": [
+   "No name in the text; ‘the Word of life’ — KJV 1 John 1:1 (app/data/bibles/kjv/62.json)",
+   "John’s Gospel and first epistle accepted without dispute — Eusebius, Church History 3.24.17 (https://www.newadvent.org/fathers/250103.htm)",
+   "Early tradition identified it as a letter of John the apostle; same school of Johannine Christianity as the Gospel; toward the end of the first century — NABRE introduction to 1 John (https://www.bible.com/bible/463/1JN.INTRO1.NABRE)"
+  ]
+ },
+ "2 John": {
+  "author": "Author uncertain; ‘the elder’ (1:1); traditionally John the apostle; some say John the elder",
+  "authorNote": "The writer calls himself only ‘The elder’ (1:1, KJV). Tradition credits the letter to John the apostle, but Eusebius listed it among the disputed books, unsure whether it was by the evangelist or another of the same name, and Papias mentions a John the elder besides the apostle. Many modern scholars think it comes from a disciple in the apostle’s circle, and the elder’s identity remains uncertain.",
+  "date": "c. AD 85–95",
+  "written": [
+   85,
+   95
+  ],
+  "sources": [
+   "‘The elder unto the elect lady’ — KJV 2 John 1:1 (app/data/bibles/kjv/63.json)",
+   "2 and 3 John disputed: whether by the evangelist or another person of the same name — Eusebius, Church History 3.25.3 (https://www.newadvent.org/fathers/250103.htm)",
+   "Papias’s second John, the presbyter — Eusebius, Church History 3.39.4–6 (same URL)",
+   "Origen: ‘perhaps also a second and third; but not all consider them genuine’ — Eusebius, Church History 6.25.10 (https://www.newadvent.org/fathers/250106.htm)",
+   "Traditionally attributed to John the apostle, probably by a disciple or scribe of an apostle; identity of the Presbyter problematic; Ephesus, end of the first century plausible — NABRE introduction to 2 John (https://www.bible.com/bible/463/2JN.INTRO1.NABRE)"
+  ]
+ },
+ "3 John": {
+  "author": "Author uncertain; ‘the elder’ (1:1); traditionally John the apostle; some say John the elder",
+  "authorNote": "The writer calls himself only ‘The elder’, writing to Gaius (1:1, KJV). Tradition credits the letter to John the apostle, but Eusebius listed it among the disputed books, unsure whether it was by the evangelist or another of the same name, and Papias mentions a John the elder besides the apostle. Many modern scholars think it comes from a disciple in the apostle’s circle, and the elder’s identity remains uncertain.",
+  "date": "c. AD 85–95",
+  "written": [
+   85,
+   95
+  ],
+  "sources": [
+   "‘The elder unto the wellbeloved Gaius’ — KJV 3 John 1:1 (app/data/bibles/kjv/64.json)",
+   "2 and 3 John disputed: evangelist or another of the same name — Eusebius, Church History 3.25.3 (https://www.newadvent.org/fathers/250103.htm)",
+   "Papias’s John the presbyter — Eusebius, Church History 3.39.4–6 (same URL)",
+   "Probably by a disciple or scribe of an apostle; identity problematic; Ephesus, end of first century plausible — NABRE introduction to 2–3 John (https://www.bible.com/bible/463/2JN.INTRO1.NABRE)"
+  ]
+ },
+ "Jude": {
+  "author": "Jude (named in 1:1), traditionally the Lord’s brother; authorship widely disputed",
+  "authorNote": "The writer calls himself ‘Jude, the servant of Jesus Christ, and brother of James’ (1:1, KJV), and he is generally identified as the Juda named among Jesus’ brothers (Mark 6:3), not one of the Twelve. Eusebius records that the letter was disputed in the early church. Many modern scholars see it as written in his name at the end of the first century or later, while others find their arguments not compelling and think Jude himself could have written it.",
+  "date": "c. AD 65–80 if by Jude; many scholars c. AD 90 or later",
+  "written": [
+   65,
+   100
+  ],
+  "sources": [
+   "‘Jude, the servant of Jesus Christ, and brother of James’ — KJV Jude 1:1 (app/data/bibles/kjv/65.json); ‘Juda’ among Jesus’ brothers — KJV Mark 6:3 (app/data/bibles/kjv/41.json)",
+   "Jude’s letter disputed, like James’s — Eusebius, Church History 2.23.25 (https://www.newadvent.org/fathers/250102.htm); among disputed books, 3.25.3 (https://www.newadvent.org/fathers/250103.htm)",
+   "‘Almost certainly the other Jude, named in the gospels among the relatives of Jesus’, not one of the Twelve; many interpreters today consider it pseudonymous, from the end of the first century or even later; arguments ‘not entirely compelling’, c. AD 80 possible — NABRE introduction to Jude (https://www.bible.com/bible/463/JUD.INTRO1.NABRE)",
+   "Conservative view: Jude, brother of James and Jesus, mid-60s — ESV Global Study Bible, Introduction to Jude (https://www.esv.org/resources/esv-global-study-bible/introduction-to-jude/)"
+  ]
+ },
+ "Revelation": {
+  "author": "John (named in 1:1); traditionally the apostle; which John is disputed",
+  "authorNote": "The writer names himself John, on ‘the isle that is called Patmos’ (1:9, KJV), but never claims to be an apostle. Justin Martyr and Irenaeus identified him as John the apostle; Dionysius of Alexandria, quoted by Eusebius, argued from its Greek and style that it was another John, and Eusebius suggested John the elder, known to Papias. Many modern scholars doubt that he also wrote the Fourth Gospel.",
+  "date": "c. AD 95–96 (late in Domitian’s reign); some date it before AD 70",
+  "written": [
+   95,
+   96
+  ],
+  "sources": [
+   "‘unto his servant John’; ‘the isle that is called Patmos’ — KJV Revelation 1:1, 1:4, 1:9, 22:8 (app/data/bibles/kjv/66.json)",
+   "Justin: John, one of the apostles of Christ, received the revelation — Justin Martyr, Dialogue with Trypho 81 (https://www.newadvent.org/fathers/01286.htm)",
+   "Seen towards the end of Domitian’s reign — Irenaeus, Against Heresies 5.30.3 (https://www.newadvent.org/fathers/0103530.htm)",
+   "Dionysius: a holy man named John, but not the apostle who wrote the Gospel and epistle; style, language, two tombs at Ephesus — Eusebius, Church History 7.25.7–26 (https://www.newadvent.org/fathers/250107.htm)",
+   "Eusebius: the second John (the presbyter) may have seen the Revelation — Church History 3.39.6 (https://www.newadvent.org/fathers/250103.htm); its acceptance divided, 3.24.18, 3.25.2–4",
+   "Never claims to be the apostle; Justin and Irenaeus identified him with the apostle, Eusebius and others denied it; style makes it doubtful he wrote the Fourth Gospel; near the end of Domitian’s reign (81–96) — NABRE introduction to Revelation (https://www.bible.com/bible/463/REV.INTRO1.NABRE)",
+   "Usually dated to Domitian’s last years; ‘Some researchers have attempted to date Revelation as early as the late 60s’ (Robinson, Bernier); a pre-70 date is a minority view (e.g. Gentry, Before Jerusalem Fell) — Michael F. Bird, ‘Dating the Book of Revelation’ (https://michaelfbird.substack.com/p/dating-the-book-of-revelation-apocalypse), with web search summary"
+  ]
+ }
+}

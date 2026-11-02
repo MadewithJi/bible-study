@@ -1783,7 +1783,7 @@ function spanText(w) {
   if (a >= 0) return `c. AD ${a}–${z}`;
   return `c. ${-a} BC – AD ${z}`;
 }
-function timelineSVG(events, { era = null, written = null, eventIds = [], markLabel = 'This chapter' } = {}) {
+function timelineSVG(events, { era = null, written = null, writtenLabel = 'Written', eventIds = [], markLabel = 'This chapter' } = {}) {
   const W = 388, H = 124, X0 = -2100, X1 = 100;
   era = isYear(era) ? +era : null;
   written = Array.isArray(written) && isYear(written[0]) ? [+written[0], isYear(written[1]) ? +written[1] : +written[0]].sort((a, z) => a - z) : null;
@@ -1797,7 +1797,7 @@ function timelineSVG(events, { era = null, written = null, eventIds = [], markLa
   const mark = String(markLabel || 'This chapter');
   const ariaParts = [];
   if (era !== null) ariaParts.push(`${mark.toLowerCase()} c. ${yearLabel(era)}`);
-  if (written) ariaParts.push(`written ${spanText(written)}`);
+  if (written) ariaParts.push(`${String(writtenLabel).toLowerCase()} ${spanText(written)}`);
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc('Timeline' + (ariaParts.length ? ': ' + ariaParts.join('; ') : ''))}">`;
   // Context bar: all of Bible history, with the zoom window bracketed.
   ERAS.forEach((e, i) => { s += `<rect class="tl-e${i % 2}" x="${f1(fx(e[0]))}" y="6" width="${f1(Math.max(0.5, fx(e[1]) - fx(e[0]) - 0.8))}" height="6" rx="1.5"/>`; });
@@ -1867,20 +1867,21 @@ function timelineSVG(events, { era = null, written = null, eventIds = [], markLa
       if (z - a < 2) { a = mid - 1; z = mid + 1; }
       s += `<path class="tl-wr" d="M${f1(a)} 60v6.5M${f1(a)} 63.25H${f1(z)}M${f1(z)} 60v6.5"/>`;
     } else mid = written[0] > w1 ? W : 0; // outside the window: park the label at that edge
-    labels.push({ x: mid, t: 'Written', s: spanText(written) });
+    labels.push({ x: mid, t: String(writtenLabel), s: spanText(written) });   // 'Written' or 'Traditionally written'
   }
   if (era !== null) {
     const x = zx(era);
     s += `<line class="tl-mk-line" x1="${f1(x)}" y1="40" x2="${f1(x)}" y2="66"/><circle class="tl-mk" cx="${f1(x)}" cy="66.5" r="4.5"/>`;
     labels.unshift({ x, t: mark, s: 'c. ' + yearLabel(era) });
   }
-  // Labels: at least 96px apart, kept off the edges.
+  // Labels: at least 96px apart (more when a label is wider, 'Traditionally written'), kept off the edges.
   const half = l => Math.max(40, Math.max(l.t.length * 6.3, l.s.length * 5.8) / 2 + 6);
   labels.forEach(l => { l.x = clamp(l.x, half(l), W - half(l)); });
-  if (labels.length === 2 && Math.abs(labels[0].x - labels[1].x) < 96) {
+  const gap = labels.length === 2 ? Math.max(96, half(labels[0]) + half(labels[1])) : 0;
+  if (labels.length === 2 && Math.abs(labels[0].x - labels[1].x) < gap) {
     const [lo, hi] = labels[0].x <= labels[1].x ? labels : [labels[1], labels[0]];
     const mid = (lo.x + hi.x) / 2;
-    lo.x = mid - 48; hi.x = mid + 48;
+    lo.x = mid - gap / 2; hi.x = mid + gap / 2;
     if (lo.x < half(lo)) { hi.x += half(lo) - lo.x; lo.x = half(lo); }
     if (hi.x > W - half(hi)) { lo.x -= hi.x - (W - half(hi)); hi.x = W - half(hi); }
   }
@@ -1892,11 +1893,11 @@ function tlTip(bk) {
   const show = bk.list.slice(0, 3), more = bk.list.length - show.length;
   return show.map(ev => `<div class="tt">${esc(ev.t)}</div>`).join('') + `<div class="tm">${esc(yearLabel(bk.y))}${more > 0 ? ` · ${fmt(more)} more` : ''}</div>`;
 }
-export async function renderTimeline(host, { era = null, written = null, eventIds = [], markLabel = 'This chapter' } = {}) {
+export async function renderTimeline(host, { era = null, written = null, writtenLabel = 'Written', eventIds = [], markLabel = 'This chapter' } = {}) {
   if (!host) return;
   let events = {};
   try { events = await data.events(); } catch (e) { events = {}; }
-  const { svg, buckets } = timelineSVG(events, { era, written, eventIds, markLabel });
+  const { svg, buckets } = timelineSVG(events, { era, written, writtenLabel, eventIds, markLabel });
   host.innerHTML = svg;
   const stamp = Math.random().toString(36).slice(2, 7);
   host.onpointermove = e => {
