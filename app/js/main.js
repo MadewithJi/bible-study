@@ -1516,9 +1516,20 @@ function bindProfileEvents() {
 /** Vercel Web Analytics (open-signup brief §2): page views, visitors, referrers and countries, without cookies. On the
  *  production site only, never locally, on a preview deployment or in a dry run. */
 const PROD_HOSTS = new Set(['www.biblelantern.com', 'biblelantern.com']);
+/** The owner's opt-out: open any page with ?va-disable=1 and this browser's visits stop being recorded (kept in
+ *  localStorage as 'va-disable', the key Vercel's docs use); ?va-disable=0 records them again. */
+function analyticsOptedOut() {
+  try {
+    const flag = new URLSearchParams(location.search).get('va-disable');
+    if (flag === '1') localStorage.setItem('va-disable', '1');
+    if (flag === '0') localStorage.removeItem('va-disable');
+    return !!localStorage.getItem('va-disable');
+  } catch (e) { return false; }
+}
 function loadAnalytics() {
   // never inside the iOS app either (ios-brief §3: no tracking there)
   if (DRY || !PROD_HOSTS.has(location.hostname) || document.documentElement.classList.contains('app-shell') || document.querySelector('script[src="/_vercel/insights/script.js"]')) return;
+  if (analyticsOptedOut()) return;
   const s = document.createElement('script');
   s.defer = true; s.src = '/_vercel/insights/script.js';
   document.head.appendChild(s);
