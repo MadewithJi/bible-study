@@ -6354,5 +6354,32 @@ class T99_Hygiene(Base):
         self.assertNotIn("Traceback", log, "no unhandled server errors")
 
 
+class T33_BootSavers(unittest.TestCase):
+    """main.js boot(): the savers (tracker, links, marks, memory) start exactly once, whenever the server answers.
+    They used to start under `if (landed)` before the first paint or `if (!landed)` after it, each reading 'landed'
+    afresh: an answer arriving while the chapter was drawn (seen every time under headless virtual time, rendering
+    the promo film) matched neither, so the selection bubble, links, tracker and memory never came up."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(os.path.join(REPO, "app", "js", "main.js"), encoding="utf-8") as f:
+            src = f.read()
+        start = src.index("async function boot()")
+        cls.boot = src[start:src.index("\n}\n", start)]
+
+    def test_savers_start_once_whatever_the_order(self):
+        b = self.boot
+        m = re.search(r"const initSavers = \(\) => \{ if \((\w+)\) return; \1 = true; ", b)
+        self.assertIsNotNone(m, "initSavers guards itself so a second call does nothing")
+        self.assertIn(f"let {m.group(1)} = false;", b)
+        snap = re.search(r"const (\w+) = landed;\n\s*if \(\1\) initSavers\(\);", b)
+        self.assertIsNotNone(snap, "the early start keys on a snapshot of 'landed' taken before the first paint")
+        early = snap.group(1)
+        late = re.search(r"if \(!" + early + r"\) \{[^}]*?await authP; initSavers\(\);", b)
+        self.assertIsNotNone(late, "the late branch runs exactly when the early start did not, from the same snapshot")
+        self.assertLess(snap.end(), late.start())
+        self.assertEqual(b.count("initSavers()"), 2, "started only from these two places")
+        self.assertNotRegex(b, r"if \(!?landed\) (\{|initSavers)", "no branch re-reads 'landed' after the awaits")
+
 if __name__ == "__main__":
     unittest.main(verbosity=int(os.environ.get("BS_TEST_VERBOSITY", "1")) if "-v" not in sys.argv else 2)
