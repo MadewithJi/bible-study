@@ -167,6 +167,41 @@ Don’t copy the `notes/` folder onto the volume: on the site its guest files ca
 
 **ESV and NLT on the site.** The owner sets the keys in Settings (⚙) on the site, just as locally. They are kept on the Railway volume (`/data/config.json`), never in the repo.
 
+## Weekly devotional
+
+A free weekly email compiled from the owner's week of study: the notes, highlights, links and studies made on the site, with the verses quoted word for word from the BSB. Readers sign up at `/weeklydevotional` (double opt-in: a confirmation link is mailed first). Each week the server compiles a draft and mails a preview to the owner; nothing goes out until the owner approves it, from the review link in that mail or from Profile → Weekly devotional. Emails are sent through Resend. The list lives in `DATA/devotional/subscribers.json` and the issues in `DATA/devotional/issues/`.
+
+**Variables** (Railway; all optional, and with none set the server behaves as today, except that `/weeklydevotional` is served and the owner tools work without email)
+
+| Variable | Default | What |
+|---|---|---|
+| `BS_RESEND_KEY` | unset | Resend API key. Unset: the list is **not open**: the page says “Sign-ups open soon”, subscribe answers 503 `not_open`, nothing is ever sent. Validated like `BS_APIBIBLE_KEY` (no whitespace or control characters) |
+| `BS_RESEND_URL` | `https://api.resend.com` | the tests’ fake Resend |
+| `BS_DEVOTIONAL_FROM` | `Bible Lantern <devotional@biblelantern.com>` | the From header. Must parse as `Name <local@domain>` or `local@domain` |
+| `BS_DEVOTIONAL_REPLY_TO` | `hello@biblelantern.com` | Reply-To |
+| `BS_DEVOTIONAL_SITE` | `https://www.biblelantern.com` | the public origin used in links inside emails (confirm, unsubscribe, verse links `#b/c/v`, the review page) |
+| `BS_DEVOTIONAL_AUTHOR` | first address of `BS_OWNER_EMAILS` | the profile whose week is compiled: the profile that holds the owner claim for that address. No such profile: compile fails with `no_author`, logged `[devotional] no author profile` |
+| `BS_DEVOTIONAL_TZ` | `America/Los_Angeles` | the local calendar for weeks and the schedule (an unknown name is ignored with a warning) |
+| `BS_DEVOTIONAL_COMPILE` | `sat 06:00` | when the week is compiled and the preview mailed to the author: `<mon…sun> HH:MM` local. `off` disables the scheduler (the owner’s Compile now still works) |
+| `BS_DEVOTIONAL_SEND` | `sun 07:00` | when an **approved** issue goes out. `now` sends on approval |
+| `BS_DEVOTIONAL_MAX` | 20000 | most confirmed subscribers; past it, subscribe answers 503 `list_full` |
+| `BS_ANTHROPIC_KEY` | unset | with it, the Claude API stitches the draft from the week’s notes. Unset: the deterministic layout |
+| `BS_ANTHROPIC_URL` | `https://api.anthropic.com` | the tests’ fake Claude |
+| `BS_ANTHROPIC_MODEL` | `claude-opus-5-5` | the model id (no date suffix) |
+| `BS_DEVOTIONAL_ADDRESS` | unset | an optional postal line for the email footer. US CAN-SPAM asks a sender of commercial mail for a postal address: set it before the list opens |
+
+**Setting up Resend (once)**
+
+1. Create a Resend account and, under Domains, add `biblelantern.com`.
+2. Add the DNS records Resend shows you at the domain’s registrar: the DKIM TXT (or CNAME) records, the SPF TXT record for the sending subdomain, and, if you want bounces and complaints handled, the MX record for it. Wait for Resend to show the domain as verified.
+3. Under API Keys, create a key with sending access only, and set it on the Railway api service as `BS_RESEND_KEY`. Railway redeploys; from then on `/weeklydevotional` takes sign-ups and `/api/devotional/config` answers `open: true`.
+4. Check `BS_DEVOTIONAL_FROM` and `BS_DEVOTIONAL_REPLY_TO` match the verified domain, and set `BS_DEVOTIONAL_ADDRESS` (a postal line for the footer).
+5. Sign up with your own address on `/weeklydevotional`, confirm from the mail, then in Profile → Weekly devotional choose **Send me a test** on a compiled issue to see the real thing in your inbox.
+
+**Each week.** On the compile day (`BS_DEVOTIONAL_COMPILE`, Saturday 06:00 Los Angeles by default) the server gathers the week’s study from the author profile, lays it out (stitched with Claude when `BS_ANTHROPIC_KEY` is set, else in the fixed order), and mails the owner a preview with a review link. **Approve**, **Skip** or **Send me a test** from that link (no sign-in needed) or from the Profile dialog; an approved issue goes out at `BS_DEVOTIONAL_SEND` (Sunday 07:00 by default, or at once with `now`). Compile this week in the Profile dialog compiles on demand. A week with nothing in it makes an `empty` issue and sends nothing. Sending goes 100 readers a batch, with progress written after every batch; the unsubscribe link in an issue is the reader’s own and keeps working after later issues go out; a batch Resend refuses (a malformed address) is sent again in halves, and after any other failure the scheduler tries again ten minutes later, up to six runs, then closes the issue and tells the owner how many readers it reached (`failed` on the card is the rest).
+
+**Locally.** With no `BS_RESEND_KEY`, `/weeklydevotional` shows “Sign-ups open soon” and no mail is ever sent; the owner tools in the Profile dialog still compile and preview an issue (open the preview in a tab). Tests use a fake Resend and a fake Claude (`BS_RESEND_URL`, `BS_ANTHROPIC_URL`) and never a real key.
+
 ## Rebuilding the data
 
 `app/data/` is generated by `build.py` from the sources below (downloaded into `raw/` on first run):

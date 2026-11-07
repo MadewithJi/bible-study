@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly devotional · 8–14 November 2026 · Bible Lantern</title>
+<style>
+  body { margin: 0; background: #0b0b0c; font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1d1d1f; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 600px; margin: 0 auto; }
+  .hero { position: relative; height: 560px; overflow: hidden; background: #000; }
+  .hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; filter: contrast(1.05) brightness(.92); }
+  .hero .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,.2) 55%, rgba(0,0,0,.92) 100%); }
+  .hero .top { position: absolute; top: 26px; left: 40px; right: 40px; display: flex; justify-content: space-between; align-items: center; color: rgba(255,255,255,.82); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+  .hero .top b { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 14px; }
+  .hero .top svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .hero .title { position: absolute; left: 40px; right: 40px; bottom: 44px; color: #fff; }
+  .hero .kicker { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #e3c56e; margin: 0 0 10px; }
+  .hero h1 { font: 600 54px/1.02 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.03em; margin: 0 0 14px; }
+  .hero .week { font-size: 15px; color: rgba(255,255,255,.78); margin: 0; }
+  .hero .cred { position: absolute; right: 40px; bottom: 16px; font-size: 11px; color: rgba(255,255,255,.45); letter-spacing: .02em; }
+
+  .paper { background: #f5f3ee; padding: 44px 40px 32px; }
+  .lede { font: 22px/1.45 "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; color: #1d1d1f; margin: 0 0 26px; }
+  .lede::first-letter { font-size: 64px; line-height: .8; float: left; padding: 8px 10px 0 0; color: #b8912f; font-weight: 600; }
+  p { margin: 0 0 14px; }
+
+  .pull { margin: 34px -40px; padding: 42px 40px; background: #1d1d1f; color: #f5f3ee; }
+  .pull p { font: 400 30px/1.3 "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; margin: 0 0 14px; letter-spacing: -.01em; }
+  .pull cite { font-style: normal; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #e3c56e; }
+
+  .sec { margin-top: 36px; }
+  .sec .n { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #b8912f; margin: 0 0 6px; }
+  .sec h2 { font: 600 24px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.02em; margin: 0 0 16px; }
+  .verse { margin: 14px 0 16px; padding: 2px 0 2px 18px; border-left: 3px solid #c9a24a; }
+  .verse p { font: 20px/1.5 "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; margin: 0 0 6px; }
+  .verse cite { font-style: normal; font-size: 13px; color: #515154; }
+  .verse cite a { color: #0071e3; text-decoration: none; }
+  .hl { background: linear-gradient(transparent 55%, rgba(255, 214, 10, .6) 55%); }
+  .note { position: relative; margin: 16px 0 0; padding: 14px 18px 14px 44px; background: #fff; border-radius: 12px; font-size: 16px; }
+  .note::before { content: "✎"; position: absolute; left: 16px; top: 12px; color: #b8912f; font-size: 16px; }
+  .note .who { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8a8a8e; margin: 0 0 4px; }
+
+  /* Connections: the week's arcs across the Bible, as in the app */
+  .conn { margin: 40px -40px 0; padding: 30px 40px 26px; background: #111113; color: #f5f3ee; }
+  .conn .n { color: #e3c56e; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 4px; }
+  .conn h2 { font: 600 24px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: -.02em; margin: 0 0 4px; }
+  .conn .sub { color: rgba(255,255,255,.6); font-size: 14px; margin: 0 0 14px; }
+  .conn svg { display: block; width: 100%; height: auto; }
+  .thread { margin: 18px 0 0; padding: 0; list-style: none; }
+  .thread li { position: relative; padding: 0 0 16px 26px; }
+  .thread li::before { content: ""; position: absolute; left: 6px; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: #e3c56e; box-shadow: 0 0 0 3px #111113; }
+  .thread li::after { content: ""; position: absolute; left: 10px; top: 18px; bottom: -4px; width: 1px; background: rgba(227,197,110,.35); }
+  .thread li:last-child::after { display: none; }
+  .thread b { font-weight: 600; color: #fff; }
+  .thread .t { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: rgba(255,255,255,.1); color: #e3c56e; vertical-align: 1px; }
+  .thread small { display: block; color: rgba(255,255,255,.62); font-size: 14px; margin-top: 2px; }
+
+  .plate { margin: 40px -40px 0; position: relative; height: 300px; overflow: hidden; }
+  .plate img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  .plate figcaption { position: absolute; left: 40px; bottom: 14px; color: #fff; font-size: 13px; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+  .plate figcaption b { display: block; font-size: 16px; font-weight: 600; }
+
+  .q { margin: 34px 0 0; padding: 22px 24px; background: #fff; border-radius: 14px; border: 1px solid rgba(0,0,0,.06); }
+  .q .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #b8912f; margin: 0 0 8px; }
+  .q p { margin: 0 0 12px; font-size: 18px; }
+  .q a.btn { display: inline-block; padding: 10px 18px; border-radius: 999px; background: #1d1d1f; color: #fff; text-decoration: none; font-weight: 600; font-size: 15px; }
+
+  .foot { margin-top: 34px; padding-top: 18px; border-top: 1px solid rgba(0,0,0,.12); font-size: 13px; line-height: 1.6; color: #8a8a8e; }
+  .foot a { color: #515154; }
+  .tag { display: block; font-size: 12px; color: #8a8a8e; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <img src="../../app/data/art/dore-214.jpg" alt="The Crucifixion, Gustave Doré">
+    <div class="shade"></div>
+    <div class="top"><b><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 4.6a1.8 1.8 0 013.6 0"/><path d="M8.3 7.4l1.2-2.8h5l1.2 2.8"/><rect x="6.9" y="7.4" width="10.2" height="11.1" rx="2.6"/><path d="M8.6 21h6.8"/><path d="M12 18.5V21"/><path d="M12 10.3v6.2M9.8 12.4h4.4"/></svg>Bible Lantern</b><span>Weekly devotional · No. 1</span></div>
+    <div class="title">
+      <p class="kicker">8–14 November 2026</p>
+      <h1>Loved first</h1>
+      <p class="week">John 3 · Romans 5 · 1 John 4 · 6 chapters, 4 notes, 3 connections</p>
+    </div>
+    <div class="cred">The Crucifixion · Gustave Doré, 1866</div>
+  </div>
+
+  <div class="paper">
+    <p class="lede">I spent most of this week in John 3, and kept being pulled back to one word: <em>gave</em>. Before anything is asked of us, something is given. By Friday the same thread had run through Romans 5 and 1 John 4, so this week’s notes are really about one thing.</p>
+
+    <div class="pull">
+      <p>We love because He first loved us.</p>
+      <cite>1 John 4:19 · BSB</cite>
+    </div>
+
+    <div class="sec">
+      <p class="n">I · John 3</p>
+      <h2>The giving comes first</h2>
+      <div class="verse"><p>For God so loved the world that He gave His one and only Son, that everyone who believes in Him shall not perish but have eternal life.</p><cite><a href="#">John 3:16</a> · BSB</cite></div>
+      <p>I have read this verse my whole life and never slowed down on the order of it. Loved, then gave, then believes. The believing comes third. Everything I do is a response to something already done.</p>
+      <div class="verse"><p>For God did not send His Son into the world to condemn the world, but to save the world through Him.</p><cite><a href="#">John 3:17</a> · BSB</cite></div>
+      <div class="note"><p class="who">Highlight · 1 John 4:10</p><span class="hl">not that we loved God, but that He loved us</span> — the direction matters. It runs toward us first.</div>
+    </div>
+
+    <div class="sec">
+      <p class="n">II · Romans 5</p>
+      <h2>While we were still</h2>
+      <div class="verse"><p>But God proves His love for us in this: While we were still sinners, Christ died for us.</p><cite><a href="#">Romans 5:8</a> · BSB</cite></div>
+      <p>“While we were still.” Not after we had cleaned up. The same order as John 3: the gift lands in the middle of the mess, not at the end of it. I linked this one back to John 3:16, and it is hard to read either without the other now.</p>
+    </div>
+
+    <div class="conn">
+      <p class="n">This week’s connections</p>
+      <h2>One thread, four books</h2>
+      <p class="sub">The verses this week linked, drawn across the whole Bible, Genesis to Revelation, as in the app.</p>
+      <svg viewBox="0 0 520 150" xmlns="http://www.w3.org/2000/svg" aria-label="Arcs between Isaiah 53, John 3, Romans 5 and 1 John 4">
+        <defs>
+          <linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#e3c56e" stop-opacity=".95"/><stop offset="1" stop-color="#e3c56e" stop-opacity=".45"/></linearGradient>
+        </defs>
+        <!-- 66 book cells: OT 39 (left), NT 27 (right) -->
+        <g fill="rgba(255,255,255,.14)">
+          <rect x="0" y="116" width="305" height="4" rx="2"/>
+          <rect x="311" y="116" width="209" height="4" rx="2"/>
+        </g>
+        <!-- books touched -->
+        <rect x="176" y="112" width="8" height="12" rx="2" fill="#e3c56e"/>   <!-- Isaiah -->
+        <rect x="334" y="112" width="8" height="12" rx="2" fill="#e3c56e"/>   <!-- John -->
+        <rect x="350" y="112" width="8" height="12" rx="2" fill="#e3c56e"/>   <!-- Romans -->
+        <rect x="480" y="112" width="8" height="12" rx="2" fill="#e3c56e"/>   <!-- 1 John -->
+        <!-- arcs -->
+        <path d="M180 114 C 180 20, 338 20, 338 114" fill="none" stroke="url(#g)" stroke-width="1.6"/>
+        <path d="M338 114 C 338 78, 354 78, 354 114" fill="none" stroke="#e3c56e" stroke-width="1.6" opacity=".9"/>
+        <path d="M338 114 C 338 10, 484 10, 484 114" fill="none" stroke="url(#g)" stroke-width="1.6"/>
+        <path d="M354 114 C 354 40, 484 40, 484 114" fill="none" stroke="url(#g)" stroke-width="1.2" opacity=".7"/>
+        <g font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="rgba(255,255,255,.7)">
+          <text x="0" y="140">Genesis</text>
+          <text x="180" y="140" text-anchor="middle" fill="#e3c56e">Isaiah 53</text>
+          <text x="338" y="140" text-anchor="end" fill="#e3c56e">John 3</text>
+          <text x="362" y="140" fill="#e3c56e">Rom 5</text>
+          <text x="484" y="140" text-anchor="middle" fill="#e3c56e">1 John 4</text>
+          <text x="520" y="106" text-anchor="end">Revelation</text>
+        </g>
+      </svg>
+      <ul class="thread">
+        <li><b>John 3:16</b> → <b>Romans 5:8</b><span class="t">same thought</span><small>the gift precedes the response</small></li>
+        <li><b>Romans 5:8</b> → <b>Isaiah 53:5</b><span class="t">fulfils</span><small>what the giving cost</small></li>
+        <li><b>John 3:16</b> → <b>1 John 4:19</b><span class="t">echo</span><small>loved first, so we love</small></li>
+      </ul>
+    </div>
+
+    <figure class="plate" style="margin-left:-40px;margin-right:-40px">
+      <img src="../../app/data/art/dore-123.jpg" alt="The Prophet Isaiah, Gustave Doré">
+      <figcaption><b>The Prophet Isaiah</b>Gustave Doré · Isaiah 53:5 · “by His stripes we are healed”</figcaption>
+    </figure>
+
+    <div class="sec">
+      <p class="n">III · 1 John 4</p>
+      <h2>Because</h2>
+      <div class="verse"><p>And love consists in this: not that we loved God, but that He loved us and sent His Son as the atoning sacrifice for our sins.</p><cite><a href="#">1 John 4:10</a> · BSB</cite></div>
+      <p>Six words in verse 19 settle the whole week. The “because” carries all of it. My love for God, for my family, for the people who are hard to love, is not the source. It is the echo.</p>
+      <p>If you take one thing from this week, take the order: loved, given, believed, and only then, loving. It is a relief to find myself third on that list.</p>
+    </div>
+
+    <div class="q"><p class="lbl">For your notes</p><p>Where in your own week did the giving come before the asking? Write it down, and link it to the verse it reminds you of.</p><a class="btn" href="#">Open 1 John 4 in Bible Lantern</a></div>
+
+    <div class="foot">
+      <p>You asked for this at biblelantern.com. One email a week, read and approved by Ji before it is sent.<br>
+      <a href="#">Unsubscribe</a> · <a href="#">Privacy</a> · <a href="#">Read on the web</a></p>
+      <p>Scripture quotations are from the Berean Standard Bible, public domain. Engravings by Gustave Doré (1866), public domain. The notes are the writer’s own and are not part of the text of Scripture.</p>
+      <span class="tag">Mock-up: the reflections are sample text in the devotional’s voice, not Ji’s notes. The verses are the app’s BSB text, word for word.</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

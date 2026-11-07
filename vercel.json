@@ -23,6 +23,7 @@
   ],
   "rewrites": [
     { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/weeklydevotional", "destination": "/weeklydevotional.html" },
     { "source": "/favicon.ico", "destination": "/icons/favicon-32.png" },
     { "source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*" }
   ],

@@ -23,6 +23,7 @@ DATA = PROFILES = DELETED = USERS = SESSIONS = None
 AUTH_LOCKFILE = SERVER_LOCKFILE = GUEST_NOTES = GUEST_LIBRARY = GUEST_LINKS = GUEST_MARKS = GUEST_MEMORY = None
 CONFIG = CACHE = None
 OWNER_CLAIMS = None
+DEVOTIONAL_LOCKFILE = None
 PORT = 8765
 ALLOWED_HOSTS = ()
 MAX_USERS = 50
@@ -34,7 +35,7 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     global DATA, PROFILES, DELETED, USERS, SESSIONS, AUTH_LOCKFILE, SERVER_LOCKFILE
     global GUEST_NOTES, GUEST_LIBRARY, GUEST_LINKS, GUEST_MARKS, GUEST_MEMORY, CONFIG, CACHE, PORT, ALLOWED_HOSTS
     global MAX_USERS, COOKIE
-    global OWNER_CLAIMS
+    global OWNER_CLAIMS, DEVOTIONAL_LOCKFILE
     DATA = os.path.realpath(os.path.expanduser(data_dir))
     PROFILES = os.path.join(DATA, "profiles")
     DELETED = os.path.join(DATA, "deleted")
@@ -50,6 +51,7 @@ def configure(data_dir, port=8765, allowed_hosts=(), max_users=50):
     CONFIG = os.path.join(DATA, "config.json")
     CACHE = os.path.join(DATA, "cache")
     OWNER_CLAIMS = os.path.join(DATA, "owner-claims.json")
+    DEVOTIONAL_LOCKFILE = os.path.join(DATA, ".devotional.lock")
     PORT = int(port)
     ALLOWED_HOSTS = tuple(h.strip().lower() for h in (allowed_hosts or ()) if h and h.strip())
     MAX_USERS = int(max_users)
@@ -522,30 +524,50 @@ DELETED_UIDS = set()
 
 
 @contextmanager
-def auth_lock():
-    """Process RLock plus fcntl.flock on DATA/.auth.lock (so the CLI and the server serialise)."""
-    with _AUTH_RLOCK:
-        if _auth_state["depth"] == 0:
+def _file_rlock(rlock, state, lockfile):
+    """A process RLock plus fcntl.flock on `lockfile` (so the CLI and the server serialise), re-entrant per thread."""
+    with rlock:
+        if state["depth"] == 0:
             os.makedirs(DATA, exist_ok=True)
-            fd = os.open(AUTH_LOCKFILE, os.O_RDWR | os.O_CREAT, 0o600)
+            fd = os.open(lockfile, os.O_RDWR | os.O_CREAT, 0o600)
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX)
             except BaseException:
                 os.close(fd)
                 raise
-            _auth_state["fd"] = fd
-        _auth_state["depth"] += 1
+            state["fd"] = fd
+        state["depth"] += 1
         try:
             yield
         finally:
-            _auth_state["depth"] -= 1
-            if _auth_state["depth"] == 0:
-                fd = _auth_state["fd"]
-                _auth_state["fd"] = None
+            state["depth"] -= 1
+            if state["depth"] == 0:
+                fd = state["fd"]
+                state["fd"] = None
                 try:
                     fcntl.flock(fd, fcntl.LOCK_UN)
                 finally:
                     os.close(fd)
+
+
+@contextmanager
+def auth_lock():
+    """Process RLock plus fcntl.flock on DATA/.auth.lock (so the CLI and the server serialise)."""
+    with _file_rlock(_AUTH_RLOCK, _auth_state, AUTH_LOCKFILE):
+        yield
+
+
+_DEVO_RLOCK = threading.RLock()
+_devo_state = {"depth": 0, "fd": None}
+
+
+@contextmanager
+def devotional_lock():
+    """The weekly devotional's lock (devotional brief §2): DATA/devotional/subscribers.json and issues/*.json are read
+    and written only under it. Lock order: auth_lock -> devotional_lock -> lock_for(scope) (the compiler reads the
+    author's files under the scope lock while holding this one; nothing takes the auth lock inside it)."""
+    with _file_rlock(_DEVO_RLOCK, _devo_state, DEVOTIONAL_LOCKFILE):
+        yield
 
 
 def lock_for(scope):
