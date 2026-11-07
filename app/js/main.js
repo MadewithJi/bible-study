@@ -1581,8 +1581,14 @@ async function boot() {
   bindChrome(); bindTranslations(); bindPicker(); buildPicker(); bindSettings(); bindDialogs(); bindToast(); bindSheetDrag(); bindKeyboard();
   bindSearchResults(); bindResume(); bindProfileEvents();
   initAccountUI(A); libCall('initLibrary', A); bindNotesLifecycle();
-  const initSavers = () => { trkCall('initTracker', A); lnkCall('initLinks', A); mrkCall('initMarks', A); memCall('initMemory', A); }; // their scope is who is studying
-  if (landed) initSavers();
+  // their scope is who is studying. Started exactly once: here when the server answered before the first paint,
+  // otherwise in the late branch below. That branch keys on this moment's answer, not on 'landed' read again after
+  // the awaits: an answer arriving while the chapter is drawn would otherwise start neither (the selection bubble,
+  // links, tracker and memory never came up under headless virtual time).
+  let saversUp = false;
+  const initSavers = () => { if (saversUp) return; saversUp = true; trkCall('initTracker', A); lnkCall('initLinks', A); mrkCall('initMarks', A); memCall('initMemory', A); };
+  const landedEarly = landed;
+  if (landedEarly) initSavers();
   // the address bar always names the chapter shown: a clamped hash ('#99/99/99'), a resumed position or a bare URL
   syncDrawer(); updateBar(); updateHash(); renderPanel();
 
@@ -1597,7 +1603,7 @@ async function boot() {
   if (!state.home && state.selected && layoutMode() === 'side') { state.drawerTab = 'xref'; openDrawer({}); }
   onScroll();
   try { sessionStorage.removeItem('bs-boot-retry'); } catch (e) { /* ignore */ } // index.html's load-failure retry
-  if (!landed) {
+  if (!landedEarly) {
     // the server answered after the first paint (or could not): the account button, then the notes, highlights,
     // links and bookmarks over the text that is already there
     await authP; initSavers(); renderAccountButton();
