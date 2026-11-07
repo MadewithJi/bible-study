@@ -38,6 +38,13 @@ BS_PROFILE_QUOTA_MB (default 25) and a free-space guard bound what strangers can
 feed GET /api/admin/traffic (owners only, 404 for anyone else) and '[alert]' lines on stderr.
 The donation link (.design/donate-brief.md): GET or HEAD /donate and /support answer 302 to BS_DONATE_URL (default
 https://buymeacoffee.com/biblelantern), never a permanent redirect, so it can be re-pointed without changing a link.
+Weekly devotional (.design/devotional-brief.md, devotional.py): /weeklydevotional is the sign-up page; public
+GET /api/devotional/config, POST /api/devotional/subscribe, GET|POST /api/devotional/confirm|unsubscribe?t= and the
+review page GET|POST /api/devotional/review?t=; owner-only (hosted; locally any signed-in profile) GET /api/devotional/admin,
+POST /api/devotional/compile, GET|PATCH /api/devotional/issues/{id}, GET …/{id}/html, POST …/{id}/approve|send-now|skip|test,
+GET /api/devotional/subscribers.csv. BS_RESEND_KEY opens the list (BS_RESEND_URL for tests), BS_DEVOTIONAL_FROM/REPLY_TO/
+SITE/AUTHOR/TZ/COMPILE/SEND/MAX/ADDRESS shape the mail and the schedule, BS_ANTHROPIC_KEY/URL/MODEL stitch the draft;
+a daemon thread compiles, sends and prunes on that schedule (DATA/devotional/).
 Data layout (DATA = --data-dir, default notes/): notes.json, guest-library.json, guest-links.json, guest-marks.json
 and guest-memory.json (guest), config.json, cache/ (cache/apibible/: bibles.json, usage.json), users.json,
 sessions.json (hashed tokens only), profiles/<uid>/{notes,library,links,marks,memory}.json, deleted/, owner-claims.json
@@ -51,6 +58,7 @@ from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 import accounts as A
+import devotional as D
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.join(HERE, "app")
@@ -775,6 +783,8 @@ MEMORY_WINDOW = Window(300, 60)     # per scope
 UPSTREAM_WINDOW = Window(50, 60)    # ESV/NLT API calls, per translation (ESV throttles a key past 60 a minute)
 APIBIBLE_CLIENT_WINDOW = Window(30, 600)  # API.Bible calls (cache misses) per client, hosted: no one spends the month
 IMPORT_WINDOW = Window(30, 60)      # profile imports, per scope
+DEVO_WINDOW = Window(10, 3600)      # devotional sign-ups, per visitor and email (devotional brief §3)
+DEVO_SITE_WINDOW = Window(100, 3600)  # devotional sign-ups, the whole site
 # Hosted or behind a proxy, AUTH_WINDOW and SIGNUP_WINDOW count per client (Handler._client_key: the address, and on
 # the site also who the attempt is about), so one client cannot lock everyone else out of signing in; these count
 # every client together, as a backstop (an X-Forwarded-For address can be made up).
@@ -809,6 +819,35 @@ HOST_NAME_RE = re.compile(r"(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z
 ORIGIN_RE = re.compile(r"https?://[a-z0-9.-]+(:[0-9]{1,5})?", re.ASCII)
 PORT_SUFFIX = re.compile(r":[0-9]{1,5}\Z")
 HEALTH = "/api/health"
+# ----------------------------------------------------------------- weekly devotional (.design/devotional-brief.md §1)
+RESEND_KEY = ""                        # BS_RESEND_KEY: unset, the list is not open and nothing is ever sent
+RESEND_DEFAULT_URL = "https://api.resend.com"
+RESEND_URL = RESEND_DEFAULT_URL        # BS_RESEND_URL (the tests' fake Resend)
+DEVO_FROM_DEFAULT = "Bible Lantern <devotional@biblelantern.com>"
+DEVO_FROM = DEVO_FROM_DEFAULT          # BS_DEVOTIONAL_FROM: 'Name <local@domain>' or 'local@domain'
+DEVO_REPLY_TO_DEFAULT = "hello@biblelantern.com"
+DEVO_REPLY_TO = DEVO_REPLY_TO_DEFAULT  # BS_DEVOTIONAL_REPLY_TO
+DEVO_SITE_DEFAULT = "https://www.biblelantern.com"
+DEVO_SITE = DEVO_SITE_DEFAULT          # BS_DEVOTIONAL_SITE: the public origin inside emails
+DEVO_AUTHOR = ""                       # BS_DEVOTIONAL_AUTHOR, else the first BS_OWNER_EMAILS address: whose week is compiled
+DEVO_TZ_DEFAULT = "America/Los_Angeles"
+DEVO_TZ_NAME = DEVO_TZ_DEFAULT         # BS_DEVOTIONAL_TZ
+DEVO_TZ = D.get_tz(DEVO_TZ_DEFAULT)
+DEVO_COMPILE = "sat 06:00"             # BS_DEVOTIONAL_COMPILE: '<day> HH:MM' or 'off'
+DEVO_SEND = "sun 07:00"                # BS_DEVOTIONAL_SEND: '<day> HH:MM', 'now' or 'off'
+DEVO_MAX = 20000                       # BS_DEVOTIONAL_MAX: most confirmed subscribers
+ANTHROPIC_KEY = ""                     # BS_ANTHROPIC_KEY: with it the draft is stitched by the Claude API
+ANTHROPIC_DEFAULT_URL = "https://api.anthropic.com"
+ANTHROPIC_URL = ANTHROPIC_DEFAULT_URL  # BS_ANTHROPIC_URL (the tests' fake Claude)
+ANTHROPIC_MODEL = "claude-opus-5-5"    # BS_ANTHROPIC_MODEL
+DEVO_ADDRESS = ""                      # BS_DEVOTIONAL_ADDRESS: the postal line in the footer
+DEVO_TEST = False                      # BS_DEVOTIONAL_TEST=1: the hidden POST /api/devotional/tick exists (tests only)
+DEVO_FROM_RE = re.compile(r"(?:([^<>\r\n]{1,100}?)\s*<([^<>\s]+)>|([^<>\s]+))", re.ASCII)
+DEVO_MODEL_RE = re.compile(r"[A-Za-z0-9._-]{1,64}", re.ASCII)
+DEVO_URL_RE = re.compile(r"https?://[!-~]+", re.ASCII)
+DEVO_RESEND_PENDING_MS = 3600 * 1000   # a pending address is sent its confirmation again at most once an hour
+DEVO_RESUME_MS = 10 * 60 * 1000        # a `sending` issue older than this with no end is resumed
+DEVO_TOKEN_IN_URL = re.compile(r"([?&]t=)[^&\s\"]*")  # the capability in a confirm, unsubscribe or review link
 
 
 def _env_flag(v): return (v or "").strip().lower() in ("1", "true", "yes", "on")
@@ -830,6 +869,8 @@ def configure_hosting(env):
     global HOSTED, TRUST_PROXY, ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS, PROXY_SECRET, OWNER_SETUP_TOKEN
     global SIGNUP_CLOSED, TURNSTILE, TURNSTILE_SITEKEY, TURNSTILE_SECRET, TURNSTILE_VERIFY_URL, ORIGIN_HOSTS
     global HOSTED_MAX_USERS, MIN_FREE_BYTES, DONATE_URL, APIBIBLE_KEY, APIBIBLE_URL, APIBIBLE_PINS, APIBIBLE_MONTHLY
+    global RESEND_KEY, RESEND_URL, DEVO_FROM, DEVO_REPLY_TO, DEVO_SITE, DEVO_AUTHOR, DEVO_TZ_NAME, DEVO_TZ, DEVO_COMPILE
+    global DEVO_SEND, DEVO_MAX, ANTHROPIC_KEY, ANTHROPIC_URL, ANTHROPIC_MODEL, DEVO_ADDRESS, DEVO_TEST
     HOSTED, TRUST_PROXY = _env_flag(env.get("BS_HOSTED")), _env_flag(env.get("BS_TRUST_PROXY"))
     PROXY_SECRET = (env.get("BS_PROXY_SECRET") or "").strip()
     OWNER_SETUP_TOKEN = (env.get("BS_OWNER_SETUP_TOKEN") or "").strip()
@@ -874,12 +915,61 @@ def configure_hosting(env):
         o = o.rstrip("/")
         if ORIGIN_RE.fullmatch(o): origins.add(o)
         else: bad.append(("BS_ALLOWED_ORIGINS", o))
+    first_owner = ""
     for e in _env_list(env.get("BS_OWNER_EMAILS")):
         ok, email, _ = A.validate_email(e)
-        if ok: owners.add(email)
+        if ok:
+            owners.add(email)
+            first_owner = first_owner or email
         else: bad.append(("BS_OWNER_EMAILS", "an address that is not valid"))  # never print an email
     ENV_HOSTS, ALLOWED_ORIGINS, OWNER_EMAILS = tuple(hosts), frozenset(origins), frozenset(owners)
     ORIGIN_HOSTS = frozenset(urllib.parse.urlsplit(o).hostname for o in origins)
+    # the weekly devotional (devotional brief §1): keys are validated like BS_APIBIBLE_KEY and never printed
+    key = (env.get("BS_RESEND_KEY") or "").strip()
+    if key and not APIBIBLE_KEY_RE.fullmatch(key): bad.append(("BS_RESEND_KEY", "a value that is not valid")); key = ""
+    RESEND_KEY = key
+    key = (env.get("BS_ANTHROPIC_KEY") or "").strip()
+    if key and not APIBIBLE_KEY_RE.fullmatch(key): bad.append(("BS_ANTHROPIC_KEY", "a value that is not valid")); key = ""
+    ANTHROPIC_KEY = key
+    url = (env.get("BS_RESEND_URL") or "").strip().rstrip("/")
+    if url and not DEVO_URL_RE.fullmatch(url): bad.append(("BS_RESEND_URL", url[:100])); url = ""
+    RESEND_URL = url or RESEND_DEFAULT_URL
+    url = (env.get("BS_ANTHROPIC_URL") or "").strip().rstrip("/")
+    if url and not DEVO_URL_RE.fullmatch(url): bad.append(("BS_ANTHROPIC_URL", url[:100])); url = ""
+    ANTHROPIC_URL = url or ANTHROPIC_DEFAULT_URL
+    url = (env.get("BS_DEVOTIONAL_SITE") or "").strip().rstrip("/")
+    if url and not DEVO_URL_RE.fullmatch(url): bad.append(("BS_DEVOTIONAL_SITE", url[:100])); url = ""
+    DEVO_SITE = url or DEVO_SITE_DEFAULT
+    sender = (env.get("BS_DEVOTIONAL_FROM") or "").strip()
+    m = DEVO_FROM_RE.fullmatch(sender) if sender else None
+    if sender and not (m and A.validate_email(m.group(2) or m.group(3))[0]):
+        bad.append(("BS_DEVOTIONAL_FROM", "a value that is not 'Name <local@domain>'")); sender = ""
+    DEVO_FROM = sender or DEVO_FROM_DEFAULT
+    reply = (env.get("BS_DEVOTIONAL_REPLY_TO") or "").strip()
+    ok, reply_email, _ = A.validate_email(reply)
+    if reply and not ok: bad.append(("BS_DEVOTIONAL_REPLY_TO", "an address that is not valid"))
+    DEVO_REPLY_TO = reply_email if ok else DEVO_REPLY_TO_DEFAULT
+    author = (env.get("BS_DEVOTIONAL_AUTHOR") or "").strip()
+    ok, author_email, _ = A.validate_email(author)
+    if author and not ok: bad.append(("BS_DEVOTIONAL_AUTHOR", "an address that is not valid"))
+    DEVO_AUTHOR = author_email if ok else first_owner
+    tz_name = (env.get("BS_DEVOTIONAL_TZ") or "").strip()
+    tz = D.get_tz(tz_name) if tz_name else None
+    if tz_name and tz is None: bad.append(("BS_DEVOTIONAL_TZ", tz_name[:100]))
+    DEVO_TZ_NAME, DEVO_TZ = (tz_name, tz) if tz is not None else (DEVO_TZ_DEFAULT, D.get_tz(DEVO_TZ_DEFAULT))
+    v = (env.get("BS_DEVOTIONAL_COMPILE") or "").strip().lower()
+    sched = D.parse_schedule(v)
+    if v and (sched is None or sched[0] == "now"): bad.append(("BS_DEVOTIONAL_COMPILE", v[:100])); v = ""
+    DEVO_COMPILE = v or "sat 06:00"
+    v = (env.get("BS_DEVOTIONAL_SEND") or "").strip().lower()
+    if v and D.parse_schedule(v) is None: bad.append(("BS_DEVOTIONAL_SEND", v[:100])); v = ""
+    DEVO_SEND = v or "sun 07:00"
+    DEVO_MAX = _env_count(env, "BS_DEVOTIONAL_MAX", 20000, bad)
+    model = (env.get("BS_ANTHROPIC_MODEL") or "").strip()
+    if model and not DEVO_MODEL_RE.fullmatch(model): bad.append(("BS_ANTHROPIC_MODEL", model[:100])); model = ""
+    ANTHROPIC_MODEL = model or "claude-opus-5-5"
+    DEVO_ADDRESS = A.clean_text((env.get("BS_DEVOTIONAL_ADDRESS") or "").strip())[:300]
+    DEVO_TEST = _env_flag(env.get("BS_DEVOTIONAL_TEST"))
     for var, v in bad: print(f"Warning: {var}: ignored {v}", file=sys.stderr)
 
 
@@ -907,8 +997,8 @@ def holds_owner_claim(user, claims):
     return isinstance(rec, dict) and rec.get("uid") == user.get("uid")
 
 
-def turnstile_check(token, remoteip, hosts):
-    """Ask Cloudflare whether a sign-up's Turnstile token is good: made for action 'signup' on one of `hosts`. -> None
+def turnstile_check(token, remoteip, hosts, action="signup"):
+    """Ask Cloudflare whether a sign-up's Turnstile token is good: made for `action` on one of `hosts`. -> None
     when it passed, else why not (a short word for the log; never the token or the secret). Raises TurnstileUnavailable
     when Cloudflare cannot be reached in time or answers something that is not a verdict: sign-up then fails closed."""
     form = {"secret": TURNSTILE_SECRET, "response": token}
@@ -926,7 +1016,7 @@ def turnstile_check(token, remoteip, hosts):
         return "failed" + (":" + ",".join(codes)[:80] if codes else "")
     # Cloudflare's test secrets answer for "example.com" with no action, whatever the page: nothing more to check
     if TURNSTILE_TEST_SECRET.fullmatch(TURNSTILE_SECRET): return None
-    if out.get("action") != "signup": return "action"
+    if out.get("action") != action: return "action"
     if not isinstance(out.get("hostname"), str) or out["hostname"].lower() not in hosts: return "hostname"
     return None
 
@@ -1140,6 +1230,15 @@ MESSAGES = {
     "quota_exceeded": "Your profile has reached its storage limit. Delete some notes or highlights to make room.",
     "storage_full": MSG_SIGNUP_PAUSED,
     "invalid_import": "That file isn’t a Bible study profile export.",
+    "bad_email": A.MSG_EMAIL,
+    "not_open": "Sign-ups open soon.",
+    "list_full": "The list is full for now. Try again another day.",
+    "mail_unavailable": "The mail service couldn’t be reached. Try again in a moment.",
+    "issue_locked": "That week’s issue is already approved or sent, so it can’t be replaced.",
+    "no_author": "No profile holds the owner claim for the author address.",
+    "bad_state": "That issue has moved on.",
+    "bad_token": "This link has expired.",
+    "bad_issue": "That issue could not be saved.",
     "registry_unavailable": "Profiles are unavailable: users.json in the data folder is missing or damaged. "
                             "Restore it from users.json.bak (see README), then try again.",
 }
@@ -1187,9 +1286,11 @@ def rate_limited(wait, uid=None, **log):
 
 
 class Route:
-    """write=True: it writes the request's scope, so in hosted mode a guest gets 401 sign_in_required."""
-    def __init__(self, fn, limit=0, auth=False, scope=False, write=False):
-        self.fn, self.limit, self.auth, self.scope, self.write = fn, limit, auth, scope, write
+    """write=True: it writes the request's scope, so in hosted mode a guest gets 401 sign_in_required.
+    form=True: a link in an email is what calls it (the devotional's confirm, unsubscribe and review), so the body is
+    a form or JSON and the capability token in it is the check, not the Origin."""
+    def __init__(self, fn, limit=0, auth=False, scope=False, write=False, form=False):
+        self.fn, self.limit, self.auth, self.scope, self.write, self.form = fn, limit, auth, scope, write, form
 
 
 BOOKMARK_PATH = re.compile(r"/api/library/bookmarks/([^/]+)")
@@ -1204,7 +1305,10 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         """The access log for API requests, on stdout: it is information, and a host reads stderr as errors (QC 12)."""
         if args and "/api/" in str(args[0]):
-            try: print(f"{self.address_string()} - - [{self.log_date_time_string()}] {fmt % args}", flush=True)
+            try:
+                line = fmt % args
+                if "/api/devotional/" in line: line = DEVO_TOKEN_IN_URL.sub(r"\1[token]", line)  # never a token in the log
+                print(f"{self.address_string()} - - [{self.log_date_time_string()}] {line}", flush=True)
             except Exception: pass  # noqa
 
     # ------------------------------------------------------------ request state and host allowlist (§3.3)
@@ -1212,6 +1316,7 @@ class Handler(SimpleHTTPRequestHandler):
         self._scope, self._uid, self._sess = "guest", None, None
         self._cookies, self._bad_cookie, self._unread = [], False, 0
         self._status, self._err = 0, None  # what was answered, for the daily counts (Metrics)
+        self._frameable = False
         cl = self.headers.get("Content-Length")
         if cl is not None and DIGITS.fullmatch(cl.strip()): self._unread = int(cl.strip())
 
@@ -1250,8 +1355,9 @@ class Handler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
         # --dev lets the app's own origin frame it (the mock harnesses and the social-card renders); live it is never framed
-        self.send_header("X-Frame-Options", "SAMEORIGIN" if self.serve_mocks else "DENY")
-        self.send_header("Content-Security-Policy", "frame-ancestors 'self'" if self.serve_mocks else "frame-ancestors 'none'")
+        same = self.serve_mocks or getattr(self, "_frameable", False)  # the review page frames the issue it shows
+        self.send_header("X-Frame-Options", "SAMEORIGIN" if same else "DENY")
+        self.send_header("Content-Security-Policy", "frame-ancestors 'self'" if same else "frame-ancestors 'none'")
         # Static files: always revalidate (cheap 304s), so a rebuild or an app update shows up on the next load.
         if not self._is_api(): self.send_header("Cache-Control", "no-cache")
         super().end_headers()
@@ -1499,6 +1605,25 @@ class Handler(SimpleHTTPRequestHandler):
             except UnicodeEncodeError: raise ApiError(400, "bad_json", "The request contains text that is not valid Unicode.")
         return obj
 
+    def read_form_body(self, limit):
+        """A form-encoded body (a mail client's one-click unsubscribe, the review page's buttons) or JSON -> a dict of
+        strings; an empty body is {}. The capability token is checked by the route, so no Origin check here."""
+        ctype = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        if ctype == "application/json": return self.read_json_body(limit)
+        cls = self.headers.get_all("Content-Length") or []
+        if not cls: return {}
+        if self.headers.get("Transfer-Encoding") or len(cls) != 1 or not DIGITS.fullmatch(cls[0].strip()):
+            self.close_connection = True
+            raise ApiError(411, "length_required")
+        n = int(cls[0].strip())
+        if n > limit: raise ApiError(413, "too_large", f"The request is too large (limit {limit // KIB} KiB).")
+        raw = self.rfile.read(n) if n else b""
+        self._unread = 0
+        if len(raw) != n: self.close_connection = True; raise ApiError(400, "bad_request")
+        try: text = raw.decode("utf-8")
+        except UnicodeDecodeError: raise ApiError(400, "bad_request")
+        return {k: v[0] for k, v in urllib.parse.parse_qs(text, keep_blank_values=True).items() if v}
+
     def check_scope(self, required=True):
         h = self.headers.get("X-BS-Scope")
         if h is None:
@@ -1513,6 +1638,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self._raw_path() in DONATE_PATHS: return self.send_redirect(DONATE_URL)
         if self._raw_path() == "/": self.path = "/index.html" + self.path[1:]
         elif self._raw_path() == "/privacy": self.path = "/privacy.html" + self.path[len("/privacy"):]  # as vercel.json rewrites it
+        elif self._raw_path() == "/weeklydevotional": self.path = "/weeklydevotional.html" + self.path[len("/weeklydevotional"):]
         return super().do_GET()
 
     def do_HEAD(self):
@@ -1535,18 +1661,24 @@ class Handler(SimpleHTTPRequestHandler):
         q = self._query()
         try:
             self.resolve_auth()
-            methods, arg = ROUTES.get(path), None
+            methods, arg, devo_owner = ROUTES.get(path), None, path in DEVO_OWNER_ONLY
             if methods is None:
                 m = BOOKMARK_PATH.fullmatch(path)
                 if m: methods, arg = BOOKMARK_ROUTES, m.group(1)
+                m = DEVO_ISSUE_PATH.fullmatch(path) if m is None else None
+                if m: methods, arg, devo_owner = DEVO_ISSUE_ROUTES[m.group(2) or ""], m.group(1), True
             if methods is None or (path in HOSTED_ONLY and not HOSTED): raise ApiError(404, "not_found")
+            if path == DEVO_TICK and not DEVO_TEST: raise ApiError(404, "not_found")
             if path in OWNERS_ONLY and not self.is_owner(): raise ApiError(404, "not_found")  # as if it did not exist
+            if devo_owner and not self.devo_owner(): raise ApiError(404, "not_found")  # hosted: owners; locally: signed in
             # HEAD is only for the health check (uptime monitors ask that way, QC 10): answered like GET, with no body.
             route = methods.get("GET" if method == "HEAD" and path == HEALTH else method)
             if route is None or method == "OPTIONS":
                 raise ApiError(405, "method_not_allowed", headers=[("Allow", ", ".join(sorted(methods)))])
             body = None
-            if method not in ("GET", "HEAD"):
+            if method not in ("GET", "HEAD") and route.form:
+                body = self.read_form_body(route.limit)
+            elif method not in ("GET", "HEAD"):
                 self.check_same_origin()
                 if not self._uid and (route.auth or (route.write and HOSTED)):  # before a byte of the body is read (QC 1)
                     raise ApiError(401, "sign_in_required" if route.write and HOSTED else "not_signed_in")
@@ -1827,7 +1959,7 @@ class Handler(SimpleHTTPRequestHandler):
         rewrite the request's host is Railway's, the page's www.biblelantern.com)."""
         return ORIGIN_HOSTS | {PORT_SUFFIX.sub("", (self.headers.get("Host") or "").strip().lower())}
 
-    def _turnstile_or_403(self, token):
+    def _turnstile_or_403(self, token, action="signup"):
         """403 bot_check_failed unless Cloudflare passes the sign-up's Turnstile token (TurnstileUnavailable when it
         cannot say). The token and the secret never reach the log."""
         why = "missing"
@@ -1835,7 +1967,7 @@ class Handler(SimpleHTTPRequestHandler):
             # remoteip is optional: it is sent only when Vercel's headers name the visitor (via_proxy), since without
             # them client_ip() is a proxy's address, which tells Cloudflare nothing and could fail a real sign-up
             remoteip = self.client_ip() if TRUST_PROXY and self.via_proxy() else ""
-            why = turnstile_check(token, remoteip, self._site_hosts())
+            why = turnstile_check(token, remoteip, self._site_hosts(), action)
         if why:
             A.log("bot-check-fail", reason=why, **self._ip_log())
             raise ApiError(403, "bot_check_failed")
@@ -2492,6 +2624,265 @@ class Handler(SimpleHTTPRequestHandler):
             if HOSTED: storage_low()  # still 200 while the volume runs low, with an [alert] line once an hour
             self.send_json({"ok": True})
 
+    # ------------------------------------------------------------ weekly devotional (devotional brief §3)
+    def devo_owner(self):
+        """Who may use the owner tools: hosted, an owner (holds_owner_claim); locally any signed-in profile, since
+        there are no owners locally. api() answers 404 to everyone else, like /api/admin/traffic."""
+        return self.is_owner() if HOSTED else bool(self._uid)
+
+    def send_html(self, html, status=200, frameable=False):
+        """A small HTML page (confirm, unsubscribe, review, the issue preview). The token in such a URL never leaves
+        with a Referer."""
+        body = html.encode("utf-8")
+        self._status, self._frameable = status, frameable
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.end_headers()
+        if self.command != "HEAD": self.wfile.write(body)
+
+    def _my_email(self):
+        with A.auth_lock(): u = A.load_users()["users"].get(self._uid)
+        if not u: raise A.ProfileGone()
+        return u.get("email", "")
+
+    @staticmethod
+    def _devo_token(body, q):
+        t = (q.get("t") or [""])[0] or ((body or {}).get("t") if isinstance(body, dict) else "")
+        return t.strip() if isinstance(t, str) else ""
+
+    def _devo_form(self):
+        """True when the request was an HTML form (the review page's buttons): the answer is a page, not JSON."""
+        return (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower() != "application/json"
+
+    def h_devo_config(self, body, q, arg):
+        sched = D.parse_schedule(DEVO_SEND)
+        self.send_json({"open": devo_open(), "turnstile": {"siteKey": TURNSTILE_SITEKEY} if TURNSTILE else None,
+                        "from": D.DAY_NAMES[sched[1]] if sched and sched[0] == "at" else "Sunday",
+                        "sample": {"title": "Loved first", "subject": "Weekly devotional · 14 November"}})
+
+    def h_devo_subscribe(self, body, q, arg):
+        """202 {ok} for every well-formed address whatever its state (no enumeration); the confirmation mail goes to a
+        new, lapsed (unsubscribed) or still-pending address (the last at most once an hour)."""
+        ok, email, _ = A.validate_email(body.get("email"))
+        if not ok: raise ApiError(400, "bad_email", field="email")
+        if not RESEND_KEY: raise ApiError(503, "not_open")
+        wait, rkey = self._hit(DEVO_WINDOW, DEVO_SITE_WINDOW, email)
+        if wait: raise rate_limited(wait, **self._ip_log())
+        try:
+            if TURNSTILE: self._turnstile_or_403(body.get("turnstileToken"), "devotional")
+        except TurnstileUnavailable as e:
+            self._unhit(DEVO_WINDOW, DEVO_SITE_WINDOW, rkey)
+            A.log_error(f"turnstile: siteverify unavailable ({e}); devotional sign-up refused (503)")
+            raise ApiError(503, "bot_check_unavailable")
+        now, raw, sid, what = A.now_ms(), None, None, "again"
+        with A.devotional_lock():
+            doc = D.load_subscribers(A.DATA)
+            # decided before the address is looked up: a full list gives every well-formed address the same answer,
+            # so the status code never says whether an address is on the list
+            if D.count_by_status(doc)["confirmed"] >= DEVO_MAX: raise ApiError(503, "list_full")
+            found = D.find_subscriber(doc, email)
+            if found is None:
+                rec, raw = D.new_subscriber(email, now)
+                sid, what = D.new_sub_id(), "new"
+                doc["subs"][sid] = rec
+            else:
+                sid, rec = found
+                if rec.get("status") == "pending" and now - (rec.get("lastMail") or 0) >= DEVO_RESEND_PENDING_MS:
+                    raw, what = D.rotate_token(rec), "resent"
+                    rec["lastMail"] = now
+                elif rec.get("status") == "unsubscribed":
+                    raw, what = D.resubscribe(rec, now), "back"
+            if raw: D.save_subscribers(A.DATA, doc)
+        if raw and not devo_mail(D.confirmation_mail(email, raw, devo_cfg()), "confirmation"):
+            with A.devotional_lock():  # the next try may send again at once
+                doc = D.load_subscribers(A.DATA)
+                rec = doc["subs"].get(sid)
+                if isinstance(rec, dict): rec["lastMail"] = 0; D.save_subscribers(A.DATA, doc)
+            raise ApiError(503, "mail_unavailable")
+        D.log_line(f"subscribe {what} {sid}")
+        self.send_json({"ok": True}, 202)
+
+    def h_devo_confirm(self, body, q, arg):
+        raw, now, sid = self._devo_token(body, q), A.now_ms(), None
+        with A.devotional_lock():
+            doc = D.load_subscribers(A.DATA)
+            found = D.find_by_token(doc, raw)
+            if found and found[1].get("status") == "pending":
+                sid = found[0]
+                D.confirm(found[1], now)
+                D.save_subscribers(A.DATA, doc)
+        if sid:
+            devo_open_reset()  # one more confirmed reader may have filled the list
+            D.log_line(f"confirmed {sid}")
+            return self.send_html(devo_page("You’re on the list",
+                                            ["One week of close reading, every Sunday, in Ji’s own notes. The first issue comes with the next send.",
+                                             "Every email has a one-click unsubscribe link."],
+                                            [("Open Bible Lantern", D.site_link(DEVO_SITE))]))
+        self.send_html(devo_page("This link has expired", ["Sign up again and a fresh link will come."],
+                                 [("Sign up again", D.site_link(DEVO_SITE, path="/weeklydevotional"))]), 404)
+
+    def h_devo_unsubscribe(self, body, q, arg):
+        """The link in an issue (and its List-Unsubscribe header) carries the reader's stable unsubscribe token,
+        derived from the install secret and never stored, so the link in every issue ever sent keeps working; a
+        confirmation mail's token (a pending reader who wants no more) is taken too, and dies on use."""
+        raw, now, sid = self._devo_token(body, q), A.now_ms(), None
+        with A.devotional_lock():
+            doc = D.load_subscribers(A.DATA)
+            found = D.find_by_token(doc, raw) or D.find_by_unsub_token(doc, D.unsub_secret(A.DATA), raw)
+            if found:
+                sid = found[0]
+                D.unsubscribe(found[1], now)  # a second click on a stable link says the same thing again
+                D.save_subscribers(A.DATA, doc)
+        if sid:
+            devo_open_reset()
+            D.log_line(f"unsubscribed {sid}")
+            return self.send_html(devo_page("You’ve been unsubscribed", ["No more emails will come. Your address is kept only so the list knows not to write again."],
+                                            [("Open Bible Lantern", D.site_link(DEVO_SITE))]))
+        self.send_html(devo_page("This link has expired", ["If you still get emails, reply to one and we will take you off by hand."],
+                                 [("Open Bible Lantern", D.site_link(DEVO_SITE))]), 404)
+
+    def h_devo_review(self, body, q, arg):
+        """The page the preview mail links to: the issue inline with Approve, Skip and Send me a test. The token is the
+        issue's review token, good while the issue is a draft."""
+        raw = self._devo_token(body, q)
+        issue = devo_find_review(raw)
+        if issue is None:
+            return self.send_html(devo_page("This link has expired", ["The issue was approved, skipped or compiled again. Open Profile in Bible Lantern to see it."]), 404)
+        if (q.get("view") or [""])[0] == "issue":
+            return self.send_html(D.personalise(issue.get("html", ""), "preview"), frameable=True)
+        with A.devotional_lock(): n = D.count_by_status(D.load_subscribers(A.DATA))["confirmed"]
+        self.send_html(devo_review_page(issue, raw, n))
+
+    def h_devo_review_post(self, body, q, arg):
+        """The review page's buttons. A form post (the page) is answered with a page whatever happens, never with
+        JSON: an expired link, a test that could not be sent, an unknown button."""
+        form = self._devo_form()
+        try:
+            return self._devo_review_action(body, q, form)
+        except ApiError as e:
+            if not form: raise
+            self._err = e.code
+            title, lines = {
+                "bad_token": ("This link has expired", ["The issue was approved, skipped or compiled again. Open Profile in Bible Lantern to see it."]),
+                "not_open": ("The test could not be sent", ["No mail service is set up on this server, so nothing was sent. Open the issue from Profile in Bible Lantern instead."]),
+                "mail_unavailable": ("The test could not be sent", ["The mail service could not be reached, so nothing was sent. Go back and try again in a minute."]),
+            }.get(e.code, ("That did not work", [D.esc(e.message)]))
+            self.send_html(devo_page(title, lines, [("Open Bible Lantern", D.site_link(DEVO_SITE))]), e.status)
+
+    def _devo_review_action(self, body, q, form):
+        raw, action, now = self._devo_token(body, q), body.get("action"), A.now_ms()
+        if action not in ("approve", "skip", "test"): raise ApiError(400, "bad_request", field="action")
+        with A.devotional_lock():
+            issue = devo_find_review(raw)
+            if issue is None: raise ApiError(404, "bad_token")
+            if action == "approve": devo_approve(issue, now)
+            elif action == "skip": devo_skip(issue, now)
+        if action == "test":
+            author = devo_author(issue.get("author"))  # the profile that compiled it: locally there is no owner claim
+            if not RESEND_KEY or not author: raise ApiError(503, "not_open")
+            if not devo_mail(D.test_mail(issue, devo_cfg(), author[1]), "test"): raise ApiError(503, "mail_unavailable")
+        D.log_line(f"review {action} {issue['id']}")
+        if action == "approve": devo_kick()
+        if form:
+            text = {"approve": ("Approved", [f"The devotional for {D.esc(D.week_label(issue['week']))} goes out {D.esc(devo_when(issue))}."]),
+                    "skip": ("Skipped", ["Nothing will be sent for that week. Compile it again from Profile if you change your mind."]),
+                    "test": ("A test is on its way", ["It goes to your own address only, marked [test]."])}[action]
+            return self.send_html(devo_page(text[0], text[1], [("Open Bible Lantern", D.site_link(DEVO_SITE))]))
+        self.send_json({"ok": True, "issue": devo_public(issue)})
+
+    def h_devo_admin(self, body, q, arg):
+        with A.devotional_lock():
+            counts = D.count_by_status(D.load_subscribers(A.DATA))
+            issues = [D.issue_row(i) for i in D.list_issues(A.DATA, 26)]
+        author, now = devo_author(self._uid), A.now_ms()
+        self.send_json({"open": bool(RESEND_KEY) and counts["confirmed"] < DEVO_MAX, "max": DEVO_MAX,
+                        "subscribers": {"confirmed": counts["confirmed"], "pending": counts["pending"]},
+                        "author": {"present": author is not None, "uid": author[0] if author else None},
+                        "schedule": {"tz": DEVO_TZ_NAME, "compile": DEVO_COMPILE, "send": DEVO_SEND,
+                                     "nextCompile": D.next_moment(D.parse_schedule(DEVO_COMPILE), now, DEVO_TZ),
+                                     "nextSend": D.next_moment(D.parse_schedule(DEVO_SEND), now, DEVO_TZ)},
+                        "ai": bool(ANTHROPIC_KEY), "issues": issues})
+
+    def h_devo_compile(self, body, q, arg):
+        week_arg = body.get("week")
+        if week_arg is not None and (not isinstance(week_arg, str) or A.parse_day(week_arg) is None):
+            raise ApiError(400, "bad_request", field="week")
+        week = D.week_for(week_arg) if week_arg else D.week_for(D.local_day(A.now_ms(), DEVO_TZ))
+        issue = devo_compile(week, "owner", self._uid)
+        self.send_json({"issue": devo_public(issue)})
+
+    def _devo_issue(self, issue_id):
+        try: issue = D.load_issue(A.DATA, issue_id)
+        except ValueError: issue = None  # not a day
+        if issue is None: raise ApiError(404, "not_found")
+        return issue
+
+    def h_devo_issue(self, body, q, arg):
+        with A.devotional_lock(): issue = self._devo_issue(arg)
+        self.send_json({"issue": devo_public(issue)})
+
+    def h_devo_issue_html(self, body, q, arg):
+        with A.devotional_lock(): issue = self._devo_issue(arg)
+        self.send_html(D.personalise(issue.get("html", ""), "preview"))
+
+    def h_devo_issue_patch(self, body, q, arg):
+        """The owner's edits to a draft: the fields given replace the draft's, refs are kept to the week's verses, and
+        the email is rendered again."""
+        fields = ("subject", "title", "opening", "sections", "closing", "question")
+        if not any(k in body for k in fields): raise ApiError(400, "bad_request")
+        now = A.now_ms()
+        with A.devotional_lock():
+            issue = self._devo_issue(arg)
+            if issue.get("status") != "draft": raise ApiError(409, "bad_state")
+            old = issue.get("draft") or {}
+            merged = {k: body.get(k, old.get(k)) for k in fields}
+            mat = issue.get("material") or {}
+            refs = list((issue.get("source") or {}).get("notes") or []) + [r for s in (old.get("sections") or []) for r in (s.get("refs") or [])]
+            pseudo = {"notes": [{"ref": r} for r in refs], "marks": [], "links": mat.get("links") or [], "memory": mat.get("memory") or []}
+            try: draft = D.validate_draft(merged, pseudo)
+            except ValueError as e: raise ApiError(400, "bad_issue", f"That issue could not be saved: {e}.")
+            draft.update(stitched=bool(old.get("stitched")), model=old.get("model"), warnings=list(old.get("warnings") or []))
+            issue["draft"], issue["updated"] = draft, now
+            issue["html"], issue["text"] = D.render(issue, DEVO_SITE, DEVO_ADDRESS)
+            D.save_issue(A.DATA, issue)
+        D.log_line(f"edited {arg}")
+        self.send_json({"issue": devo_public(issue)})
+
+    def h_devo_issue_action(self, body, q, arg):
+        action, now = self._raw_path().rsplit("/", 1)[1], A.now_ms()
+        if action == "test":
+            with A.devotional_lock(): issue = self._devo_issue(arg)
+            if not RESEND_KEY: raise ApiError(503, "not_open")
+            if not devo_mail(D.test_mail(issue, devo_cfg(), self._my_email()), "test"): raise ApiError(503, "mail_unavailable")
+            D.log_line(f"test {arg} to {self._uid}")
+            return self.send_json({"ok": True, "issue": devo_public(issue)})
+        with A.devotional_lock():
+            issue = self._devo_issue(arg)
+            if action == "approve": devo_approve(issue, now)
+            elif action == "skip": devo_skip(issue, now)
+            else:  # send-now
+                if issue.get("status") != "approved": raise ApiError(409, "bad_state")
+                if not RESEND_KEY: raise ApiError(503, "not_open")
+                issue["send"]["due"], issue["updated"] = now, now
+                D.save_issue(A.DATA, issue)
+        D.log_line(f"{action} {arg} by {self._uid}")
+        if action != "skip": devo_kick()
+        self.send_json({"ok": True, "issue": devo_public(issue)})
+
+    def h_devo_csv(self, body, q, arg):
+        with A.devotional_lock(): csv = D.subscribers_csv(D.load_subscribers(A.DATA))
+        self.send_download(csv.encode("utf-8"), "text/csv; charset=utf-8", "devotional-subscribers.csv")
+
+    def h_devo_tick(self, body, q, arg):
+        """Tests only (BS_DEVOTIONAL_TEST=1): one scheduler tick at `now` (ms), or at the real now."""
+        now = body.get("now")
+        if now is not None and not A._is_int(now): raise ApiError(400, "bad_request", field="now")
+        SCHEDULER.tick(now)
+        self.send_json({"ok": True, "now": now if now is not None else A.now_ms()})
+
 
 HEALTH_TTL = 5         # seconds a healthy probe is reused for: a burst of probes costs the volume one fsync, not one each
 _HEALTH = [None, None]  # [when (monotonic), problem] of the last probe
@@ -2540,7 +2931,322 @@ def _finite_float(s):
 DIGITS = re.compile(r"[0-9]+")  # str.isdigit() also accepts '²' and other scripts' digits, which int() then rejects
 
 
+# ----------------------------------------------------------------- weekly devotional (devotional brief §4.5–4.7)
+def devo_cfg(): return {"from": DEVO_FROM, "reply_to": DEVO_REPLY_TO, "site": DEVO_SITE}
+
+
+DEVO_OPEN_TTL = 60       # seconds the open/closed verdict of the public config route is reused for
+_DEVO_OPEN = [None, False]  # [when (monotonic), open] of the last count
+
+
+def devo_open():
+    """The list takes names: a mail key is set and the list is not full. The count means parsing the whole
+    subscribers file under the devotional lock, and /api/devotional/config is public and unrated, so the verdict
+    is kept for DEVO_OPEN_TTL seconds (a confirmation or an unsubscribe drops it at once: devo_open_reset); the
+    subscribe route counts for itself, under the lock, and is the one that decides."""
+    if not RESEND_KEY: return False
+    now = time.monotonic()
+    if _DEVO_OPEN[0] is not None and now - _DEVO_OPEN[0] <= DEVO_OPEN_TTL: return _DEVO_OPEN[1]
+    with A.devotional_lock(): is_open = D.count_by_status(D.load_subscribers(A.DATA))["confirmed"] < DEVO_MAX
+    _DEVO_OPEN[:] = [now, is_open]
+    return is_open
+
+
+def devo_open_reset():
+    _DEVO_OPEN[0] = None
+
+
+def devo_author(uid=None):
+    """-> (uid, email) of the profile whose week is compiled: hosted, the profile holding the owner claim for
+    BS_DEVOTIONAL_AUTHOR (else the first owner email); locally that address's profile, else the signed-in one."""
+    with A.auth_lock():
+        users = A.load_users()["users"]
+        if HOSTED:
+            if not DEVO_AUTHOR: return None
+            claims = A.load_owner_claims()
+            rec = claims.get(A.claim_key(DEVO_AUTHOR))
+            u = users.get(rec.get("uid")) if isinstance(rec, dict) and isinstance(rec.get("uid"), str) else None
+            return (u["uid"], u.get("email", "")) if u and holds_owner_claim(u, claims) else None
+        u = A.find_user_by_email({"users": users}, DEVO_AUTHOR) if DEVO_AUTHOR else None
+        u = u or (users.get(uid) if uid else None)
+        return (u["uid"], u.get("email", "")) if u else None
+
+
+def devo_mail(message, what):
+    """One message through Resend. -> True when accepted; a failure is logged (status only, never the address)."""
+    if not RESEND_KEY: return False
+    try:
+        D.Resend(RESEND_URL, RESEND_KEY).send(message)
+        return True
+    except D.ResendError as e:
+        A.log_error(f"devotional: {what} mail failed: resend {e.status}")
+        return False
+
+
+def devo_public(issue):
+    out = D.public_issue(issue)
+    out["stitched"] = bool((issue.get("draft") or {}).get("stitched"))
+    return out
+
+
+def devo_when(issue):
+    due = (issue.get("send") or {}).get("due")
+    if not due: return "when you press Send now"
+    return "now" if due <= A.now_ms() else datetime.datetime.fromtimestamp(due / 1000, DEVO_TZ).strftime("%A %H:%M")
+
+
+def devo_find_review(raw):
+    """The draft issue whose review token this is, or None (the caller may hold the devotional lock: re-entrant)."""
+    if not isinstance(raw, str) or not D.TOKEN_RE.fullmatch(raw): return None
+    h = D.token_hash(raw)
+    with A.devotional_lock():
+        for issue in D.list_issues(A.DATA, 60):
+            if issue.get("status") == "draft" and (issue.get("review") or {}).get("tokenHash") == h: return issue
+    return None
+
+
+def devo_approve(issue, now):
+    """draft -> approved (under the devotional lock); send.due is the next BS_DEVOTIONAL_SEND moment, now for 'now',
+    0 for 'off' (Send now is the only way out then)."""
+    if issue.get("status") != "draft": raise ApiError(409, "bad_state")
+    issue["status"], issue["approved"], issue["updated"] = "approved", now, now
+    issue["send"]["due"] = D.next_moment(D.parse_schedule(DEVO_SEND), now, DEVO_TZ) or 0
+    D.save_issue(A.DATA, issue)
+
+
+def devo_skip(issue, now):
+    if issue.get("status") not in ("draft", "approved"): raise ApiError(409, "bad_state")
+    issue["status"], issue["skipped"], issue["updated"] = "skipped", now, now
+    D.save_issue(A.DATA, issue)
+
+
+def devo_compile(week, compiled_by, uid=None):
+    """§4: gather the author's week, draft it (stitched with the Claude API when a key is set, else laid out), render
+    the email, save the issue and mail the author a preview. The week's draft or empty issue is replaced; one that is
+    approved, sending or sent is left alone (409 issue_locked). No author profile: 503 no_author."""
+    author = devo_author(uid)
+    if author is None:
+        D.log_line("no author profile")
+        raise ApiError(503, "no_author")
+    auid, aemail = author
+    with A.devotional_lock():
+        old = D.load_issue(A.DATA, week["to"])
+        if old is not None and old.get("status") not in ("draft", "empty"): raise ApiError(409, "issue_locked")
+        with A.lock_for(auid): material = D.gather(auid, week, DEVO_TZ)
+    empty = D.is_empty(material)
+    # the model call (up to two minutes) runs outside the lock, so sign-ups are not held up by it
+    draft = D.deterministic_draft(material) if empty or not ANTHROPIC_KEY else D.stitch(material, ANTHROPIC_KEY, ANTHROPIC_URL, ANTHROPIC_MODEL)
+    now = A.now_ms()
+    issue = D.new_issue(week, now, compiled_by)
+    issue["author"] = auid  # whose week this is: the review page's test goes to this profile, locally too
+    issue["source"], issue["material"], issue["draft"] = D.source_of(material), D.keep_material(material), draft
+    if empty: issue["status"] = "empty"
+    issue["html"], issue["text"] = D.render(issue, DEVO_SITE, DEVO_ADDRESS)
+    review_raw = D.new_token()
+    issue["review"]["tokenHash"] = D.token_hash(review_raw)
+    with A.devotional_lock():
+        old = D.load_issue(A.DATA, week["to"])
+        if old is not None and old.get("status") not in ("draft", "empty"): raise ApiError(409, "issue_locked")
+        D.save_issue(A.DATA, issue)
+    D.log_line(f"compiled {issue['id']} by {compiled_by}: {issue['status']}, {'stitched' if draft.get('stitched') else 'laid out'}, "
+               f"{', '.join(f'{k} {v}' for k, v in issue['source']['counts'].items())}")
+    if RESEND_KEY and devo_mail(D.preview_mail(issue, review_raw, devo_cfg(), aemail), "preview"):
+        with A.devotional_lock():
+            cur = D.load_issue(A.DATA, issue["id"])
+            if cur is not None and cur.get("created") == issue["created"]:
+                cur["review"]["mailedAt"] = A.now_ms()
+                D.save_issue(A.DATA, cur)
+                issue = cur
+    return issue
+
+
+DEVO_SEND_RUNS = 6  # runs (ten minutes apart) a sending issue gets before it is closed with the rest counted failed
+
+
+def devo_send(issue_id, now):
+    """§4.5: every confirmed subscriber not yet in send.done, 100 a batch, each batch marked done on a 2xx; progress
+    is saved after every batch. Which readers go together (send.batches) is written to the issue before the first
+    request and kept by every later run, and a batch's Idempotency-Key is the issue plus its addresses, so a run cut
+    off between Resend's 2xx and the `done` write sends the very same request again and Resend does not deliver it
+    twice. The unsubscribe links are the readers' stable tokens: nothing is rotated for a send.
+    A batch Resend refuses (400 or 422: something in it is malformed) is halved down to single readers, who end up
+    in send.rejected and are not tried again; any other failure (an exhausted 5xx, 401, 403…) ends the run. A run
+    always records its end (send.finishedAt), the scheduler resumes a `sending` issue ten minutes after its last
+    activity, and the DEVO_SEND_RUNS-th run closes the issue as sent with whoever is left counted in send.failed,
+    so a refused key or a dead service never loops for ever and the author always hears how it went."""
+    if not RESEND_KEY: return
+    resend, author = D.Resend(RESEND_URL, RESEND_KEY), devo_author()
+    with A.devotional_lock():
+        issue = D.load_issue(A.DATA, issue_id)
+        if issue is None or issue.get("status") not in ("approved", "sending"): return
+        doc = D.load_subscribers(A.DATA)
+        secret = D.unsub_secret(A.DATA)
+        send = issue["send"]
+        done, rejected = send.setdefault("done", {}), send.setdefault("rejected", {})
+        send["runs"] = (send.get("runs") or 0) + 1
+        live = {sid: rec["email"] for sid, rec in D.confirmed(doc)}
+        plan = send.setdefault("batches", [])
+        planned = {sid for b in plan for sid in (b.get("sids") or [])}
+        extra = [sid for sid in live if sid not in done and sid not in rejected and sid not in planned]
+        for i in range(0, len(extra), D.BATCH_SIZE): plan.append({"sids": extra[i:i + D.BATCH_SIZE]})
+        issue["status"], send["startedAt"], send["finishedAt"], issue["updated"] = "sending", now, None, now
+        D.save_issue(A.DATA, issue)
+        chunks = []
+        for b in plan:
+            chunk = [(sid, live[sid], D.unsub_token(secret, sid)) for sid in (b.get("sids") or [])
+                     if sid in live and sid not in done and sid not in rejected]
+            if chunk: chunks.append(chunk)
+        cfg = devo_cfg()
+    D.log_line(f"sending {issue_id}: run {send['runs']}, {sum(len(c) for c in chunks)} recipient(s) in {len(chunks)} batch(es)")
+    queue, stopped = list(chunks), False
+    while queue and not stopped:
+        chunk = queue.pop(0)
+        b = D.batch_messages(issue, chunk, cfg)[0]
+        err = None
+        try: resend.send_batch(b["messages"], b["key"])
+        except D.ResendError as e: err = e
+        with A.devotional_lock():
+            issue = D.load_issue(A.DATA, issue_id)
+            if issue is None: return
+            send, t = issue["send"], A.now_ms()
+            if err is None:
+                for sid in b["sids"]: send["done"][sid] = t
+            elif err.status in (400, 422) and len(chunk) > 1:
+                half = len(chunk) // 2  # refused as a whole: halve it, so one bad address costs its own message only
+                queue[:0] = [chunk[:half], chunk[half:]]
+                D.log_line(f"a batch of {len(chunk)} for {issue_id} was refused (resend {err.status}); sending it in halves")
+            elif err.status in (400, 422):
+                send.setdefault("rejected", {})[chunk[0][0]] = t
+                send.setdefault("errors", []).append({"t": t, "error": f"resend {err.status}", "n": 1})
+                A.log_error(f"devotional: one reader of {issue_id} was refused by resend ({err.status}); not tried again")
+            else:
+                send.setdefault("errors", []).append({"t": t, "error": f"resend {err.status}", "n": len(chunk)})
+                A.log_error(f"devotional: a batch of {issue_id} failed: resend {err.status}; this run stops, the next is in ten minutes")
+                stopped = True
+            send["sent"], issue["updated"] = len(send["done"]), t
+            D.save_issue(A.DATA, issue)
+    with A.devotional_lock():
+        issue = D.load_issue(A.DATA, issue_id)
+        if issue is None: return
+        send, t = issue["send"], A.now_ms()
+        rejected = send.get("rejected") or {}
+        left = [sid for sid, _r in D.confirmed(D.load_subscribers(A.DATA)) if sid not in send["done"] and sid not in rejected]
+        send["failed"] = len(left) + len(rejected)
+        closed = not left or send["runs"] >= DEVO_SEND_RUNS
+        if closed: issue["status"] = "sent"
+        send["finishedAt"] = issue["updated"] = t
+        D.save_issue(A.DATA, issue)
+    D.log_line(f"{issue['status']} {issue_id}: sent {send['sent']}, rejected {len(rejected)}, left {len(left)}")
+    if closed and left: A.log_error(f"devotional: {issue_id} closed after {send['runs']} runs with {len(left)} reader(s) unsent")
+    if closed and author: devo_mail(D.sent_mail(issue, send["sent"], devo_cfg(), author[1]), "sent")
+
+
+def devo_last_activity(issue):
+    """When a `sending` issue last did anything: the end of its last run, or its start while a run is going."""
+    s = issue.get("send") or {}
+    return s.get("finishedAt") if A._is_int(s.get("finishedAt")) else s.get("startedAt")
+
+
+def devo_page(title, lines, links=(), extra=""):
+    """A small dark page in the email's look (confirm, unsubscribe, review). `lines` and `extra` are HTML the caller
+    has escaped; the title and the link labels are escaped here."""
+    body = "".join(f'<p style="margin:0 0 14px;font:400 17px/1.6 {D.SANS};color:{D.INK};">{x}</p>' for x in lines)
+    btns = "".join(f'<p style="margin:0 0 12px;"><a href="{D.esc(u)}" style="display:inline-block;padding:11px 20px;border-radius:999px;'
+                   f'background:{D.GOLD};color:{D.BG};text-decoration:none;font:600 15px/1 {D.SANS};">{D.esc(t)}</a></p>' for t, u in links)
+    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<meta name="robots" content="noindex"><meta name="color-scheme" content="dark"><title>{D.esc(title)} · Bible Lantern</title></head>'
+            f'<body style="margin:0;padding:0;background:#000000;color:{D.INK};"><div style="max-width:600px;margin:0 auto;padding:40px 24px;background:{D.BG};">'
+            f'<p style="margin:0 0 28px;font:600 13px/1 {D.SANS};color:{D.INK};"><img src="{D.esc(DEVO_SITE)}/icons/icon-192.png" width="22" height="22" alt="" '
+            f'style="vertical-align:middle;border:0;border-radius:5px;margin-right:8px;">Bible Lantern</p>'
+            f'<h1 style="margin:0 0 16px;font:400 34px/1.1 {D.SERIF};color:{D.INK};">{D.esc(title)}</h1>{body}{btns}{extra}</div></body></html>')
+
+
+def devo_review_page(issue, raw, readers):
+    """The review page: the issue framed below three buttons. The forms post the token back (no sign-in needed)."""
+    btn = (f'font:600 15px/1 {D.SANS};padding:11px 20px;border-radius:999px;border:0;cursor:pointer;')
+    forms = "".join(
+        f'<form method="post" action="/api/devotional/review" style="display:inline-block;margin:0 8px 8px 0;">'
+        f'<input type="hidden" name="t" value="{D.esc(raw)}"><input type="hidden" name="action" value="{a}">'
+        f'<button type="submit" style="{btn}background:{D.GOLD if a == "approve" else "#2a2927"};color:{D.BG if a == "approve" else D.INK};">{label}</button></form>'
+        for a, label in (("approve", "Approve"), ("skip", "Skip"), ("test", "Send me a test")))
+    subject = D.esc(((issue.get("draft") or {}).get("subject")) or "Weekly devotional")
+    lines = [f"{subject} · {D.esc(D.week_label(issue['week']))} · {readers} confirmed reader{'' if readers == 1 else 's'}.",
+             "Approve and it goes out at the next send time. Skip and nothing is sent for the week. "
+             "Send me a test mails it to your own address, marked [test]."]
+    frame = (f'<p style="margin:12px 0 0;">{forms}</p><iframe src="/api/devotional/review?t={D.esc(raw)}&amp;view=issue" title="The issue" '
+             f'style="display:block;width:100%;height:1600px;margin-top:20px;border:1px solid {D.LINE};border-radius:12px;background:#000000;"></iframe>')
+    return devo_page("Review this issue", lines, (), frame)
+
+
+def devo_kick():
+    """Run a scheduler tick soon (after an approval with BS_DEVOTIONAL_SEND=now, or Send now), off the request thread."""
+    threading.Thread(target=SCHEDULER.tick, name="devotional-kick", daemon=True).start()
+
+
+class DevotionalScheduler:
+    """§4.6: a daemon thread that ticks every 30 s. Each step is wrapped, so one failure is logged and the thread
+    keeps going. tick(now) is also what the tests call (POST /api/devotional/tick with BS_DEVOTIONAL_TEST=1)."""
+    INTERVAL = 30
+
+    def __init__(self):
+        self.stop, self.lock, self.failed = threading.Event(), threading.Lock(), {}
+
+    def start(self):
+        threading.Thread(target=self.loop, name="devotional", daemon=True).start()
+
+    def loop(self):
+        while not self.stop.wait(self.INTERVAL):
+            self.tick()
+
+    def tick(self, now=None):
+        now = now if now is not None else A.now_ms()
+        with self.lock:
+            for step in (self.compile_due, self.send_due, self.resume_stuck, self.prune):
+                try: step(now)
+                except Exception:  # noqa: one step failing must not stop the others, or the thread
+                    A.log_error(f"devotional: {step.__name__}: {traceback.format_exc()}")
+
+    def compile_due(self, now):
+        sched = D.parse_schedule(DEVO_COMPILE)
+        moment = D.last_moment(sched, now, DEVO_TZ)
+        if moment is None: return
+        week = D.week_for(D.local_day(moment, DEVO_TZ))
+        with A.devotional_lock(): exists = D.load_issue(A.DATA, week["to"]) is not None
+        if exists or self.failed.get(week["to"], 0) > now - 3600 * 1000: return
+        try: devo_compile(week, "schedule")
+        except ApiError as e:
+            self.failed[week["to"]] = now  # tried again in an hour, not every 30 s
+            D.log_line(f"compile {week['to']} failed: {e.code}")
+
+    def send_due(self, now):
+        with A.devotional_lock():
+            due = [i["id"] for i in D.list_issues(A.DATA, 60)
+                   if i.get("status") == "approved" and A._is_int((i.get("send") or {}).get("due")) and 0 < i["send"]["due"] <= now]
+        for issue_id in due: devo_send(issue_id, now)
+
+    def resume_stuck(self, now):
+        """A `sending` issue quiet for ten minutes: a run that was cut off (no end recorded) or one that ended with
+        readers left after a failure. devo_send closes it after DEVO_SEND_RUNS runs."""
+        with A.devotional_lock():
+            stuck = [i["id"] for i in D.list_issues(A.DATA, 60)
+                     if i.get("status") == "sending" and A._is_int(devo_last_activity(i)) and now - devo_last_activity(i) > DEVO_RESUME_MS]
+        for issue_id in stuck:
+            D.log_line(f"resuming {issue_id}")
+            devo_send(issue_id, now)
+
+    def prune(self, now):
+        with A.devotional_lock():
+            doc = D.load_subscribers(A.DATA)
+            n = D.prune_pending(doc, now)
+            if n: D.save_subscribers(A.DATA, doc)
+        if n: D.log_line(f"dropped {n} pending sign-up(s) older than 7 days")
+
+
+SCHEDULER = DevotionalScheduler()
+
+
 H = Handler
+DEVO_TICK = "/api/devotional/tick"
 ROUTES = {
     "/api/auth/me": {"GET": Route(H.h_me)},
     "/api/auth/signup": {"POST": Route(H.h_signup, 16 * KIB)},
@@ -2570,11 +3276,33 @@ ROUTES = {
     "/api/passage": {"GET": Route(H.h_passage)},
     "/api/admin/traffic": {"GET": Route(H.h_admin_traffic)},
     HEALTH: {"GET": Route(H.h_health)},
+    # the weekly devotional (devotional brief §3): public routes need no X-BS-Scope (a plain page calls them); the
+    # confirm, unsubscribe and review links come from emails (form=True); the owner routes are in DEVO_OWNER_ONLY
+    "/api/devotional/config": {"GET": Route(H.h_devo_config)},
+    "/api/devotional/subscribe": {"POST": Route(H.h_devo_subscribe, 8 * KIB)},
+    "/api/devotional/confirm": {"GET": Route(H.h_devo_confirm), "POST": Route(H.h_devo_confirm, 8 * KIB, form=True)},
+    "/api/devotional/unsubscribe": {"GET": Route(H.h_devo_unsubscribe), "POST": Route(H.h_devo_unsubscribe, 8 * KIB, form=True)},
+    "/api/devotional/review": {"GET": Route(H.h_devo_review), "POST": Route(H.h_devo_review_post, 8 * KIB, form=True)},
+    "/api/devotional/admin": {"GET": Route(H.h_devo_admin)},
+    "/api/devotional/compile": {"POST": Route(H.h_devo_compile, 8 * KIB, auth=True, scope=True)},
+    "/api/devotional/subscribers.csv": {"GET": Route(H.h_devo_csv)},
+    DEVO_TICK: {"POST": Route(H.h_devo_tick, 8 * KIB, auth=True, scope=True)},
 }
 HOSTED_ONLY = {"/api/admin/traffic"}  # 404 locally, where there are no owners
 OWNERS_ONLY = {"/api/admin/traffic"}  # 404 for anyone but an owner, whatever the method
+# 404 for anyone but an owner on the site; locally for anyone not signed in (Handler.devo_owner)
+DEVO_OWNER_ONLY = {"/api/devotional/admin", "/api/devotional/compile", "/api/devotional/subscribers.csv", DEVO_TICK}
 BOOKMARK_ROUTES = {"PATCH": Route(H.h_bookmark_patch, 8 * KIB, scope=True, write=True),
                    "DELETE": Route(H.h_bookmark_delete, 1 * KIB, scope=True, write=True)}
+DEVO_ISSUE_PATH = re.compile(r"/api/devotional/issues/(\d{4}-\d{2}-\d{2})(?:/(html|approve|send-now|skip|test))?")
+DEVO_ISSUE_ROUTES = {  # all owner-only, like DEVO_OWNER_ONLY
+    "": {"GET": Route(H.h_devo_issue), "PATCH": Route(H.h_devo_issue_patch, 512 * KIB, auth=True, scope=True)},
+    "html": {"GET": Route(H.h_devo_issue_html)},
+    "approve": {"POST": Route(H.h_devo_issue_action, 1 * KIB, auth=True, scope=True)},
+    "send-now": {"POST": Route(H.h_devo_issue_action, 1 * KIB, auth=True, scope=True)},
+    "skip": {"POST": Route(H.h_devo_issue_action, 1 * KIB, auth=True, scope=True)},
+    "test": {"POST": Route(H.h_devo_issue_action, 1 * KIB, auth=True, scope=True)},
+}
 
 
 # ----------------------------------------------------------------- CLI (§3.9)
@@ -2751,6 +3479,16 @@ def main():
         n_claims = backfill_owner_claims()
         if n_claims: print(f"Recorded {n_claims} owner claim(s) for profiles made before owner-claims.json existed.", flush=True)
         start_metrics(os.path.join(data, "metrics.json"))
+    if HOSTED and not RESEND_KEY:
+        print("Weekly devotional: BS_RESEND_KEY not set: the list is not open and nothing is sent.", flush=True)
+    if RESEND_KEY and not DEVO_AUTHOR:
+        print("Warning: BS_RESEND_KEY is set but no author: set BS_DEVOTIONAL_AUTHOR or BS_OWNER_EMAILS, or nothing compiles.", file=sys.stderr)
+    if RESEND_KEY and not DEVO_ADDRESS:
+        print("Warning: BS_DEVOTIONAL_ADDRESS is empty: the email footer has no postal line (CAN-SPAM asks for one).", file=sys.stderr)
+    if RESEND_KEY:
+        print(f"Weekly devotional: list open, compiled {D.schedule_text(D.parse_schedule(DEVO_COMPILE))}, sent "
+              f"{D.schedule_text(D.parse_schedule(DEVO_SEND))} ({DEVO_TZ_NAME}), draft {'stitched with AI' if ANTHROPIC_KEY else 'laid out without AI'}", flush=True)
+    SCHEDULER.start()
     if APIBIBLE_KEY:  # which Bibles the key serves, found in the background (from bibles.json while it is recent)
         pinned = [t.upper() for t in APIBIBLE_TRS if t in APIBIBLE_PINS]
         print(f"API.Bible: key set, {APIBIBLE_MONTHLY} calls a month" + (f", pinned {', '.join(pinned)}" if pinned else ""), flush=True)

@@ -790,6 +790,7 @@ function renderProfile() {
   ${fileRow}
 </ul>
 ${a.hosted && a.owner ? trafficHtml() : ''}
+${a.owner || !a.hosted ? devoHtml() : ''}
 <h3 class="group-h">Bible Lantern</h3>
 <ul class="group av"><li>${GIVE_ROW}</li></ul>
 <h3 class="group-h">Sessions</h3>
@@ -799,6 +800,7 @@ ${a.hosted && a.owner ? trafficHtml() : ''}
   $('#prof-email-in').value = u.email || '';
   profShown = { name: u.name || '', email: u.email || '' };
   if (a.hosted && a.owner) loadTraffic();
+  if (a.owner || !a.hosted) loadDevotional();
 }
 /** The name and email the fields were last filled with: a field still holding them has not been edited. */
 let profShown = { name: '', email: '' };
@@ -875,6 +877,7 @@ function bindProfileDialog() {
     else if (what === 'import-file') { if (DRY) profErr('Dry run: profile changes are turned off.'); else $('#prof-import-file')?.click(); }
     else if (what === 'signout-all') { closeDialog(document.getElementById('profile')); signOut({ all: true }); }
     else if (what === 'delete') deleteProfile();
+    else if (what.startsWith('devo-')) await devoAction(it, what.slice(5));
   });
 }
 async function busyWhile(btn, label, fn) {
@@ -1065,6 +1068,134 @@ async function loadTraffic() {
   if (r.ok && r.data && typeof r.data === 'object') { trf = { at: Date.now(), data: r.data }; drawTraffic(r.data); return; }
   box.removeAttribute('aria-busy');
   box.innerHTML = `<p class="group-foot trf-wait">${esc(r.offline ? MSG.offline : 'Couldn’t load site activity. Close and open Profile to try again.')}</p>`;
+}
+
+// ------------------------------------------------------------ weekly devotional (devotional brief §6: the owner's card)
+// GET /api/devotional/admin: hosted it answers owners only (404 to everyone else, and the card goes); locally any
+// signed-in profile, so the card is drawn for owners hosted and for everyone locally, and removed on a 404 (an older
+// serve.py without the routes). Every action re-fetches the card; failures are toasts.
+const DEVO_ROWS = 6;
+const DEVO_DAYS = { mon: 'Mondays', tue: 'Tuesdays', wed: 'Wednesdays', thu: 'Thursdays', fri: 'Fridays', sat: 'Saturdays', sun: 'Sundays' };
+const DEVO_DAY = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' };
+const DEVO_STATUS = { draft: 'Draft', approved: 'Approved', sending: 'Sending', sent: 'Sent', skipped: 'Skipped', empty: 'Empty', failed: 'Failed' };
+const DEVO_COUNTS = [['notes', 'note', 'notes'], ['highlights', 'highlight', 'highlights'], ['links', 'link', 'links'], ['studies', 'study', 'studies'],
+  ['chapters', 'chapter', 'chapters'], ['verses', 'verse', 'verses'], ['sections', 'section', 'sections']];
+const DEVO_ERR = {
+  issue_locked: 'That week’s issue is already approved or sent, so it can’t be replaced.',
+  not_open: 'The list isn’t open: no mail key is set.',
+  no_author: 'No profile holds the owner claim for the author address.',
+  mail_unavailable: 'The mail service couldn’t be reached. Try again in a moment.',
+  bad_state: 'That issue has moved on. The card has been refreshed.',
+};
+let devoSeq = 0, devoData = null;
+function devoHtml() {
+  return `<h3 class="group-h" id="prof-devo-h">Weekly devotional</h3>
+<div class="devo" id="prof-devo" role="region" aria-labelledby="prof-devo-h" aria-busy="true"><p class="group-foot devo-wait">Loading the weekly devotional…</p></div>`;
+}
+/** "Week ending 8 Nov 2026" from the issue's week (its end day, YYYY-MM-DD), read as a calendar day, never shifted. */
+function devoWeek(iso) {
+  const [y, m, d] = String(iso || '').split('-').map(Number);
+  return y && m && d ? `Week ending ${d} ${MON3[m - 1]} ${y}` : 'Week';
+}
+/** "Saturdays 06:00" from "sat 06:00"; "off" and "now" come back as given. */
+function devoWhen(s, plural = true) {
+  const m = /^(mon|tue|wed|thu|fri|sat|sun)\s+(\d{1,2}:\d{2})$/i.exec(String(s || '').trim());
+  if (!m) return String(s || '').trim().toLowerCase();
+  const day = m[1].toLowerCase();
+  return `${plural ? DEVO_DAYS[day] : DEVO_DAY[day]} ${m[2].padStart(5, '0')}`;
+}
+function devoSchedule(sc) {
+  const s = sc && typeof sc === 'object' ? sc : {};
+  const tz = String(s.tz || '').split('/').pop().replace(/_/g, ' ');
+  const compile = devoWhen(s.compile), send = devoWhen(s.send);
+  const parts = [compile === 'off' ? 'Compiled by hand' : compile ? `Compiled ${compile}` : '',
+    send === 'now' ? 'sent on approval' : send ? `sent ${send}` : ''].filter(Boolean);
+  return parts.length ? `${parts.join(', ')}${tz ? `, ${tz}` : ''}` : 'No schedule';
+}
+/** '3 notes · 2 highlights · 4 verses' from the issue's counts (zero parts omitted; unknown keys shown by name). */
+function devoCounts(c) {
+  if (!c || typeof c !== 'object') return '';
+  const known = new Set(DEVO_COUNTS.map(x => x[0]));
+  const parts = DEVO_COUNTS.filter(([k]) => num(c[k]) > 0).map(([k, one, many]) => `${fmtN(c[k])} ${num(c[k]) === 1 ? one : many}`);
+  Object.keys(c).filter(k => !known.has(k) && num(c[k]) > 0).forEach(k => parts.push(`${fmtN(c[k])} ${k.replace(/_/g, ' ')}`));
+  return parts.join(' · ');
+}
+function devoIssueRow(it) {
+  const id = String(it.id || ''), st = String(it.status || 'draft').toLowerCase();
+  const chip = `<span class="devo-st ${esc(st)}">${esc(DEVO_STATUS[st] || st)}</span>`;
+  const counts = devoCounts(it.counts);
+  const send = it.send && typeof it.send === 'object' ? it.send : {};
+  const note = st === 'sent' && Number.isFinite(+send.sent) ? `Sent to ${fmtN(send.sent)}${num(send.failed) ? `, ${fmtN(send.failed)} failed` : ''}`
+    : st === 'approved' && send.due ? `Goes out ${longDate(send.due)}` : '';
+  const b = (act, label, cls = 'btn-plain') => `<button type="button" class="btn ${cls} sm" data-prof="devo-${act}" data-id="${esc(id)}">${label}</button>`;
+  const acts = [`<a class="btn btn-plain sm" href="/api/devotional/issues/${encodeURIComponent(id)}/html" target="_blank" rel="noopener noreferrer">Preview ${icon('external')}</a>`];
+  if (st === 'draft') acts.push(b('approve', 'Approve', 'btn-tinted'), b('skip', 'Skip'), b('test', 'Send me a test'));
+  else if (st === 'approved') acts.push(b('send-now', 'Send now', 'btn-tinted'), b('skip', 'Skip'), b('test', 'Send me a test'));
+  else if (st === 'sent' || st === 'failed') acts.push(b('test', 'Send me a test'));
+  const meta = [counts, note].filter(Boolean).join(' · ');
+  return `<li class="devo-issue"><div class="devo-row"><b>${esc(devoWeek(it.week))}</b>${chip}${meta ? `<small>${esc(meta)}</small>` : ''}</div><div class="devo-acts">${acts.join('')}</div></li>`;
+}
+function drawDevotional(d) {
+  const box = $('#prof-devo'); if (!box) return;
+  const subs = d.subscribers && typeof d.subscribers === 'object' ? d.subscribers : {};
+  const issues = (Array.isArray(d.issues) ? d.issues : []).filter(x => x && typeof x === 'object' && x.id).slice(0, DEVO_ROWS);
+  const facts = [
+    ['Subscribers', `${fmtN(subs.confirmed)} confirmed · ${fmtN(subs.pending)} pending`],
+    ['Schedule', devoSchedule(d.schedule)],
+    ['Draft', d.ai ? 'Stitched with AI' : 'Laid out without AI'],
+    ['List', d.open ? 'Open' : 'List not open (no mail key)'],
+  ];
+  box.innerHTML = `<dl class="group trf-facts devo-facts" aria-label="The weekly devotional now">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+<div class="actions"><button type="button" class="btn btn-tinted sm" data-prof="devo-compile">Compile this week</button></div>
+${issues.length ? `<ul class="group devo-issues" aria-label="Issues, newest first">${issues.map(devoIssueRow).join('')}</ul>`
+    : '<p class="group-foot devo-wait">No issues yet. Compile this week to make the first draft.</p>'}
+<p class="group-foot">Nothing goes out until you approve an issue. Preview opens the email in a new tab.</p>`;
+  box.removeAttribute('aria-busy');
+}
+/** Loaded each time the Profile dialog opens, and again after every action. */
+async function loadDevotional() {
+  const my = ++devoSeq;
+  const r = await api('GET', '/api/devotional/admin');
+  const box = $('#prof-devo'); if (my !== devoSeq || !box) return;
+  if (r.status === 404) { box.remove(); $('#prof-devo-h')?.remove(); devoData = null; return; } // not an owner here, or no such routes
+  if (r.ok && r.data && typeof r.data === 'object') { devoData = r.data; drawDevotional(r.data); return; }
+  box.removeAttribute('aria-busy');
+  box.innerHTML = `<p class="group-foot devo-wait">${esc(r.offline ? MSG.offline : 'Couldn’t load the weekly devotional. Close and open Profile to try again.')}</p>`;
+}
+const devoFail = r => r.offline ? MSG.offline : (r.data && (DEVO_ERR[r.data.error] || r.data.message)) || (r.status === 404 ? 'That issue is gone. The card has been refreshed.' : MSG.generic);
+/** The owner's buttons: compile, approve, skip, test, send-now (each confirmed first except compile). */
+async function devoAction(btn, act) {
+  if (DRY) { toast(MSG.dry); return; }
+  const id = btn.dataset.id || '', d = devoData || {};
+  const issue = (Array.isArray(d.issues) ? d.issues : []).find(x => x && x.id === id) || {};
+  const readers = fmtN(d.subscribers && d.subscribers.confirmed), week = devoWeek(issue.week).replace(/^Week/, 'week');
+  const send = devoWhen(d.schedule && d.schedule.send, false);
+  const when = send === 'now' ? 'straight away' : send ? `on ${send}` : 'at the next send time';
+  const ask = { compile: null,
+    approve: { title: 'Approve this issue?', body: `Send this week’s devotional to ${readers} readers ${when}?`, ok: 'Approve' },
+    skip: { title: 'Skip this issue?', body: `The ${week} will not be sent. You can compile it again while it is a draft.`, ok: 'Skip', danger: true },
+    test: { title: 'Send yourself a test?', body: `The ${week} goes to your own address only, marked [test].`, ok: 'Send test' },
+    'send-now': { title: 'Send now?', body: `Send this week’s devotional to ${readers} readers now, instead of ${when === 'straight away' ? 'waiting' : when}?`, ok: 'Send now' },
+  }[act];
+  if (ask === undefined) return;
+  if (ask) {
+    const c = await confirmDialog({ title: ask.title, body: ask.body, ok: ask.ok, danger: !!ask.danger });
+    if (!c.ok) return;
+  }
+  const url = act === 'compile' ? '/api/devotional/compile' : `/api/devotional/issues/${encodeURIComponent(id)}/${act}`;
+  const labels = { compile: 'Compiling…', approve: 'Approving…', skip: 'Skipping…', test: 'Sending…', 'send-now': 'Sending…' };
+  const r = await busyWhile(btn, labels[act], () => api('POST', url, {}, { timeout: 120000 }));
+  if (r.ok) {
+    const it = r.data && r.data.issue && typeof r.data.issue === 'object' ? r.data.issue : issue;
+    if (act === 'compile') {
+      const empty = String(it.status || '') === 'empty';
+      toast(`Compiled the ${devoWeek(it.week).replace(/^Week/, 'week')}: ${empty ? 'nothing was studied that week' : `${devoCounts(it.counts) || 'a draft'}, ${it.stitched ? 'stitched with AI' : 'laid out without AI'}`}.${!empty && d.open ? ' A preview is on its way to your inbox.' : ''}`);
+    } else if (act === 'approve') toast(`Approved. It goes to ${readers} readers ${when}.`);
+    else if (act === 'skip') toast('Skipped. Nothing will be sent for that week.');
+    else if (act === 'test') toast('A test is on its way to your own address.');
+    else toast(`Sending now to ${readers} readers.`);
+  } else toast(devoFail(r));
+  await loadDevotional();
 }
 
 async function deleteProfile() {

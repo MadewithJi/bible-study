@@ -1401,6 +1401,23 @@ dialog.auth { max-width: 440px; }
 .trf-facts dt { font-size: 14px; color: var(--label); }
 .trf-facts dd { margin: 0; font-size: 14px; color: var(--label-2); text-align: right; font-variant-numeric: tabular-nums; }
 #profile-body > .trf + .group-h { margin-top: 24px; }
+/* the weekly devotional card (owner): facts like Site activity, then the issues list */
+.devo-wait { margin: 0 16px; }
+.devo .actions { margin-top: 12px; }
+.devo-issues { margin-top: 12px; }
+.devo-issue { padding: 11px 16px 9px; }
+.devo-issue + .devo-issue { border-top: .5px solid var(--sep); }
+.devo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; line-height: 1.3; color: var(--label); }
+.devo-row b { font-weight: 600; }
+.devo-row small { font-size: 12px; color: var(--label-2); }
+.devo-st { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: var(--r-pill); background: var(--fill-2); color: var(--label-2); font: 600 11px/1 var(--sans); letter-spacing: .02em; text-transform: uppercase; }
+.devo-st.draft { background: color-mix(in srgb, var(--sw-yellow) 24%, transparent); color: var(--label); }
+.devo-st.approved { background: color-mix(in srgb, var(--sw-green) 18%, transparent); color: var(--sw-green); }
+.devo-st.sending { background: color-mix(in srgb, var(--sw-orange) 18%, transparent); color: var(--sw-orange); }
+.devo-st.sent { background: var(--accent-tint-2); color: var(--accent-on-tint); }
+.devo-st.failed { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger-text); }
+.devo-acts { display: flex; flex-wrap: wrap; gap: 2px 4px; margin: 4px 0 0 -10px; }
+#profile-body > .devo + .group-h { margin-top: 24px; }
 .note-card.guest-save { padding: 0; }
 .note-card.guest-save .empty { padding: 24px 20px 22px; }
 .note-card.guest-save .btn { margin-top: 6px; }
