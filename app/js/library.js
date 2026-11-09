@@ -669,14 +669,15 @@ export function openBookmarkMenu(anchor, bookmark) {
   return m;
 }
 function closeMenuSafe(restore) { if (fn('closeMenu')) ui.closeMenu(restore); }
-/** The memory verse a verse bookmark is (that verse, or a passage starting there, as the gutter's badge), or null. */
-const memOfBm = bm => (mem && bm && bm.v ? mem.findByRef(`${bm.b}.${bm.c}.${bm.v}`) || mem.memoryFor(bm.b, bm.c, bm.v) : null);
-/** The bookmark menu's Memorize this verse (memorize-brief §4), in the reader's translation; Practise when it is one. */
+/** The memory verse a verse bookmark is in (that verse, or a passage holding it: memory.js memoryCovering), or null. */
+const memOfBm = bm => (mem && bm && bm.v ? (typeof mem.memoryCovering === 'function' ? mem.memoryCovering(bm.b, bm.c, bm.v) : mem.findByRef(`${bm.b}.${bm.c}.${bm.v}`) || mem.memoryFor(bm.b, bm.c, bm.v)) : null);
+/** The bookmark menu's Memorize this verse (memorize-brief §4), in the reader's translation; Practise when it is one
+ * in that translation (learned in another: memorize() says which and offers Learn in). */
 function memorizeBm(bm, anchor) {
   if (!mem) return;
   const have = memOfBm(bm);
   // the Library may redraw the row under the practice: its ⋯ again, by the bookmark's id
-  if (have) mem.practise(have.id, { returnFocus: () => (anchor.isConnected ? anchor : $(`#library-body li[data-bm="${cssEsc(bm.id)}"] [data-bm-menu]`)) });
+  if (have && have.tr === state.tr) mem.practise(have.id, { returnFocus: () => (anchor.isConnected ? anchor : $(`#library-body li[data-bm="${cssEsc(bm.id)}"] [data-bm-menu]`)) });
   else mem.memorize({ b: bm.b, c: bm.c, v: bm.v, tr: state.tr });
 }
 

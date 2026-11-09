@@ -5,6 +5,7 @@
 import { state, bookOf, refLabel, esc, api, lsGet, lsSet, lsKey, DRY, broadcast, onBroadcast, cut, wellFormed, scrollBehavior, setSaveStatus, pendingNotes, registerSaver, trInfo, readOnlyGuest, guestBlocked, signInRequired, lsDel } from './store.js';
 import { icon } from './icons.js';
 import * as ui from './ui.js';
+import { matchQuote } from './xmatch.js';
 
 // library.js is optional (main.js loads it guarded): the optimistic activity entry and a refresh after new marks
 let library = null;
@@ -548,6 +549,26 @@ function locate(m, M) {
   const p = vpos(M, g, false), q = vpos(M, g + m.quote.length, true);
   return p && q ? { sv: p.v, so: p.off, ev: q.v, eo: q.off, moved: true } : null;
 }
+/**
+ * Where a mark made in another translation goes in this column: the same words when this text has them (xmatch.js),
+ * else the whole of its verses (approx); null when none of its verses is in this column (an omitted verse).
+ */
+function crossLocate(m, M) {
+  const s = parseRef(m.start), e = parseRef(m.end); if (!s || !e) return null;
+  const vs = M.order.filter(i => i.v >= s.v && i.v <= e.v); if (!vs.length) return null;
+  const a = vs[0], z = vs[vs.length - 1];
+  // a phrase said more than once in the verse: the place nearest where the mark is in its own translation
+  const hint = a.v === s.v ? Math.min(m.so, a.len) : 0, hit = matchQuote(M.text.slice(a.start, z.start + z.len), m.quote, hint);
+  if (hit) {
+    const p = vpos(M, a.start + hit.i, false), q = vpos(M, a.start + hit.i + hit.len, true);
+    if (p && q) return { sv: p.v, so: p.off, ev: q.v, eo: q.off, moved: false, cross: true };
+  }
+  return { sv: a.v, so: 0, ev: z.v, eo: z.len, moved: false, cross: true, approx: true };
+}
+/** Whether a translation is on screen (either reader column; after a fallback, the one actually shown). */
+const trOnScreen = tr => colFor(readerEl(), tr) >= 0 || (!readerEl() && tr === state.tr);
+/** The reader columns on screen: [0], or [0, 1] with a parallel translation. */
+const colsOn = root => (root && root.dataset.tr2 ? [0, 1] : [0]);
 function domPoint(info, off, end) {
   const ns = info.nodes; if (!ns.length) return null;
   for (const { n, at } of ns) if (end ? off <= at + n.data.length : off < at + n.data.length) return [n, Math.max(0, off - at)];
@@ -578,8 +599,8 @@ function located(mark, chapterEl) {
   const root = chapterEl && chapterEl.id !== 'reader' && chapterEl.closest ? chapterEl.closest('#reader') || chapterEl : chapterEl;
   const s = parseRef(mark && mark.start);
   if (!root || !s || root.dataset.ch !== `${s.b}.${s.c}`) return null;
-  const col = colFor(root, mark.tr); if (col < 0) return null;
-  const M = chapterModel(root, col), loc = locate(mark, M);
+  const col = colFor(root, mark.tr); // made in a translation not on screen: its place in the main column
+  const M = chapterModel(root, Math.max(0, col)), loc = col < 0 ? crossLocate(mark, M) : locate(mark, M);
   return loc ? { M, loc } : null;
 }
 /**
@@ -650,8 +671,13 @@ function rangeToDraft(r) {
 }
 
 // ------------------------------------------------------------ drawing marks (§3.3)
-let drawn = new Map(); // id -> { sv, so, ev, eo, moved, range, ranges } for the marks drawn in the chapter shown (range: to place by; ranges: what is painted)
-let shown = new Map(); // id -> 'words' | 'moved' | 'other' (another translation) for every mark of the chapter shown
+// id -> { sv, so, ev, eo, moved, range, ranges, locs } for the marks drawn in the chapter shown (range: to place by;
+// ranges: what is painted, in every column; locs: [{col, sv, so, ev, eo, approx?, range, ranges}], one per column)
+let drawn = new Map();
+// id -> 'words' (in its own translation), 'moved' (its own translation, words not found), 'same' (made in another
+// translation, the same words found here), 'verse' (another translation, drawn as its whole verses) or 'other'
+// (another translation, none of its verses here) for every mark of the chapter shown
+let shown = new Map();
 
 /** Fallback paint: each item's ranges (else its range) in spans (one per piece of a text node; a later item wins an overlap). */
 function wrap(items) {
@@ -684,8 +710,9 @@ function unwrap(root, sel) {
   hosts.forEach(h => h && h.normalize());
 }
 /**
- * Draw the saved marks of the chapter shown: word highlights for marks made in a translation on screen (one
- * highlight per colour; comments without a colour as a dotted underline). Runs after each chapter render and on
+ * Draw the saved marks of the chapter shown in every translation and column on screen: in the mark's own translation
+ * its words; in another its words when that text has the same ones, else its whole verses (one highlight per colour;
+ * comments without a colour as a dotted underline). Runs after each chapter render and on
  * bs:marks-changed; fires bs:marks-drawn {b, c} after.
  */
 export function renderVerseMarks(chapterEl = readerEl()) {
@@ -693,15 +720,42 @@ export function renderVerseMarks(chapterEl = readerEl()) {
   if (HL) HL_NAMES.forEach(n => CSS.highlights.delete(n)); else unwrap(root, 'span.mk');
   drawn = new Map(); shown = new Map();
   const [b, c] = String(root.dataset.ch || '').split('.').map(Number);
-  const models = [], items = [];
+  const models = [], items = [], found = [];
   for (const m of b && c ? marksInChapter(b, c) : []) {
-    const col = colFor(root, m.tr);
-    if (col < 0) { shown.set(m.id, 'other'); continue; }
-    const M = models[col] || (models[col] = chapterModel(root, col));
-    const loc = locate(m, M), r = loc && toRange(M, loc), ranges = r ? toRanges(M, loc) : [];
-    if (!r || !ranges.length) { shown.set(m.id, 'moved'); continue; }
-    shown.set(m.id, 'words'); drawn.set(m.id, { ...loc, range: r, ranges });
-    items.push({ id: m.id, range: r, ranges, cls: m.color ? 'mark-' + m.color : 'mark-note' });
+    const own = colFor(root, m.tr), locs = [];
+    let ownFound = false;
+    for (const col of colsOn(root)) {
+      const M = models[col] || (models[col] = chapterModel(root, col));
+      const loc = col === own ? locate(m, M) : crossLocate(m, M), r = loc && toRange(M, loc), ranges = r ? toRanges(M, loc) : [];
+      if (!r || !ranges.length) continue;
+      if (col === own) ownFound = true;
+      locs.push({ col, ...loc, range: r, ranges });
+    }
+    if (own >= 0 && !ownFound) locs.length = 0; // its own text on screen without its words: 'Text moved', drawn nowhere
+    const first = locs.find(l => l.col === own) || locs[0];
+    shown.set(m.id, own >= 0 ? (ownFound ? 'words' : 'moved') : !first ? 'other' : first.approx ? 'verse' : 'same');
+    if (first) found.push({ m, locs, first });
+  }
+  // a mark drawn as its whole verses (other words in this translation) never covers a highlight of the words
+  // themselves: it goes round them, so a highlight made in this translation (or matched in it) shows its own colour
+  const solid = new Map(); // Text -> [[start, end]] of the coloured highlights drawn on their words
+  for (const { m, locs } of found) if (m.color) for (const l of locs) if (!l.approx) for (const r of l.ranges) {
+    let a = solid.get(r.startContainer); if (!a) solid.set(r.startContainer, a = []); a.push([r.startOffset, r.endOffset]);
+  }
+  const around = r => {
+    const cuts = (solid.get(r.startContainer) || []).filter(([x, y]) => y > r.startOffset && x < r.endOffset).sort((x, y) => x[0] - y[0]);
+    if (!cuts.length) return [r];
+    const out = []; let at = r.startOffset;
+    const piece = (x, y) => { if (y > x) { const q = document.createRange(); q.setStart(r.startContainer, x); q.setEnd(r.startContainer, y); out.push(q); } };
+    for (const [x, y] of cuts) { piece(at, Math.min(x, r.endOffset)); at = Math.max(at, y); }
+    piece(at, r.endOffset);
+    return out;
+  };
+  for (const { m, locs, first } of found) {
+    for (const l of locs) if (l.approx) l.ranges = l.ranges.flatMap(around);
+    const all = locs.flatMap(l => l.ranges); // kept when fully covered too: the bubble still finds the mark (containing)
+    drawn.set(m.id, { sv: first.sv, so: first.so, ev: first.ev, eo: first.eo, moved: first.moved, range: first.range, ranges: all, locs });
+    if (all.length) items.push({ id: m.id, range: first.range, ranges: all, cls: m.color ? 'mark-' + m.color : 'mark-note' });
   }
   if (HL) {
     const g = new Map();
@@ -711,7 +765,7 @@ export function renderVerseMarks(chapterEl = readerEl()) {
   if (pending) repaintPending();
   if (b && c) document.dispatchEvent(new CustomEvent('bs:marks-drawn', { detail: { b, c } }));
 }
-/** How a mark of the chapter shown is drawn: 'words', 'moved' (its words are not found: margin and drawer only), 'other' (made in a translation not on screen), or null. */
+/** How a mark of the chapter shown is drawn: 'words', 'moved', 'same', 'verse' or 'other' (see `shown`), or null. */
 export const markState = id => shown.get(id) || null;
 /** A drawn mark's words as a Range (computed afresh with the span fallback), or null. */
 export function markRange(id) {
@@ -845,12 +899,19 @@ const sameDraft = (x, y) => !!x && !!y && x.tr === y.tr && x.start === y.start &
 /** The saved mark whose words hold all of a draft's (the smallest), if any: the bubble then edits it. */
 function containing(d) {
   const s = parseRef(d.start), e = parseRef(d.end); if (!s || !e) return null;
+  const dcol = colFor(readerEl(), d.tr); // marks of every translation, as drawn in the draft's column
   let best = null, size = Infinity;
-  for (const [id, x] of drawn) {
-    const m = marks.byId.get(id); if (!m || m.tr !== d.tr) continue;
-    if ((x.sv - s.v || x.so - d.so) > 0 || (e.v - x.ev || d.eo - x.eo) > 0) continue;
-    const n = (x.ev - x.sv) * OFF_MAX + x.eo - x.so;
-    if (n < size) { best = m; size = n; }
+  for (const [id, dx] of drawn) {
+    const m = marks.byId.get(id); if (!m) continue;
+    for (const x of dx.locs || []) {
+      if (x.col !== dcol) continue;
+      // drawn as its whole verses (other words in this translation): only the whole of those verses is that mark,
+      // never some words inside them
+      if (x.approx && !(s.v === x.sv && e.v === x.ev && d.so === 0 && d.eo >= x.eo)) continue;
+      if ((x.sv - s.v || x.so - d.so) > 0 || (e.v - x.ev || d.eo - x.eo) > 0) continue;
+      const n = (x.ev - x.sv) * OFF_MAX + x.eo - x.so;
+      if (n < size) { best = m; size = n; }
+    }
   }
   return best;
 }
@@ -870,10 +931,20 @@ const say = msg => { const el = document.getElementById('mark-say'); if (el) { e
  * The verses a draft touches as a memory verse's ref ('43.3.16', '43.3.16-18') and their label, and the memory verse
  * already there (any translation) or null.
  */
+/**
+ * The memory verse a selection of verses v..w already is (any translation): the same ref, else one that holds all of
+ * them (a single verse inside a memorized passage); a passage that only starts on a memory verse is a new one.
+ */
+function mzHave(ref, s, w) {
+  const exact = safe(mem && mem.findByRef, ref); if (exact) return exact;
+  const cov = mem && typeof mem.memoryCovering === 'function' ? safe(mem.memoryCovering, s.b, s.c, s.v) : null;
+  const m = cov && /^\d+\.\d+\.(\d+)(?:-(\d+))?$/.exec(cov.ref);
+  return m && +m[1] <= s.v && w <= +(m[2] || m[1]) ? cov : null;
+}
 function mzOf(d) {
   const s = parseRef(d && d.start), e = parseRef(d && d.end); if (!s || !e) return null;
   const w = e.v > s.v ? e.v : s.v, ref = w > s.v ? `${s.b}.${s.c}.${s.v}-${w}` : `${s.b}.${s.c}.${s.v}`;
-  return { b: s.b, c: s.c, v: s.v, w, label: refLabel(s.b, s.c, s.v, w > s.v ? w : 0), have: safe(mem && mem.findByRef, ref) || null };
+  return { b: s.b, c: s.c, v: s.v, w, label: refLabel(s.b, s.c, s.v, w > s.v ? w : 0), have: mzHave(ref, s, w) };
 }
 /** The bubble's last button (§4): Memorize the verses, or Practise them when they already are a memory verse ('' without memory.js). */
 function mzBtnHtml(d) {
@@ -1019,7 +1090,8 @@ function memorizePending() {
   const p = pending, z = p && mem && mzOf(p.draft); if (!z) return;
   window.getSelection?.()?.removeAllRanges();
   closeBubble({ restore: true });
-  if (z.have) safe(mem.practise, z.have.id);
+  if (z.have && z.have.tr === p.draft.tr) safe(mem.practise, z.have.id);
+  else if (z.have) { const h = /^\d+\.\d+\.(\d+)(?:-(\d+))?$/.exec(z.have.ref); if (h) safe(mem.memorize, { b: z.b, c: z.c, v: +h[1], ve: +(h[2] || h[1]), tr: p.draft.tr }); } // says which translation, offers Learn in
   else if (safe(mem.memorize, { b: z.b, c: z.c, v: z.v, ve: z.w, tr: p.draft.tr })) safe(A && A.flash, Array.from({ length: z.w - z.v + 1 }, (_, i) => z.v + i), { scroll: false });
 }
 async function copyPending() {
@@ -1038,12 +1110,19 @@ async function copyPending() {
   toast(ok ? (p.whole ? `Copied ${markLabel(p.draft)}.` : 'Copied the words.') : 'Couldn’t copy. The browser blocked the clipboard.');
 }
 
+/** The comment card's heading: Comment or Edit comment, the verses, and their translation when it is not the reader's. */
+const cardRef = (d, m) => `${m && m.note ? 'Edit comment' : 'Comment'} · ${markLabel(d)}${d.tr !== (readerEl()?.dataset.tr || state.tr) ? ` · ${trInfo(d.tr).abbr}` : ''}`;
+/** The open card's heading again (the reader changed translation under it): text only, the typed words untouched. */
+function refreshCardRef() {
+  const el = cardEl()?.querySelector('#mc-ref'); if (!el || !pending) return;
+  const m = pending.mark ? marks.byId.get(pending.mark.id) || pending.mark : null, t = cardRef(pending.draft, m);
+  if (el.textContent !== t) el.textContent = t;
+}
 function cardHtml(p, m) {
   const color = card.color, d = p.draft;
-  const tr = d.tr !== state.tr ? ` · ${esc(trInfo(d.tr).abbr)}` : '';
   const quote = d.quote.replace(/\s+/g, ' ').trim();
   const sw = ['', ...COLORS].map(c => `<button type="button" role="radio" class="mc-sw${c ? '' : ' none'}" data-mc-color="${c}" aria-checked="${c === color}" tabindex="${c === color ? 0 : -1}" aria-label="${c ? cap(c) : 'No colour'}" title="${c ? cap(c) : 'No colour: a dotted underline'}"><i>${c ? '' : icon('slash')}</i></button>`).join('');
-  return `<p class="mc-ref" id="mc-ref">${m && m.note ? 'Edit comment' : 'Comment'} · ${esc(markLabel(d))}${tr}</p>`
+  return `<p class="mc-ref" id="mc-ref">${esc(cardRef(d, m))}</p>`
     + `<blockquote class="mc-quote"${color ? ` data-mk-color="${color}"` : ''}>“${esc(quote.length > 400 ? quote.slice(0, 400) : quote)}”</blockquote>`
     + `<div class="editor"><textarea class="note-text mc-text" aria-labelledby="mc-ref" maxlength="${NOTE_MAX}" placeholder="Write a comment…">${esc(card.text0)}</textarea></div>`
     + '<p class="mc-err" role="alert" hidden></p>'
@@ -1222,8 +1301,10 @@ export function markCardHtml(m, { menu = false } = {}) {
   const meta = [m.color ? cap(m.color) : 'Underlined',
     `<time datetime="${new Date(m.updated).toISOString()}" title="${when} ${esc(ui.longDate(m.updated))}">${esc(ui.relTime(m.updated))}</time>`,
     e.v > s.v ? esc(label) : '',
-    m.tr !== state.tr ? `<abbr title="Made in the ${esc(trInfo(m.tr).name)}">${esc(trInfo(m.tr).abbr)}</abbr>` : '',
+    m.tr !== (readerEl()?.dataset.tr || state.tr) ? `<abbr title="Made in the ${esc(trInfo(m.tr).name)}">${esc(trInfo(m.tr).abbr)}</abbr>` : '',
     st === 'moved' ? '<span class="mk-moved" title="These words aren’t in the verse as it reads now, so they aren’t highlighted.">Text moved</span>' : '',
+    st === 'verse' && !trOnScreen(m.tr) ? `<span class="mk-moved" title="${esc(`${what === 'comment' ? 'Made' : 'Highlighted'} in the ${trInfo(m.tr).name}. The words differ here, so the whole verse is shown.`)}">Whole verse</span>` : '',
+    st === 'other' ? `<span class="mk-moved" title="${esc(`This translation leaves out the verse it was made in (${trInfo(m.tr).abbr}).`)}">Not in this translation</span>` : '',
   ].filter(Boolean).join('<span aria-hidden="true"> · </span>');
   const note = m.note ? `<div class="md mk-note" data-mk-note>${mdHtml(m.note)}</div><button class="link mk-more" type="button" data-mk-more aria-expanded="false" hidden>More</button>` : '';
   if (menu) {
@@ -1566,13 +1647,20 @@ export function initMarks(actions) {
     renderVerseMarks();
     if (pop) { const root = readerEl(); if (!root || root.dataset.ch !== `${pop.b}.${pop.c}`) closeMarkPop({ back: false }); else syncPop(); }
     if (!pending) return;
-    if (cardShown && !pending.range) { place(cardEl(), { keep: true }); return; } // a card for words that were not drawn stays
+    if (cardShown) refreshCardRef();
+    // a card for words that were not drawn stays (beside its verse) until they can be drawn again
+    if (cardShown && !pending.range && !anchor(pending.draft, readerEl())) { place(cardEl(), { keep: true }); return; }
     const root = readerEl(), gone = () => (cardShown ? closeCard({ restore: false, why: 'gone' }) : closeBubble());
-    if (!root || root.dataset.ch !== `${pending.b}.${pending.c}` || blocked() || colFor(root, pending.draft.tr) < 0) { gone(); return; }
+    // another translation now: the bubble goes (its words were a selection), a comment card stays over the same words
+    // there, else beside the verse; its draft keeps the words and translation it was made in
+    const off = !!root && colFor(root, pending.draft.tr) < 0;
+    if (!root || root.dataset.ch !== `${pending.b}.${pending.c}` || blocked() || (off && !cardShown)) { gone(); return; }
     const r = anchor(pending.draft, root);
-    if (!r) { gone(); return; }
-    pending.range = r; pending.ranges = pending.whole ? [] : anchorRanges(pending.draft, root); repaintPending();
-    if (pending.whole) pending.at = vtextOf(document.getElementById('v' + parseRef(pending.draft.start).v), colFor(root, pending.draft.tr)) || pending.at;
+    if (!r && !(off && cardShown)) { gone(); return; }
+    pending.range = r || null; pending.ranges = r && !pending.whole ? anchorRanges(pending.draft, root) : []; repaintPending();
+    const v0 = document.getElementById('v' + parseRef(pending.draft.start).v);
+    if (!r) pending.at = v0 || pending.at;
+    else if (pending.whole) pending.at = vtextOf(v0, Math.max(0, colFor(root, pending.draft.tr))) || pending.at;
     if (pending.origin && !pending.origin.isConnected) pending.origin = document.getElementById('v' + parseRef(pending.draft.start).v);
     if (bubbleShown) { if (!place(bubbleEl())) closeBubble(); } else place(cardEl(), { keep: true });
   });

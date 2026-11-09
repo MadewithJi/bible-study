@@ -921,6 +921,7 @@ mark { background: var(--mark-bg, color-mix(in srgb, var(--sw-yellow) 42%, trans
 .toast .toast-msg { flex: 1; min-width: 0; }
 .toast button, .toast .toast-act { flex: none; margin: -6px -4px -6px 0; padding: 6px 8px; border-radius: 8px; color: #64b0ff; font-weight: 600; transition: background-color var(--d-1); }
 .toast button:hover { background: rgba(255,255,255,.1); }
+.toast .toast-act + .toast-act { margin-left: -10px; }   /* two actions (memory.js: Practise, Learn in …) sit as a pair */
 .toast button:focus-visible { outline-color: #64b0ff; }
 .toast-key { margin-left: 6px; padding: 0 4px; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; font: 600 11px/15px var(--sans); opacity: .75; vertical-align: 1px; }
 @media (pointer: coarse) { .toast-key { display: none; } }
