@@ -51,6 +51,11 @@ dialog.practice .mz-blank textarea { width: 100%; min-height: 152px; padding: 14
 .mz-pr-meta { margin-top: 20px; }
 .mz-fb { display: flex; align-items: flex-start; gap: 7px; margin: 0; font: 400 13px/1.45 var(--sans); color: var(--label-2); }
 .mz-fb > .i { flex: none; width: 15px; height: 15px; margin-top: 1px; stroke-width: 1.8; }
+/* the reader shows another translation: Learn in it (practice.js learnIn) */
+.mz-trl { margin: 0; font: 400 13px/1.45 var(--sans); color: var(--label-2); }
+.mz-fb + .mz-trl { margin-top: 6px; }
+.mz-trl button { padding: 0; font: inherit; font-weight: 600; color: var(--link); }
+.mz-trl button:hover { text-decoration: underline; text-underline-offset: .15em; }
 .practice .copyright.mz-copy { max-width: none; margin: 12px 0 0; padding-top: 12px; }
 .mz-pr-meta > .mz-copy:first-child { margin-top: 0; }
 

@@ -843,28 +843,31 @@ function bindFloats() {
   });
   mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] }); // the art viewer is added later
 }
-let toastT = 0, toastOutT = 0, toastAction = null;
+let toastT = 0, toastOutT = 0, toastAction = null, toastActs = [];
+/** A toast: msg, and an action {label, run} or a list of them (the first is Z's; memory.js's Practise and Learn in). */
 function toast(msg, action) {
   const t = $('#toast'); if (!t) return;
   clearTimeout(toastT); clearTimeout(toastOutT);
-  toastAction = action || null;
+  toastActs = (Array.isArray(action) ? action : [action]).filter(a => a && typeof a === 'object');
+  toastAction = toastActs[0] || null;
   t.classList.remove('out'); t.hidden = false;
   placeFloats();
-  // Z (Alt+Z in a text field) runs the action from the keyboard (bindKeyboard)
-  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span>${action ? `<span class="sr"> Press Z for ${esc(action.label || 'Undo')}.</span><button type="button" class="toast-act" aria-keyshortcuts="Z Alt+Z">${esc(action.label || 'Undo')}<kbd class="toast-key" aria-hidden="true">Z</kbd></button>` : ''}`;
+  // Z (Alt+Z in a text field) runs the first action from the keyboard (bindKeyboard)
+  const btn = (a, i) => `<button type="button" class="toast-act" data-ti="${i}"${i ? '' : ' aria-keyshortcuts="Z Alt+Z"'}>${esc(a.label || 'Undo')}${i ? '' : '<kbd class="toast-key" aria-hidden="true">Z</kbd>'}</button>`;
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span>${toastAction ? `<span class="sr"> Press Z for ${esc(toastAction.label || 'Undo')}.</span>${toastActs.map(btn).join('')}` : ''}`;
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
-  toastT = setTimeout(hideToast, action ? 10000 : 4200);
+  toastT = setTimeout(hideToast, toastAction ? 10000 : 4200);
 }
 function hideToast() {
   const t = $('#toast'); if (!t || t.hidden) return;
   clearTimeout(toastT); t.classList.add('out');
   clearTimeout(toastOutT); toastOutT = setTimeout(() => { t.hidden = true; t.classList.remove('out'); placeFloats(); }, RM.matches ? 0 : 300);
 }
-function runToastAction() { const a = toastAction; toastAction = null; hideToast(); try { a?.run?.(); } catch (err) { console.error(err); } }
+function runToastAction(i = 0) { const a = toastActs[i] || null; toastAction = null; toastActs = []; hideToast(); try { a?.run?.(); } catch (err) { console.error(err); } }
 function bindToast() {
   const t = $('#toast'); if (!t) return;
   bindFloats();
-  t.addEventListener('click', e => { if (e.target.closest('.toast-act')) runToastAction(); });
+  t.addEventListener('click', e => { const b = e.target.closest('.toast-act'); if (b) runToastAction(+b.dataset.ti || 0); });
   // pause while the pointer or focus is on it (time to reach Undo)
   const pause = () => clearTimeout(toastT);
   const resume = () => { if (!t.hidden && !t.classList.contains('out')) { clearTimeout(toastT); toastT = setTimeout(hideToast, 2500); } };

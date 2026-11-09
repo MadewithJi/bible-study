@@ -232,18 +232,19 @@ function renderBookmarkBtn(b, c, v) {
 const bookmarkTarget = () => ({ b: state.book, c: state.chapter, v: state.drawerTab === 'search' ? 0 : (state.selected || 0) });
 /**
  * #btn-memorize (Ji, 2026-10-27): blue beside the bookmark, so Memorize is plain to see once a verse is open; Practise
- * when the verse already is a memory verse. Hidden for a chapter, beside a search, for a verse the translation leaves
- * out, and without memory.js.
+ * when the verse already is (or is in) a memory verse. Hidden for a chapter, beside a search, for a verse the translation leaves
+ * out (unless it is a memory verse already), and without memory.js.
  */
 function renderMemorizeBtn() {
   const btn = document.getElementById('btn-memorize'); if (!btn) return;
   const b = state.book, c = state.chapter, v = state.selected || 0;
-  const row = `#reader .verses > .verse[data-v="${v}"]`; // the main column's text: memorizeSelected keeps state.tr
+  const row = `#reader .verses > .verse[data-v="${v}"]`; // the main column's text: memorizeSelected memorizes in its translation
   const omitted = !!document.querySelector(`${row} > .vtext.omitted, ${row} > .vcols > :first-child .vtext.omitted`);
-  const hide = !mem || !v || state.drawerTab === 'search' || omitted;
+  // a memory verse (in any translation, or a passage holding it) keeps its Practise where this translation leaves it out
+  const have = !!(mem && v && memHolding(b, c, v)), name = refLabel(b, c, v);
+  const hide = !mem || !v || state.drawerTab === 'search' || (omitted && !have);
   if (hide && document.activeElement === btn) document.getElementById('drawer-close')?.focus({ preventScroll: true });
   btn.hidden = hide; if (hide) { fitTitle(); return; }
-  const have = !!safe(mem.findByRef, `${b}.${c}.${v}`), name = refLabel(b, c, v);
   const label = `${have ? 'Practise' : 'Memorize'} ${name}`;
   if (btn.getAttribute('aria-label') !== label) btn.setAttribute('aria-label', label);
   btn.title = have ? 'Practise this memory verse' : 'Memorize this verse';
@@ -274,10 +275,15 @@ function fitTitle() {
 function memorizeSelected() {
   const btn = document.getElementById('btn-memorize'), b = state.book, c = state.chapter, v = state.selected || 0;
   if (!mem || !v) return;
-  const have = safe(mem.findByRef, `${b}.${c}.${v}`);
-  if (have) { safe(mem.practise, have.id, { returnFocus: btn }); return; }
-  if (safe(mem.memorize, { b, c, v, tr: state.tr })) A.flash([v], { scroll: false });
+  const have = memHolding(b, c, v);
+  // in the translation on screen (reader.js sets #reader's data-tr after any fallback), not only the chosen one
+  const tr = document.querySelector('#reader')?.dataset.tr || state.tr;
+  // learned in another translation: memorize() says which, with Practise and Learn in
+  if (have && have.tr === tr) { safe(mem.practise, have.id, { returnFocus: btn }); return; }
+  if (safe(mem.memorize, { b, c, v, tr })) A.flash([v], { scroll: false });
 }
+/** The memory verse holding b.c.v (memory.js memoryCovering; findByRef with a memory.js from before it), or null. */
+const memHolding = (b, c, v) => (typeof mem.memoryCovering === 'function' ? safe(mem.memoryCovering, b, c, v) : safe(mem.findByRef, `${b}.${c}.${v}`)) || null;
 
 /** Study signals for tracker.js (§5.14). */
 function wordStudied(strong, word) {
