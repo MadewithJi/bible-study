@@ -447,6 +447,8 @@ input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--
 .verse[aria-current="true"] .vnum span { background: var(--accent-fill); color: #fff; animation: pop .5s var(--spring); }
 @keyframes pop { from { transform: scale(.6); } to { transform: none; } }
 .vtext { -webkit-box-decoration-break: clone; box-decoration-break: clone; border-radius: 4px; }
+/* A historic Greek text (Codex Vaticanus, lang="grc" from meta.json): the Greek stack the interlinear uses. Early-modern English stays plain */
+.vtext[lang="grc"] { font-family: var(--grk); }
 /* Words of Jesus (red-letter data): bold with a bright blue gradient; each wrapped line gets its own gradient */
 .vtext .woc { font-weight: 700; color: var(--woc-solid); background-image: var(--woc-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 /* Chromium paints ::selection and ::highlight() text in `color` (it ignores -webkit-text-fill-color there); WebKit uses the fill */

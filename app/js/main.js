@@ -1,7 +1,7 @@
 // Wiring: boot, the action object A, the study-sheet state machine, top bar, stage panels, picker,
 // search, settings, dialogs, toast, keyboard, profiles (resume prompt, library marks) and the art panel.
 import { icon } from './icons.js'; // first import: injects the icon sprite
-import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted, QUOTA_MSG, applyLicensed, LICENSED_IDS } from './store.js';
+import { state, data, bookOf, refLabel, refKey, parseReference, loadNotes, loadConfig, setApiTimeout, bindNotesLifecycle, esc, previewText, previewTr, DRY, lsGet, lsSet, layoutMode, onLayoutChange, RM, scrollBehavior, plural, clip, saveConfig, notesDiffer, restoreNotes, trInfo, guestBlocked, hostedMsg, likelyHosted, QUOTA_MSG, applyLicensed, LICENSED_IDS, trCreditHtml } from './store.js';
 import * as reader from './reader.js';
 import * as drawer from './drawer.js';
 import * as viz from './viz.js';
@@ -1105,12 +1105,19 @@ const ownerOnlyKeys = () => !!(state.auth.hosted && !state.auth.owner);
 function fillTranslationSelects() {
   const off = ownerOnlyKeys();
   const opt = t => `<option value="${esc(t.id)}"${off && t.kind === 'api' ? ' disabled' : ''}>${esc(t.abbr)}</option>`;
-  const g = kind => state.translations.filter(t => t.kind === kind);
+  // the historic texts (meta.json group 'historic': the 1611 King James, Tyndale's Pentateuch, Codex Vaticanus) are
+  // bundled too, but they are not whole modern Bibles: a group of their own, after the others
+  const old = t => t.group === 'historic';
+  const g = kind => state.translations.filter(t => t.kind === kind && !old(t));
   const group = (label, list) => list.length ? `<optgroup label="${label}">${list.map(opt).join('')}</optgroup>` : '';
+  const hist = group('Historic texts', state.translations.filter(t => t.kind === 'bundled' && old(t)));
   const api = group(off ? 'Available to the site owner' : 'With API key', g('api'));
   const lic = group('Licensed', g('licensed')); // NIV, NKJV and NASB through API.Bible: every reader, guests included
-  $('#tr').innerHTML = group('Bundled', g('bundled')) + lic + api + group('Opens a website', g('external'));
-  $('#tr2').innerHTML = '<option value="">Parallel</option>' + group('Bundled', g('bundled')) + lic + api;
+  $('#tr').innerHTML = group('Bundled', g('bundled')) + lic + api + group('Opens a website', g('external')) + hist;
+  $('#tr2').innerHTML = '<option value="">Parallel</option>' + group('Bundled', g('bundled')) + lic + api + hist;
+  // About's credits name each historic text with its credit line (a condition of the CC BY-SA ones); nothing before they are built
+  const cr = $('#credits-historic');
+  if (cr) cr.innerHTML = state.translations.filter(t => t.kind === 'bundled' && old(t) && trCreditHtml(t.id)).map(t => `${trCreditHtml(t.id)} · `).join('');
 }
 /** A text the current session can read: bundled, licensed (API.Bible), or an API one with a key it may use. */
 const usableTr = id => { const t = state.translations.find(x => x.id === id); return !!t && t.kind !== 'external' && (t.kind !== 'api' || !!state.apiKeys[t.id]); };

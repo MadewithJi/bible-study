@@ -2,7 +2,7 @@
 // and those written on the heart; the schedule is memsched.js's. The data layer follows marks.js (a dirty map per scope,
 // a debounced and keepalive flush with compare-and-set bases, conflicts, cross-tab sync, the browser mirror); the
 // practice (practice.js) and the Library's Memory view are loaded when a toast's button first needs them.
-import { state, bookOf, refLabel, api, lsGet, lsSet, lsKey, lsDel, DRY, broadcast, onBroadcast, setSaveStatus, pendingNotes, registerSaver, readOnlyGuest, guestBlocked, signInRequired, data, isPassageTr, LICENSED_IDS, COPYRIGHT } from './store.js';
+import { state, bookOf, refLabel, api, lsGet, lsSet, lsKey, lsDel, DRY, broadcast, onBroadcast, setSaveStatus, pendingNotes, registerSaver, readOnlyGuest, guestBlocked, signInRequired, data, isPassageTr, LICENSED_IDS, COPYRIGHT, markableTr, hasBook, isPartialTr, trCreditHtml } from './store.js';
 import { localDay } from './ui.js';
 import * as S from './memsched.js';
 
@@ -10,7 +10,7 @@ const safe = (fn, ...a) => { try { return typeof fn === 'function' ? fn(...a) : 
 
 export const memory = { loaded: false, scope: null, rev: 0, byId: new Map(), offline: false };
 
-const TRS = ['kjv', 'bsb', 'esv', 'nlt', 'niv', 'nkjv', 'nasb'];
+// the texts a verse may be memorized in: store.js markableTr (as marks.js; accounts.py MARK_TRS is the server's list)
 const MEM_KEY = 'bs-memory-v1', DIRTY_KEY = 'bs-memory-dirty-v1';
 const ID_RX = /^mv_[0-9a-f]{12}$/;
 const REF_RX = /^(\d{1,2})\.(\d{1,3})\.(\d{1,3})(?:-(\d{1,3}))?$/;
@@ -76,7 +76,7 @@ function normVerse(raw) {
   const step = Number.isInteger(raw.step) && raw.step >= 0 && raw.step <= S.STEPS ? raw.step : 0;
   const pos = typeof raw.pos === 'number' && Number.isFinite(raw.pos) && Math.abs(raw.pos) <= POS_MAX ? raw.pos : 0;
   return {
-    id: raw.id, ref: refOf(p.b, p.c, p.v, p.w), tr: TRS.includes(raw.tr) ? raw.tr : 'kjv', pos,
+    id: raw.id, ref: refOf(p.b, p.c, p.v, p.w), tr: markableTr(raw.tr) ? raw.tr : 'kjv', pos,
     step: heart ? S.STEPS : step, due: S.isDay(raw.due) ? raw.due : '', heart, last: num(raw.last),
     created: num(raw.created) || updated, updated,
   };
@@ -150,11 +150,12 @@ async function chapterVerses(tr, b, c) {
   return bk[c] || [];
 }
 /**
- * The words of a memory verse: { tr, text, verses: [{v, t}], credit: {copyright, fumsToken}, fallback, omitted }. tr is
+ * The words of a memory verse: { tr, text, verses: [{v, t}], credit: {copyright, html, fumsToken}, fallback, omitted, absent }. tr is
  * the text's translation; fallback is 'kjv' when the verse's own (entry.tr) can't be had here (not available, offline,
  * or a verse it leaves out) and the KJV is shown instead, else ''; omitted is true when its chapter loaded but has no
- * text for the verse (the BSB's 16 textual variants, ESV/NLT gaps), so the practice doesn't call the translation
- * unavailable. credit is the text's copyright line (an NIV, NKJV or NASB chapter's, or the ESV's or NLT's from store.js
+ * text for the verse (the BSB's 16 textual variants, ESV/NLT gaps; a historic text without the book, chapter or verse), so
+ * the practice doesn't call the translation unavailable; absent is true, as well, only when a historic text lacks the
+ * whole book or chapter (an empty verse in a chapter it has may be given under a neighbouring number). credit is the text's copyright line (an NIV, NKJV or NASB chapter's, or the ESV's or NLT's from store.js
  * COPYRIGHT; '' for the KJV and BSB) and an NIV, NKJV or NASB chapter's FUMS token (practice.js calls reader.js
  * fumsView with it once per practice opened).
  * Null when not even the KJV loads.
@@ -162,10 +163,16 @@ async function chapterVerses(tr, b, c) {
 export async function memoryText(entry) {
   const p = parseRef(entry && entry.ref); if (!p) return null;
   const pick = vs => { const out = []; for (let v = p.v; v <= p.w; v++) { const t = String((vs && vs[v - 1]) ?? '').trim(); if (t) out.push({ v, t }); } return out; };
-  const want = TRS.includes(entry.tr) ? entry.tr : 'kjv';
-  let tr = want, verses = [], omitted = false;
+  const want = markableTr(entry.tr) ? entry.tr : 'kjv';
+  let tr = want, verses = [], omitted = false, absent = false, failed = false;
   if (trUsable(want) || want === 'kjv') {
-    try { const vs = await chapterVerses(want, p.b, p.c); verses = pick(vs); omitted = !verses.length && Array.isArray(vs) && vs.length > 0; } catch (e) { verses = []; }
+    let vs = null;
+    try { vs = await chapterVerses(want, p.b, p.c); verses = pick(vs); omitted = !verses.length && Array.isArray(vs) && vs.length > 0; } catch (e) { verses = []; failed = true; }
+    // a historic text without this book or chapter (store.js hasBook; a chapter of none, as reader.js getChapter): that is
+    // what it holds, not a fault. absent tells it from an empty verse slot in a chapter it has, whose words the text may
+    // give under a neighbouring number, so the practice never says the passage is missing from it
+    if (!verses.length && !failed && isPartialTr(want) && (!hasBook(want, p.b) || !Array.isArray(vs) || !vs.some(t => String(t ?? '').trim()))) absent = true;
+    if (absent) omitted = true;
   }
   if (!verses.length && want !== 'kjv') {
     tr = 'kjv';
@@ -173,7 +180,8 @@ export async function memoryText(entry) {
   }
   if (!verses.length) return null;
   const cr = LICENSED_IDS.includes(tr) ? data.passageCredit(tr, p.b, p.c) : null;
-  return { tr, text: verses.map(x => x.t).join(' '), verses, credit: { copyright: (cr && cr.copyright) || COPYRIGHT[tr] || '', fumsToken: (cr && cr.fumsToken) || '' }, fallback: tr !== want ? 'kjv' : '', omitted: tr !== want && omitted };
+  // html: a historic text's credit with its licence and source as links (store.js trCreditHtml), shown in place of `copyright`
+  return { tr, text: verses.map(x => x.t).join(' '), verses, credit: { copyright: (cr && cr.copyright) || COPYRIGHT[tr] || '', html: trCreditHtml(tr), fumsToken: (cr && cr.fumsToken) || '' }, fallback: tr !== want ? 'kjv' : '', omitted: tr !== want && omitted, absent: tr !== want && absent };
 }
 /** A KJV or BSB memory verse's text for a list (Home, the Library); '' for the others (no API calls for a list). */
 export async function memoryPreview(entry) {
@@ -507,6 +515,10 @@ function change(id, fields, reason = 'edit') {
 export function memorize({ b, c, v, ve = 0, tr = 'kjv' } = {}) {
   if (guestBlocked()) return null;
   b = +b; c = +c; v = +v;
+  // a historic text without this book, or whose chapter the reader is showing in the King James Version (reader.js
+  // getPrimary): the verse is memorized in the words that are on screen, never under the name of a text that lacks it
+  const rd = typeof document !== 'undefined' ? document.getElementById('reader') : null;
+  if (!hasBook(tr, b) || (isPartialTr(tr) && tr === state.tr && rd && rd.dataset.ch === `${b}.${c}` && rd.dataset.tr === 'kjv')) tr = 'kjv';
   const w = +ve > v ? +ve : v;
   if (w - v + 1 > MAX_VERSES) { toast(`A memory verse can be up to ${MAX_VERSES} verses long. Select fewer verses.`); return null; }
   const p = parseRef(refOf(b, c, v, w)); if (!p) return null;
@@ -516,7 +528,7 @@ export function memorize({ b, c, v, ve = 0, tr = 'kjv' } = {}) {
   const list = memoryList(), day = today();
   if (S.organize(list, day).full) { toast(`Three verses are already teed up. Remove one to add ${label}.`, { label: 'Open Memory', run: showMemory }); return null; }
   const now = Date.now();
-  const x = normVerse({ id: newId(), ref, tr: TRS.includes(tr) ? tr : 'kjv', pos: S.addPos(list), step: 0, due: '', heart: '', last: 0, created: now, updated: now });
+  const x = normVerse({ id: newId(), ref, tr: markableTr(tr) ? tr : 'kjv', pos: S.addPos(list), step: 0, due: '', heart: '', last: 0, created: now, updated: now });
   if (!x) return null;
   put(x, 'add');
   const o = S.organize(memoryList(), day);

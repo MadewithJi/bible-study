@@ -175,6 +175,15 @@ Don’t copy the `notes/` folder onto the volume: on the site its guest files ca
 python3 build.py
 ```
 
+The historic texts can be built on their own, without touching anything else (nothing else is rebuilt or downloaded); the build prints a versification report against the KJV, and since the files sit under the Scripture lock, update the lock straight after on purpose:
+
+```bash
+python3 build.py --only kjv1611,tyndale,codexb      # writes app/data/bibles/<id>/ and their meta.json entries
+python3 tools/scripture_lock.py --update && python3 tools/scripture_lock.py
+```
+
+`--out` and `--raw` point a build somewhere else (to try it outside the repo). Each source is pinned to one commit or revision in `build.py`; moving a pin is a deliberate change.
+
 Inputs kept in `src/`: `cross_references.txt` (OpenBible.info), `topics/` (OpenBible.info topical index, from the Obsidian vault export), `book_intros.json` (hand-written book introductions — edit freely).
 
 ## Data licences
@@ -186,5 +195,11 @@ Inputs kept in `src/`: `cross_references.txt` (OpenBible.info), `topics/` (OpenB
 - People, places, events, years, Easton's — [Theographic Bible Metadata](https://github.com/robertrouse/theographic-bible-metadata), CC BY-SA 4.0.
 - Maps — [MapLibre GL JS](https://maplibre.org/) (BSD-3-Clause); basemap by [OpenFreeMap](https://openfreemap.org/), © [OpenMapTiles](https://www.openmaptiles.org/), © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL); terrain from Mapzen / [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/); [Digital Atlas of the Roman Empire](https://imperium.ahlfeldt.se/) © Johan Åhlfeldt, University of Gothenburg, CC BY 4.0.
 - Place records — [Pleiades](https://pleiades.stoa.org/) (CC BY), [GeoNames](https://www.geonames.org/) (CC BY 4.0).
+
+Historic texts (each reader page shows its full credit line, taken from `build.py`'s `HISTORIC` table, which lists every change made to the source's text):
+
+- KJV 1611 — the King James Bible, 1611 first edition ("He" printing), public domain; transcription from Freely-Given.org [Open Bible Data](https://github.com/Freely-Given-org/OpenBibleData/tree/e40913d4fcb1f435e6bfb145d811b695ea92eeae/Bibles/EnglishTranslations/KJB-1611) (KJB-1611 USFM, CC0 1.0), pinned to commit e40913d. The 66 books only (the 1611 Apocrypha is not included), verse text only, original spelling in roman type. In the United Kingdom the Authorized Version is subject to Crown rights.
+- Tyndale 1530 — William Tyndale's Pentateuch (1530), public domain; transcription from English Wikisource, [Bible (Tyndale)](https://en.wikisource.org/wiki/Bible_(Tyndale)), Genesis to Deuteronomy, CC BY-SA 4.0, pinned to the revisions current on 16 November 2026 (oldids in `build.py`); the adapted text is likewise CC BY-SA 4.0. Verse numbers are not Tyndale's: they were added later to match the KJV.
+- Vaticanus — Codex Vaticanus (B, 03) Greek New Testament, transcription © 2020-2026 Alan Bunning, [Center for New Testament Restoration](https://github.com/Center-for-New-Testament-Restoration/transcriptions) (`class 1/03.txt`), CC BY-SA 4.0, pinned to commit ce4025e. Adapted (first-hand text, marks removed, final sigma restored); `app/data/bibles/codexb/` is likewise released under CC BY-SA 4.0 with the same credit. Take it from the GitHub repo only, not from greekcntr.org, whose pages are all rights reserved.
 
 Bible art — Gustave Doré (1832–1883), engravings for *La Grande Bible de Tours* (1866), public domain, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/Dor%C3%A9%27s_Bible_Illustrations). The 222 plates on canonical passages (the Apocrypha plates are left out) come from Commons scans of Doré's English Bible and, where those are poor or missing, of other printings of the same engravings, mostly the 1874 Warsaw Bible scanned by the National Library of Poland. Each plate links to its Commons file page in `app/data/art.json`. `src/art/dore.json` is the curated list: the passage each plate illustrates, a short scene description, the chosen Commons file and any crop. `python3 tools/fetch_art.py` downloads the images into `app/data/art/` (1800px and 560px JPEGs, about 270 MB) and rewrites `art.json`. It only fetches missing images (`--force` or `--only dore-015` to redo some), and it uses Commons' resized thumbnails where they are big enough.

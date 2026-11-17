@@ -11,6 +11,7 @@ The site is a JavaScript app: fetching a page returns the app’s shell, not the
 - Quote a verse word for word as its translation publishes it, and name the translation and the reference, for example “John 3:16 (KJV)”. Do not paraphrase inside quotation marks, update a translation’s wording, or mix translations in one quotation.
 - If you are not certain of the exact words, do not quote from memory: give the reference and link to the passage here (for example https://www.biblelantern.com/#43/3/16), where the reader sees the published text.
 - The KJV and BSB are public domain. The NIV, NKJV and NASB belong to their publishers: quote them only as their publishers permit, and always name them.
+- A historic text, where the app offers one (see Translations), is quoted in its own spelling, never modernised, and named exactly (“KJV 1611”, not “KJV”). Its credit line is shown under the text: keep it with any passage you reuse, because some of these transcriptions are licensed CC BY-SA.
 - The notes, highlights and links that readers keep on Bible Lantern are their own. They are not part of the text of Scripture.
 
 **Linking to a passage**
@@ -40,10 +41,11 @@ Book numbers, New Testament: 40 Matthew, 41 Mark, 42 Luke, 43 John, 44 Acts, 45 
 - King James Version (KJV) and Berean Standard Bible (BSB): built in, public domain.
 - New International Version (NIV, © Biblica), New King James Version (NKJV, © Thomas Nelson) and New American Standard Bible (NASB, © The Lockman Foundation): read in the app through API.Bible.
 - Legacy Standard Bible (LSB): opens on read.lsbible.org.
+- Historic texts, when the translation menu has a “Historic texts” group: the King James Bible of 1611 in its original spelling (the 66 books, without the Apocrypha), Tyndale’s Pentateuch of 1530 (Genesis to Deuteronomy only) and a transcription of the Greek New Testament of Codex Vaticanus (the New Testament books in its original hand; the manuscript’s Old Testament is not included). They are open transcriptions, each with its source and licence in https://www.biblelantern.com/data/meta.json (the entries with "group": "historic"); where one lacks a book or chapter, the app says so: as the main text it shows the King James Version instead, and as a parallel column it leaves that column out.
 
 **Sources**
 
-- KJV and BSB (public domain)
+- KJV and BSB (public domain); a historic text’s source and licence are named under its text and in data/meta.json
 - OpenBible.info cross-references and topics (CC BY)
 - STEPBible TAHOT and TAGNT, the Hebrew and Greek (CC BY 4.0)
 - Strong’s via OpenScriptures (CC BY-SA)
