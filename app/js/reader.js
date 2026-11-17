@@ -1,6 +1,6 @@
 // The reading page: chapter hero, verses (parallel columns, inline interlinear, markers), footer.
 // The document scrolls on the window (not on #reader).
-import { state, data, bookOf, refKey, noteFor, yearLabel, esc, isHebrewBook, isDivine, smart, nobreak, plural, initials, testamentName, divSlug, trInfo, layoutMode, RM, isAramaicWord, aramaicVerses, morphNoLang, DRY, isPassageTr, LICENSED_IDS, COPYRIGHT } from './store.js';
+import { state, data, bookOf, refKey, noteFor, yearLabel, esc, isHebrewBook, isDivine, smart, nobreak, plural, initials, testamentName, divSlug, trInfo, layoutMode, RM, isAramaicWord, aramaicVerses, morphNoLang, DRY, isPassageTr, LICENSED_IDS, COPYRIGHT, hasBook, isHistoric, isPartialTr, trLang, trCoverage, trCreditHtml } from './store.js';
 import { decodeMorph, wordTypeLabel, isVariantWord, variantShort } from './morph.js';
 import { icon } from './icons.js';
 import * as viz from './viz.js';
@@ -101,16 +101,20 @@ async function getChapter(tr, b, c) {
       const title = b === 19 ? safeCall(data.passageTitle, tr, b, c) : ''; // a psalm's title ("title" of /api/passage), never part of verse 1
       return { verses, title: typeof title === 'string' ? title : '' };
     }
-    const bk = await data.bible(tr, b);
-    return { verses: bk[c] || [] };
+    // a historic text is not always a whole Bible (Tyndale's Pentateuch; Vaticanus ends at Hebrews 9:14): a book it
+    // lacks is never requested, and a chapter it lacks is `absent`, not a chapter of blank rows. Neither is an error.
+    if (!hasBook(tr, b)) return { verses: [], absent: 'book' };
+    const bk = await data.bible(tr, b), verses = bk[c] || [];
+    if (isPartialTr(tr) && !verses.some(t => String(t ?? '').trim())) return { verses: [], absent: 'chapter' };
+    return { verses };
   } catch (e) { return { verses: [], error: e.message }; }
 }
-/** Primary text; if a licensed translation fails, fall back to KJV so the page is never empty. */
+/** Primary text; if a licensed translation fails, or a historic text has no such chapter, fall back to KJV so the page is never empty. */
 async function getPrimary(tr, b, c) {
   const r = await getChapter(tr, b, c);
-  if (!r.error || tr === 'kjv') return r;
+  if ((!r.error && !r.absent) || tr === 'kjv') return r;
   const k = await getChapter('kjv', b, c);
-  return { verses: k.verses, error: r.error, fellBack: k.error ? null : 'kjv' };
+  return { verses: k.verses, error: r.error || (r.absent ? k.error : undefined), absent: r.absent, fellBack: k.error ? null : 'kjv' };
 }
 
 /** Neighbouring chapter or null at either end of the canon. */
@@ -175,12 +179,18 @@ function verseTextHtml(verses, v, n, tr, ranges, kjv) {
     ? verses.slice(n).map((t, i) => (String(t || '').trim() ? ` <sup class="vx" title="${esc(`Verse ${n + i + 1} in the ${trInfo(tr).abbr}`)}">${n + i + 1}</sup>${esc(t)}` : '')).join('')
     : '';
   if (isGap(verses, v) && !extra) return omittedHtml(tr, kjv && kjv[v - 1]);
-  return `<span class="vtext">${wordsOfJesus((verses && verses[v - 1]) || '', ranges)}${extra}</span>`;
+  // the words carry their own language (a Greek manuscript: lang="grc" and the Greek stack); the row around them stays English
+  const lang = trLang(tr);
+  return `<span class="vtext"${lang === 'en' ? '' : ` lang="${esc(lang)}"`}>${wordsOfJesus((verses && verses[v - 1]) || '', ranges)}${extra}</span>`;
 }
 /** The explanation is editorial, never Scripture: set apart (em) from the KJV reading it quotes; no red letters. */
 function omittedHtml(tr, kjvText) {
   const abbr = esc(trInfo(tr).abbr);
+  // a historic text (a manuscript, an early printing): no claim about variants is made for it, and none that the words
+  // are missing, since such a text often gives them under a neighbouring number (Tyndale's Genesis 9:29 inside 9:28,
+  // Vaticanus' Acts 19:41 inside 19:40). A whole missing book or chapter is the calm notice card's, not this row's.
   const why = tr === 'bsb' ? 'The BSB leaves this verse out of its text (a textual variant it gives in a footnote).'
+    : isHistoric(tr) || isPartialTr(tr) ? `The ${abbr} has no separate verse here: this text does not have it, or gives its words under a neighbouring verse number.`
     : `The ${abbr} has no separate verse here (a textual variant, or combined with an adjacent verse).`;
   return `<span class="vtext omitted"><em class="om-why">${why}</em>${kjvText ? ` <span class="om-kjv">KJV: “${esc(String(kjvText).trim())}”</span>` : ''}</span>`;
 }
@@ -256,7 +266,9 @@ export async function renderReader(opts = {}) {
   const shownTr = primary.fellBack || state.tr;
   // a parallel translation that failed to load (no key, API error, offline) is left out of the layout, its heading and
   // the copyright lines; its error card stays (noticeCards) and state.tr2 is kept, so the column returns once it loads
-  const tr2 = parallel && !parallel.error ? state.tr2 : '';
+  // likewise a historic text without this book or chapter (a calm card says what it holds), and a column that would only
+  // repeat the King James Version the main text fell back to
+  const tr2 = parallel && !parallel.error && !parallel.absent && state.tr2 !== shownTr ? state.tr2 : '';
   // a verse a translation leaves out is quoted from the bundled KJV, unless a KJV column is already on screen
   const kjvGap = shownTr !== 'kjv' && tr2 !== 'kjv' && (hasGap(primary.verses, n) || (!!tr2 && hasGap(parallel.verses, n)));
   const kjv = kjvGap ? (await getChapter('kjv', b, c)).verses : null;
@@ -378,7 +390,9 @@ export async function renderReader(opts = {}) {
   // line that came with an NIV, NKJV or NASB chapter, with every display of it (each column's, when they differ)
   const credit = t => (LICENSED_IDS.includes(t) ? data.passageCredit(t, b, c).copyright : '');
   const lines = [...new Set([shownTr, tr2].filter(Boolean))].map(t => COPYRIGHT[t] ? esc(COPYRIGHT[t]) + (t === 'esv' ? ' <a href="https://www.esv.org" target="_blank" rel="noopener">www.esv.org</a>' : '')
-    : credit(t) ? `<span class="cr-pub" data-cr="${esc(t)}">${esc(credit(t))}</span>` : `${esc(trInfo(t).name)} · ${esc(trInfo(t).licence || '')}`);
+    : credit(t) ? `<span class="cr-pub" data-cr="${esc(t)}">${esc(credit(t))}</span>`
+    // a historic text's credit from meta.json, its licence and source as links (a condition of the CC BY-SA ones)
+    : trCreditHtml(t) ? `<span class="cr-hist" data-cr="${esc(t)}">${trCreditHtml(t)}</span>` : `${esc(trInfo(t).name)} · ${esc(trInfo(t).licence || '')}`);
   if (orig) lines.push(heb ? `${aramaicVerses(b, c).length ? 'Hebrew and Aramaic' : 'Hebrew'}: STEPBible TAHOT (CC BY 4.0)` : 'Greek: STEPBible TAGNT (CC BY 4.0)');
   lines.push('Cross-references: OpenBible.info (CC BY)');
   html += `<p class="copyright">${lines.join('<br>')}</p>`;
@@ -437,7 +451,18 @@ function noticeCards(primary, parallel) {
     h += `<div class="notice" role="note">${icon('sparkle')}<p>${esc(state.notice.title)}<small>${esc(state.notice.body)}</small></p><button class="btn btn-tinted sm" type="button" data-open-settings>Open Settings</button><button class="close-btn" type="button" data-dismiss-notice aria-label="Dismiss">${icon('xmark')}</button></div>`;
   }
   const err = (tr, msg, fell) => `<div class="notice error" role="note">${icon('info')}<p>Couldn’t load ${esc(trInfo(tr).abbr)}<small>${esc(msg)}${fell ? ' Showing the King James Version instead.' : ''}</small></p>${/key/i.test(msg) ? '<button class="btn btn-tinted sm" type="button" data-open-settings>Open Settings</button>' : ''}<button class="close-btn" type="button" data-dismiss-notice aria-label="Dismiss">${icon('xmark')}</button></div>`;
-  if (primary.error) h += err(state.tr, primary.error, !!primary.fellBack);
+  // a historic text that does not have this book or chapter: nothing failed, so the card is calm and says what the text
+  // offered here holds. It speaks of this transcription or edition, never of the manuscript or printing itself (Codex
+  // Vaticanus holds most of the Greek Old Testament; the transcription here is its New Testament). as: 'fell' when the
+  // King James Version is on screen in its place, 'main' when that too failed (its error card follows and says so),
+  // 'parallel' for the second column.
+  const gone = (tr, why, as) => {
+    const said = as === 'fell' ? 'Showing the King James Version here.' : as === 'parallel' ? 'Its parallel column is left out here.' : '';
+    return `<div class="notice absent" role="note">${icon('info')}<p>${esc(`The ${trInfo(tr).abbr} text here ${why === 'book' && trCoverage(tr) ? `has only ${trCoverage(tr)}` : `does not have ${chName(state.book, state.chapter)}`}.`)}${said ? `<small>${said}</small>` : ''}</p><button class="close-btn" type="button" data-dismiss-notice aria-label="Dismiss">${icon('xmark')}</button></div>`;
+  };
+  if (primary.absent) h += gone(state.tr, primary.absent, primary.fellBack ? 'fell' : 'main');
+  if (primary.error) h += err(primary.absent ? 'kjv' : state.tr, primary.error, !!primary.fellBack);
+  if (parallel && parallel.absent) h += gone(state.tr2, parallel.absent, 'parallel');
   if (parallel && parallel.error) h += err(state.tr2, parallel.error, false);
   return h;
 }
@@ -838,7 +863,7 @@ export function bindReader() {
     if (t.closest('[data-open-settings]')) { A.openSettings(); return; }
     if (t.closest('[data-dismiss-notice]')) {
       const card = t.closest('.notice'); if (!card) return;
-      if (!card.classList.contains('error')) state.notice = null;
+      if (!card.classList.contains('error') && !card.classList.contains('absent')) state.notice = null; // only the key card is state.notice
       // the focused Dismiss goes with its card: the focus moves to the next card's Dismiss, else to the reading verse
       if (card.contains(document.activeElement)) {
         let nx = card.nextElementSibling; while (nx && !nx.matches('.notice')) nx = nx.nextElementSibling;

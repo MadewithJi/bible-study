@@ -26,7 +26,7 @@
 @media (max-width: 1279px) { .wordmark { width: 34px; padding: 0; justify-content: center; margin-right: 0; } .wordmark .wm-name { display: none; } }
 @media (max-width: 999px) { .wordmark { width: 32px; } }
 /* 700–999 (a tablet): the mark takes 34px from the tool strip, so the strip's gaps tighten to keep it whole at 820 */
-@media (min-width: 700px) and (max-width: 999px) { .wordmark { width: 30px; } .gnav-right { gap: 2px; } .ib.search-open { margin-left: 2px; } }
+@media (min-width: 700px) and (max-width: 999px) { .wordmark { width: 30px; } }
 /* Home shows no chapter: the reading progress line under the bar has nothing to measure */
 body.at-home #progress { display: none; }
 

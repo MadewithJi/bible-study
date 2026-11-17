@@ -3507,6 +3507,54 @@ class T20_Marks(Base):
         put_raw(path, json.dumps(disk).encode("utf-8"))
         self.assertEqual(self.marks(c)["marks"][mid]["tr"], "niv")
 
+    def test_r10c_marks_in_historic_texts(self):
+        # the historic texts (1611 King James, Tyndale's Pentateuch, Codex Vaticanus) are bundled texts to read: a mark made
+        # in one keeps its translation, Greek words and all; an id that only looks like one is still refused
+        email, pw = H.account("markhist", "Annotations: historic texts")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Mark Hist").status, 201)
+        self.assertEqual(accounts.MARK_TRS[-3:], ("kjv1611", "tyndale", "codexb"))
+        sent = {}
+        for tr, start, quote in (("kjv1611", "43.3.16", "a made-vp phrase"), ("tyndale", "1.1.1", "another made vp phrase"),
+                                 ("codexb", "43.1.1", "λογοσ πεποιημενοσ")):  # made-up words, never verse text
+            mid = new_mark_id()
+            sent[mid] = self.mark(mid, start=start, so=0, eo=len(quote), tr=tr, quote=quote, pre="", suf="")
+        w = self.changes(c, sent)
+        self.assertEqual(w.status, 200, w)
+        got = self.marks(c)["marks"]
+        self.assertEqual({k: {f: got[k][f] for f in m if f != "updated"} for k, m in sent.items()},
+                         {k: {f: v for f, v in m.items() if f != "updated"} for k, m in sent.items()}, "accepted unchanged")
+        disk = H.read("profiles", c.scope, "marks.json")
+        self.assertEqual(sorted(m["tr"] for m in disk["marks"].values()), ["codexb", "kjv1611", "tyndale"])
+        self.assertEqual(sorted(m["tr"] for m in self.marks(c)["marks"].values()), ["codexb", "kjv1611", "tyndale"], "not repaired into KJV marks")
+        # the Markdown export names each by its abbreviation, as the app does, never its id in capitals ("CODEXB")
+        lines = [ln for rows in accounts._highlights(disk).values() for ln in rows]
+        for said in ("(KJV 1611, yellow)", "(Tyndale 1530, yellow)", "(Vaticanus, yellow)"):
+            self.assertEqual(sum(ln.endswith(said) for ln in lines), 1, (said, lines))
+        for tr in ("kjv1611x", "tyndale1530", "vaticanus", "codex", "slave1807", "geez", "KJV1611", "lsb", ""):
+            mid = new_mark_id()
+            r = self.changes(c, {mid: self.mark(mid, tr=tr)})
+            self.assertErr(r, 400, "invalid_mark", field=mid)
+            self.assertEqual(r.json["message"], accounts.MARK_TRS_SAID)
+        self.assertTrue(accounts.MARK_TRS_SAID.endswith("kjv1611, tyndale or codexb."), accounts.MARK_TRS_SAID)
+        self.assertEqual(len(self.marks(c)["marks"]), 3, "nothing unknown was kept")
+
+    def test_r10d_every_bundled_text_can_be_marked(self):
+        # app/js/store.js markableTr takes every bundled text app/data/meta.json names (build.py writes the historic ones
+        # there when the owner builds them): the server's list must cover them, and each id must fit the library's TR_RE
+        with open(os.path.join(REPO, "app", "data", "meta.json"), encoding="utf-8") as f:
+            trs = json.load(f)["translations"]
+        bundled = [t["id"] for t in trs if t.get("kind") == "bundled"]
+        self.assertTrue({"kjv", "bsb"} <= set(bundled), bundled)
+        self.assertEqual([i for i in bundled if i not in accounts.MARK_TRS], [], "a bundled text accounts.MARK_TRS does not take")
+        for t in trs:
+            if t.get("group") == "historic":
+                self.assertRegex(t["id"], r"^[a-z0-9]{2,8}$")
+                self.assertTrue(t.get("credit") and t.get("licence") and t.get("source"), f"{t['id']}: a historic text carries its credit")
+                self.assertTrue(isinstance(t.get("books"), list) and all(isinstance(b, int) and 1 <= b <= 66 for b in t["books"]), t["id"])
+        for i in accounts.MARK_TRS:
+            self.assertRegex(i, r"^[a-z0-9]{2,8}$")
+
     def test_r11_limit_and_damaged_files(self):
         email, pw = H.account("markcap", "Annotations: limit and repair")
         c = Client()
@@ -5908,6 +5956,27 @@ class T31_Memory(Base):
             self.assertErr(self.changes(a, {good: self.verse(good)}, day=day), 400, "bad_request", field="day")
         self.assertEqual(self.memory(a)["rev"], rev, "nothing was written")
         self.assertErr(self.changes(a, del_={f"mv_{i:012x}": now_ms() for i in range(1001)}), 400, "bad_request")
+
+    def test_m02b_historic_texts(self):
+        # a verse may be memorized in a historic text (the list is the marks': accounts.MARK_TRS); unknown ids are still refused
+        email, pw = H.account("memhist", "Memorize: historic texts")
+        c = Client()
+        self.assertEqual(c.signup(email, pw, name="Mem Hist").status, 201)
+        sent = {}
+        for i, (tr, ref) in enumerate((("kjv1611", "43.3.16"), ("tyndale", "1.1.1-3"), ("codexb", "43.1.1"))):
+            vid = new_memory_id()
+            sent[vid] = self.verse(vid, ref=ref, tr=tr, pos=i + 1)
+        w = self.changes(c, sent)
+        self.assertEqual(w.status, 200, w)
+        got = self.memory(c)["memory"]
+        self.assertEqual({k: got[k]["tr"] for k in sent}, {k: v["tr"] for k, v in sent.items()})
+        self.assertEqual(sorted(v["tr"] for v in H.read("profiles", c.scope, "memory.json")["memory"].values()), ["codexb", "kjv1611", "tyndale"])
+        for tr in ("tyndale1530", "vaticanus", "codex", "slave1807", "geez", "TYNDALE", "lsb", ""):
+            vid = new_memory_id()
+            r = self.changes(c, {vid: self.verse(vid, ref="45.8.1", tr=tr)})
+            self.assertErr(r, 400, "invalid_memory_verse", field=vid)
+            self.assertEqual(r.json["message"], accounts.MARK_TRS_SAID)
+        self.assertEqual(len(self.memory(c)["memory"]), 3, "nothing unknown was kept")
 
     def test_m03_defaults_and_canonical_form(self):
         a, vid = S["mina"], new_memory_id()

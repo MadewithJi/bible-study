@@ -100,6 +100,7 @@ export const data = {
       if (!cache.has(key)) cache.set(key, {});
       return cache.get(key); // chapters filled by passage()
     }
+    if (!hasBook(tr, b)) return {}; // a historic text without this book (meta 'books'): no request, so no 404
     return getJSON(`data/bibles/${tr}/${pad(b)}.json`);
   },
   passage: async (tr, b, c) => {
@@ -267,6 +268,85 @@ export const testamentName = bk => bk.test === 'OT' ? 'Old Testament' : 'New Tes
 /** Division slug for .hero[data-div]. */
 export const divSlug = bk => bk.div === 'History' ? (bk.test === 'OT' ? 'ot-history' : 'nt-history') : String(bk.div).toLowerCase().replace(/\s+/g, '-');
 export const trInfo = id => state.translations.find(t => t.id === id) || { id, abbr: String(id || '').toUpperCase(), name: String(id || '').toUpperCase(), licence: '', kind: 'bundled' };
+
+// ------------------------------------------------------------ historic texts (meta.json: group 'historic')
+// build.py lists them as { id, name, abbr, kind: 'bundled', books: [book numbers], lang, group: 'historic', licence,
+// credit, source }. Everything here is read from that entry, so the app is the same before the owner has built them
+// (no entry: nothing to choose) and after. An entry without 'books' is a whole Bible, as the KJV and BSB are.
+/** A translation's own entry, or null. trInfo's stand-in for an unknown id looks bundled: never ask it what a text holds. */
+export const trEntry = id => (state.translations || []).find(t => t.id === id) || null;
+export const isHistoric = tr => trEntry(tr)?.group === 'historic';
+/** A text that is not all 66 books by design (Tyndale's Pentateuch, a manuscript): its entry lists the books it has. */
+export const isPartialTr = tr => Array.isArray(trEntry(tr)?.books);
+export const hasBook = (tr, b) => { const t = trEntry(tr); return !t || !Array.isArray(t.books) || t.books.includes(+b); };
+/** The language of a text's words for lang="" ('grc' for a Greek manuscript); 'en' unless its entry says otherwise. */
+export const trLang = tr => { const l = trEntry(tr)?.lang; return typeof l === 'string' && /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(l) ? l : 'en'; };
+/** What a partial text holds, by runs of neighbouring books: 'Genesis to Deuteronomy', 'Matthew to 2 Thessalonians and Hebrews to Jude'. */
+export function trCoverage(tr) {
+  const t = trEntry(tr);
+  if (t && typeof t.coverage === 'string' && t.coverage.trim()) return t.coverage.trim(); // the builder's own words (a book that stops part way)
+  const ns = [...new Set((t && Array.isArray(t.books) ? t.books : []).map(Number))].filter(n => bookOf(n)).sort((a, z) => a - z);
+  const runs = [];
+  for (const n of ns) { const r = runs[runs.length - 1]; if (r && r[1] === n - 1) r[1] = n; else runs.push([n, n]); }
+  const said = runs.map(([a, z]) => (a === z ? bookOf(a).name : `${bookOf(a).name} ${z === a + 1 ? 'and' : 'to'} ${bookOf(z).name}`));
+  return said.length > 1 ? `${said.slice(0, -1).join(', ')} and ${said[said.length - 1]}` : said[0] || '';
+}
+/**
+ * Texts a highlight, comment or memory verse may be made in: the seven accounts.py has always taken, and every bundled
+ * text meta.json names (the historic ones). accounts.py MARK_TRS is the server's list; a test keeps it covering meta.json.
+ */
+const MARK_BASE = ['kjv', 'bsb', 'esv', 'nlt', 'niv', 'nkjv', 'nasb'];
+export const markableTr = tr => MARK_BASE.includes(tr) || trEntry(tr)?.kind === 'bundled';
+
+// The credit of a historic text, shown wherever its words are (the reader's footer, a memory verse's practice, the
+// credits): for the CC BY-SA ones (the Wikisource Tyndale, the CNTR's Vaticanus) this is a condition of the licence.
+const LICENCE_URLS = [[/CC\s*BY-SA\s*4\.0/i, 'https://creativecommons.org/licenses/by-sa/4.0/'], [/CC\s*BY\s*4\.0/i, 'https://creativecommons.org/licenses/by/4.0/'], [/CC0/i, 'https://creativecommons.org/publicdomain/zero/1.0/']];
+const httpUrl = u => (/^https?:\/\/[^\s<>"']+$/i.test(String(u || '')) ? String(u) : '');
+const extLink = (url, label) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`;
+/** A web address found in running text, without what follows it: a full stop or comma is not part of it, a closing
+ *  bracket only when the address opened it (en.wikisource.org/wiki/Bible_(Tyndale)). linkify and creditPart share it,
+ *  so a source's address and the same address in the credit agree, and the credit's link is not printed twice. */
+const URL_RX = /https?:\/\/[^\s<>"“”‘’]+/g;
+const trimUrl = raw => {
+  let u = String(raw || '').replace(/[.,;:!?'…]+$/, '');
+  while (u.endsWith(')') && (u.match(/\)/g) || []).length > (u.match(/\(/g) || []).length) u = u.slice(0, -1);
+  return u.replace(/[.,;:!?'…]+$/, '');
+};
+/** Escaped text with its web addresses (trimUrl) made links. */
+export function linkify(text) {
+  let out = '', at = 0; const s = String(text || '');
+  for (const m of s.matchAll(URL_RX)) {
+    const u = trimUrl(m[0]);
+    if (!httpUrl(u)) continue;
+    out += esc(s.slice(at, m.index)) + extLink(u, u.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+    at = m.index + u.length;
+  }
+  return out + esc(s.slice(at));
+}
+/** A 'licence' or 'source' of meta.json as { text, url }: a string (a name, an address or a sentence holding one) or { name, url }. */
+function creditPart(x, known) {
+  if (x && typeof x === 'object') return { text: String(x.name || x.label || x.title || x.url || ''), url: httpUrl(x.url) };
+  const text = String(x || '').trim(), bare = httpUrl(text);
+  const url = bare || httpUrl(trimUrl((text.match(new RegExp(URL_RX.source)) || [''])[0])) || (known ? (LICENCE_URLS.find(([rx]) => rx.test(text)) || [])[1] || '' : '');
+  return { text: bare ? bare.replace(/^https?:\/\//, '').replace(/\/$/, '') : text, url };
+}
+/**
+ * The credit line of a text whose entry carries one ('' for the others, which keep their name and licence): its
+ * credit, then its licence and its source as links, unless the credit already links to that address.
+ */
+export function trCreditHtml(tr) {
+  const t = trEntry(tr); if (!t || !(t.credit || t.source)) return '';
+  let h = linkify(t.credit || t.name || t.abbr);
+  const add = (label, p) => {
+    if (!p.text || (p.url && h.includes(`href="${esc(p.url)}"`))) return;
+    // a sentence that holds its address keeps its words; a name or a bare address is the link itself
+    const said = !p.url ? esc(p.text) : p.text.includes(p.url) ? linkify(p.text) : extLink(p.url, p.text);
+    h += `${/[.!?]$/.test(h) ? '' : '.'} ${label}: ${said}${/[.!?]$/.test(p.text) ? '' : '.'}`;
+  };
+  add('Licence', creditPart(t.licence, true));
+  add('Source', creditPart(t.source, false));
+  return h;
+}
 /** "1D" -> "1 day", "3M10D" -> "3 months 10 days", "2.5Y" -> "2.5 years". */
 export function fmtDur(d) {
   const s = String(d || '');

@@ -1739,7 +1739,14 @@ def link_phrase(link, side):
 
 # ------------------------------------------------------------------ marks (annotations brief §1, §2)
 MARK_ID_RE = re.compile(r"mk_[0-9a-f]{12}", re.ASCII)
-MARK_TRS = ("kjv", "bsb", "esv", "nlt", "niv", "nkjv", "nasb")
+# The texts a highlight, comment or memory verse may be made in. The last three are the historic texts build.py bundles
+# (the 1611 King James, Tyndale's Pentateuch of 1530, Codex Vaticanus): app/js/store.js markableTr takes every bundled
+# text of app/data/meta.json, and a test keeps this list covering that file.
+MARK_TRS = ("kjv", "bsb", "esv", "nlt", "niv", "nkjv", "nasb", "kjv1611", "tyndale", "codexb")
+# how a mark's text is named in the Markdown export (_highlights): the earlier ids read as their abbreviation in capitals,
+# the historic ones do not (meta.json abbr; the app's trInfo)
+MARK_TR_ABBR = {"kjv1611": "KJV 1611", "tyndale": "Tyndale 1530", "codexb": "Vaticanus"}
+MARK_TRS_SAID = f"The translation must be {', '.join(MARK_TRS[:-1])} or {MARK_TRS[-1]}."
 MARK_COLORS = ("yellow", "green", "blue", "pink", "purple", "orange")  # or "" for a comment-only underline
 MAX_MARKS = 20_000
 MARK_MAX_BYTES = 32 * 1024
@@ -1775,7 +1782,7 @@ def clean_mark(raw, now=None, check_size=True):
         raise ValueError("A highlight id is “mk_” followed by 12 hex digits.")
     tr = raw.get("tr")
     if tr not in MARK_TRS:
-        raise ValueError("The translation must be kjv, bsb, esv, nlt, niv, nkjv or nasb.")
+        raise ValueError(MARK_TRS_SAID)
     ends = {}
     for f in ("start", "end"):
         p = parse_mark_end(raw.get(f))
@@ -1922,7 +1929,7 @@ def clean_memory_verse(raw, now=None, check_size=True):
         raise ValueError(f"A memory verse can be up to {MEMORY_PASSAGE_MAX} verses long.")
     tr = raw.get("tr")
     if tr not in MARK_TRS:
-        raise ValueError("The translation must be kjv, bsb, esv, nlt, niv, nkjv or nasb.")
+        raise ValueError(MARK_TRS_SAID)
     pos = 0 if raw.get("pos") is None else raw["pos"]
     if not _is_num(pos) or abs(pos) > MEMORY_POS_MAX:
         raise ValueError("“pos” must be a number from -1e12 to 1e12.")
@@ -2841,7 +2848,8 @@ def _highlights(marks):
         p = parse_mark_end(mk.get("start")) if isinstance(mk, dict) else None
         if not p or not isinstance(mk.get("quote"), str):
             continue
-        tag = ", ".join(x for x in (str(mk.get("tr") or "").upper(), str(mk.get("color") or "")) if x)
+        tr = str(mk.get("tr") or "")
+        tag = ", ".join(x for x in (MARK_TR_ABBR.get(tr, tr.upper()), str(mk.get("color") or "")) if x)
         quote = re.sub(r"\s+", " ", mk["quote"]).strip()
         rows = [f"- “{quote}”" + (f" ({tag})" if tag else "")]
         if isinstance(mk.get("note"), str) and mk["note"].strip():

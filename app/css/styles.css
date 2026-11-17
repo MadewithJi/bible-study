@@ -217,15 +217,13 @@ body.sheet-modal { overflow: hidden; }
    4. Global bar (frosted)
    ===================================================================== */
 .gnav {
-  /* --gnav-side is the width of the widest side cluster (measured: the right
-     cluster, with NKJV selected). Capping the search track by it lets both
-     1fr side tracks stay equal, so the search field is centred in the
-     viewport whenever it fits (spec sec. 10.A acceptance at 1440 and 1280).
-     Re-measured with the Bible art tool and the profile button: 554 + 36 + 39. */
-  --gnav-side: 630px;
+  /* --gnav-side is the width of the wider side cluster (the right one: Text 'NKJV + NASB', the four tools, the
+     study panel and the avatar). Capping the field's track by it lets both 1fr side tracks stay equal, so the
+     field is centred in the viewport whenever it fits. */
+  --gnav-side: 350px;
   position: fixed; z-index: 40; top: 0; left: 0; right: 0; height: var(--bar-h);
   display: grid; align-items: center; gap: 12px;
-  grid-template-columns: minmax(max-content, 1fr) minmax(180px, min(400px, calc(100% - 2 * var(--gnav-side) - 24px))) minmax(max-content, 1fr);
+  grid-template-columns: minmax(max-content, 1fr) minmax(220px, min(600px, calc(100% - 2 * var(--gnav-side) - 24px))) minmax(max-content, 1fr);
   padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
   background: var(--glass); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
   border-bottom: 1px solid var(--sep);
@@ -236,10 +234,12 @@ body.sheet-modal { overflow: hidden; }
 .gnav.flat #progress { opacity: 0; }
 .gnav-left, .gnav-right { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .gnav-right { justify-content: flex-end; gap: 5px; }
-/* a tool strip that scrolls sideways (< 1180px, phones) fades the edge that hides tools (classes from main.js) */
-.gnav-right.ov-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
-.gnav-right.ov-l { -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px); mask-image: linear-gradient(90deg, transparent, #000 28px); }
-.gnav-right.ov-l.ov-r { -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+.gnav-center { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.gnav-center .search { flex: 1; min-width: 0; }
+.gnav-tools { display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.gnav-right #btn-account { order: 1; } /* last on screen; next to Text in the tab order, as on a phone */
+/* Back and Forward take room only while there is somewhere to go */
+#btn-back:disabled, #btn-fwd:disabled { display: none; }
 .ib { position: relative; flex: none; width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 9px; color: var(--label-2); transition: background-color var(--d-1), color var(--d-1), transform var(--d-1) var(--ease-out); }
 .ib:hover { background: var(--fill-2); color: var(--label); }
 .ib:active { transform: scale(.92); background: var(--fill); }
@@ -251,21 +251,41 @@ body.sheet-modal { overflow: hidden; }
 .refbtn { display: inline-flex; align-items: center; gap: 6px; min-width: 0; height: 34px; padding: 0 10px; border-radius: 9px; font: 600 17px/1 var(--display); letter-spacing: -.022em; color: var(--label); white-space: nowrap; transition: background-color var(--d-1); }
 .refbtn:hover { background: var(--fill-2); }
 .refbtn:active { background: var(--fill); }
-#cur-ref-text { display: inline-flex; min-width: 0; max-width: 11em; padding: 2px 0; font-variant-numeric: tabular-nums; }
+/* the one field at rest: where you are, then what it is for; focused, the label gives way to the search input */
+.gnav-ref { position: absolute; left: 34px; right: 38px; top: 0; bottom: 0; display: flex; align-items: center; gap: 8px; min-width: 0; pointer-events: none; white-space: nowrap; overflow: hidden; }
+#cur-ref-text { display: inline-flex; flex: 0 1 auto; min-width: 0; padding: 2px 0; font: 600 15px/1 var(--display); letter-spacing: -.02em; color: var(--label); font-variant-numeric: tabular-nums; }
+.gnav-hint { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; color: var(--label-3); }
+/* .typing (main.js: the input's own focus and blur), not :focus-within: the chevron is in the form too and takes
+   focus back from the picker. At rest the input is see-through (opacity, which forced colours leave alone) but
+   still takes the click that focuses it. */
+.search.typing .gnav-ref { display: none; }
+.gnav.searching .gnav-ref { display: none; }
+.search:not(.typing) input { opacity: 0; }
+.gnav.searching .search input { opacity: 1; }
+.gnav-books { position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; color: var(--label-3); transition: background-color var(--d-1), color var(--d-1); }
+.gnav-books:hover { background: var(--fill); color: var(--label); }
+.gnav-books .i { width: 11px; height: 11px; stroke-width: 2.2; }
+/* the Text button: what is being read ('BSB', 'BSB + KJV'), a dot while Hebrew and Greek show */
+.gnav-text { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 12px; border-radius: var(--r-pill); background: var(--fill-2); font: 600 13px/1 var(--sans); letter-spacing: -.005em; color: var(--label); white-space: nowrap; flex: none; transition: background-color var(--d-2), color var(--d-2), transform var(--d-1) var(--ease-out); }
+.gnav-text:hover { background: var(--fill); }
+.gnav-text:active { transform: scale(.96); }
+.gnav-text .i { width: 10px; height: 10px; stroke-width: 2.4; color: var(--label-3); }
+.gnav-text .tx-b { margin-left: -6px; white-space: pre; }
+.gnav-text .dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.gnav-text.has-orig .dot { display: block; }
+.gnav-text[aria-expanded="true"] { background: var(--accent-tint-2); color: var(--accent-on-tint); }
+.gnav-text[aria-expanded="true"] .i { color: var(--accent); }
 #cur-ref-text .rb { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #cur-ref-text .rc { flex: none; white-space: pre; }
 .refbtn .i { width: 11px; height: 11px; stroke-width: 2.2; color: var(--label-3); margin-top: 1px; }
 .search { position: relative; display: flex; align-items: center; height: 36px; border-radius: 10px; background: var(--fill-2); transition: background-color var(--d-2), box-shadow var(--d-2); }
 .search:hover { background: var(--fill); }
-.search:focus-within { background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); }
+.search.typing { background: var(--bg-elev); box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-tint-2); }
 .search > .i { position: absolute; left: 11px; width: 16px; height: 16px; color: var(--label-3); pointer-events: none; }
-.search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; padding: 0 42px 0 34px; font-size: 14px; color: var(--label); -webkit-appearance: none; appearance: none; }
+.search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; padding: 0 38px 0 34px; font-size: 14px; color: var(--label); -webkit-appearance: none; appearance: none; }
 .search input::placeholder { color: var(--label-3); }
 .search input::-webkit-search-cancel-button, .search input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
-.search kbd { position: absolute; right: 9px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; border: 1px solid var(--sep-2); font: 500 11px/1 var(--sans); color: var(--label-3); transition: opacity var(--d-1); pointer-events: none; }
-.search:focus-within kbd, .search.has-value kbd { opacity: 0; }
 .search .cancel { display: none; }
-.ib.search-open { display: none; }
 .pill-select { position: relative; display: inline-flex; align-items: center; height: 30px; border-radius: var(--r-pill); background: var(--fill-2); color: var(--label); transition: background-color var(--d-1), color var(--d-1), box-shadow var(--d-1); flex: none; }
 .pill-select:hover { background: var(--fill); }
 .pill-select:focus-within { box-shadow: 0 0 0 2px var(--focus); }
@@ -274,7 +294,6 @@ body.sheet-modal { overflow: hidden; }
 .pill-select select option, .pill-select select optgroup { color: var(--label); background: var(--bg-elev); }
 /* size the pill to the chosen abbreviation, not the widest option */
 @supports (field-sizing: content) { .pill-select select { field-sizing: content; } }
-@supports not (field-sizing: content) { .gnav { --gnav-side: 654px; } }
 .pill-select.lead select { padding-left: 31px; }
 .pill-select > .i { position: absolute; pointer-events: none; }
 .pill-select > .lead-i { left: 10px; width: 16px; height: 16px; color: var(--label-2); }
@@ -447,6 +466,8 @@ input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--
 .verse[aria-current="true"] .vnum span { background: var(--accent-fill); color: #fff; animation: pop .5s var(--spring); }
 @keyframes pop { from { transform: scale(.6); } to { transform: none; } }
 .vtext { -webkit-box-decoration-break: clone; box-decoration-break: clone; border-radius: 4px; }
+/* A historic Greek text (Codex Vaticanus, lang="grc" from meta.json): the Greek stack the interlinear uses. Early-modern English stays plain */
+.vtext[lang="grc"] { font-family: var(--grk); }
 /* Words of Jesus (red-letter data): bold with a bright blue gradient; each wrapped line gets its own gradient */
 .vtext .woc { font-weight: 700; color: var(--woc-solid); background-image: var(--woc-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 /* Chromium paints ::selection and ::highlight() text in `color` (it ignores -webkit-text-fill-color there); WebKit uses the fill */
@@ -908,6 +929,19 @@ mark { background: var(--mark-bg, color-mix(in srgb, var(--sw-yellow) 42%, trans
 .menu button:hover, .menu a:hover, .menu button:focus-visible, .menu a:focus-visible { background: var(--accent-fill); color: #fff; outline: none; text-decoration: none; }
 .menu .i { width: 16px; height: 16px; }
 .menu hr { border: 0; height: 1px; background: var(--sep); margin: 5px 8px; }
+.menu kbd { margin-left: auto; margin-right: -4px; font: 500 11px/1 var(--sans); color: var(--label-3); }
+.menu button:hover kbd, .menu button:focus-visible kbd { color: inherit; }
+/* the top bar's Text menu: its own controls (two selects and a toggle) in rows */
+.menu.text-menu { min-width: 260px; max-width: calc(100vw - 16px); }
+.menu .pill-select > .chev { width: 10px; height: 10px; } /* not .menu .i's 16px */
+.gnav-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 42px; padding: 0 6px 0 10px; font-size: 14px; color: var(--label); }
+.gnav-row + .gnav-row { border-top: 1px solid var(--sep); }
+.gnav-row select { max-width: 52vw; text-overflow: ellipsis; }
+.menu.text-menu .toggle { width: auto; height: 30px; padding: 0 12px 0 10px; gap: 6px; border-radius: var(--r-pill); background: var(--fill-2); color: var(--label); font: 600 13px/1 var(--sans); justify-content: center; }
+.menu.text-menu .toggle .lbl { display: inline; }
+.menu.text-menu .toggle:hover, .menu.text-menu .toggle:focus-visible { background: var(--fill); color: var(--label); }
+.menu.text-menu .toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.menu.text-menu .toggle[aria-pressed="true"] { background: var(--accent-tint-2); color: var(--accent-on-tint); }
 .menu .danger:hover, .menu .danger:focus-visible { background: var(--danger-fill); color: #fff !important; }
 .tip { position: fixed; z-index: 80; left: 0; top: 0; max-width: 320px; padding: 10px 12px; border-radius: 12px; background: var(--glass-2); -webkit-backdrop-filter: var(--blur-sheet); backdrop-filter: var(--blur-sheet); box-shadow: var(--sh-pop); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(4px) scale(.98); transition: opacity .15s, transform .2s var(--ease-out), visibility 0s linear .2s; font-size: 13px; line-height: 1.35; color: var(--label); }
 .tip.on { opacity: 1; visibility: visible; transform: none; transition: opacity .15s, transform .2s var(--ease-out), visibility 0s; }
@@ -1123,69 +1157,53 @@ kbd.k { display: inline-grid; place-items: center; min-width: 26px; height: 26px
 @media (min-width: 1400px) {
   :root { --sheet-w: 440px; }
 }
-/* < 1500: the bar gained Bible art and the profile button, so the Parallel select and the Original
-   toggle go icon-only here (was < 1180) and the search stays centred at 1440 and 1280 (spec sec. 10.A).
-   --gnav-side re-measured with icon-only pills: 518.3px. */
-@media (max-width: 1499px) {
-  .gnav { --gnav-side: 519px; }
-  .pill-select.par select { width: 50px; color: transparent; padding-right: 0; }
-  .pill-select.par select option, .pill-select.par select optgroup { color: var(--label); }
-  .toggle .lbl { display: none; }
-  .toggle { padding: 0; width: 34px; justify-content: center; }
-}
-@supports not (field-sizing: content) { @media (max-width: 1499px) { .gnav { --gnav-side: 543px; } } }
-/* < 1180: the reference, fourteen controls and a search field no longer fit, so the field collapses to .search-open
-   (it was < 900 before Library, Bible art and the profile button joined the bar) and .searching shows it as
-   an overlay. Columns: reference cluster at its own width (never truncated) · spacer · search icon · tool
-   strip. The strip takes what is left and, when that is not enough, scrolls sideways with a fade on the
-   edge that hides tools (.ov-l / .ov-r, set by main.js). */
+/* < 1400: the side clusters differ too much to centre the field without starving it, so it takes the room there is */
+@media (max-width: 1399px) { .gnav { grid-template-columns: minmax(max-content, 1fr) minmax(220px, 600px) minmax(max-content, 1fr); } }
+/* < 1180 */
 @media (max-width: 1179px) {
-  .gnav { column-gap: 0; grid-template-columns: max-content minmax(0, 1fr) auto minmax(0, max-content); }
-  /* the books button repeats "John 3 ▾" (both open the picker): here the reference button is the picker entry */
-  #btn-pick { display: none; }
-  .search { display: none; }
-  .ib.search-open { display: inline-grid; grid-column: 3; margin: 0 4px 0 10px; }
-  .gnav-right { grid-column: 4; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; padding: 4px; margin-right: -4px; }
-  .gnav-right::-webkit-scrollbar { display: none; }
-  .gnav-right > * { flex: none; }
-  .gnav.searching .search { display: flex; position: absolute; left: 10px; right: 10px; top: 8px; z-index: 3; background: var(--bg-elev); box-shadow: 0 0 0 .5px var(--sep-2), var(--sh-2); animation: fade .2s var(--ease-out); }
-  .gnav.searching .search .cancel { display: block; position: absolute; right: 6px; height: 28px; padding: 0 6px; border-radius: 7px; color: var(--link); font-size: 14px; }
-  .gnav.searching .search kbd { display: none; }
-  .gnav.searching .search input { padding-right: 72px; }
-  .pill-select.par select { width: 50px; color: transparent; padding-right: 0; }
-  .pill-select.par select option, .pill-select.par select optgroup { color: var(--label); }
-  .toggle .lbl { display: none; }
-  .toggle { padding: 0; width: 34px; justify-content: center; }
   /* picker: one testament column, three book columns, so names never clip */
   .picker-books { grid-template-columns: 1fr; }
   .pbooks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   dialog.picker { height: min(1240px, calc(100vh - 32px)); height: min(1240px, calc(100dvh - 32px)); } /* one long list: use the screen */
 }
-/* < 1000: tighter spacing, so the tool strip scrolls as little as possible */
+/* < 1000: tighter spacing */
 @media (max-width: 999px) {
-  .gnav { padding: 0 max(9px, env(safe-area-inset-right)) 0 max(9px, env(safe-area-inset-left)); }
+  .gnav { column-gap: 8px; padding: 0 max(9px, env(safe-area-inset-right)) 0 max(9px, env(safe-area-inset-left)); }
   .gnav-left { gap: 2px; }
   .gnav-right { gap: 4px; }
-  .vsep { display: none; }
   .ib { width: 32px; }
-  .refbtn { padding: 0 7px; }
   .tools button { width: 30px; }
-  .ib.search-open { margin-left: 6px; }
 }
+/* < 860: the field keeps the place; its hint goes */
+@media (max-width: 859px) { .gnav-hint { display: none; } .gnav { grid-template-columns: minmax(max-content, 1fr) minmax(150px, 600px) minmax(max-content, 1fr); } }
 /* < 700: phone. Two-row bar, bottom sheet with detents */
 @media (max-width: 699px) {
   :root { --bar-h: 96px; --read-size: 19px; }
-  /* top bar: row 1 = navigation + search, row 2 = scrolling tool strip */
-  .gnav { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 52px 44px; height: var(--bar-h); gap: 0 6px; padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+  /* top bar: row 1 = the lantern, Back, the field, Text and the menu; row 2 = previous · the tools · next */
+  .gnav { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-rows: 52px 44px; height: var(--bar-h); gap: 0 6px; padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+  .gnav-center, .gnav-right { display: contents; }
   .gnav-left { grid-area: 1 / 1; gap: 2px; }
+  #btn-fwd { display: none; }
   .ib { width: 34px; }
-  .refbtn { gap: 5px; padding: 0 7px; font-size: 16px; }
-  .ib.search-open { grid-area: 1 / 2; margin: 0; }
-  .gnav.searching .search { grid-row: 1; }
-  .gnav-right { grid-area: 2 / 1 / 3 / 3; justify-content: flex-start; gap: 6px; padding: 5px 8px; margin: 0 calc(-1 * max(8px, env(safe-area-inset-right))) 0 calc(-1 * max(8px, env(safe-area-inset-left))); }
-  .gnav-right #btn-account { order: -1; } /* Sign in (or the profile) leads the strip, so a phone sees it without scrolling sideways */
+  #search-form { grid-area: 1 / 2; min-width: 0; }
+  #btn-text { grid-area: 1 / 3; padding: 0 8px 0 10px; }
+  #btn-text .tx-b { display: none; }
+  #btn-text.has-par .dot { display: block; } /* a parallel is on: the dot stands for it here */
+  #btn-account { grid-area: 1 / 4; }
+  #btn-prev, .gnav-tools, #btn-next { grid-area: 2 / 1 / 3 / -1; }
+  #btn-prev { justify-self: start; } .gnav-tools { justify-self: center; } #btn-next { justify-self: end; }
+  #cur-ref-text { font-size: 15px; }
+  /* no magnifier at rest here: the room goes to the place ('Revelation 22:21' beside Back) */
+  .gnav:not(.searching) .search > .i { display: none; }
+  .gnav:not(.searching) .gnav-ref { left: 12px; }
+  .gnav:not(.searching) .search input { padding-left: 12px; }
+  /* an absolutely placed grid item is held by its grid area: the whole first row while searching */
+  .gnav.searching #search-form { grid-area: 1 / 1 / 2 / -1; }
+  .gnav.searching .search { position: absolute; left: 0; right: 0; top: 8px; z-index: 3; background: var(--bg-elev); box-shadow: 0 0 0 .5px var(--sep-2), var(--sh-2); animation: fade .2s var(--ease-out); }
+  .gnav.searching .search .cancel { display: block; position: absolute; right: 6px; height: 28px; padding: 0 6px; border-radius: 7px; color: var(--link); font-size: 14px; }
+  .gnav.searching .gnav-books { display: none; }
+  .gnav.searching .search input { padding-right: 72px; }
   .gnav.hide { transform: translateY(-100%); }
-  .vsep.hide-m { display: none; }
   .tools button { width: 34px; }
   /* hero */
   .hero { padding: 40px 16px 0; }
@@ -1268,7 +1286,8 @@ kbd.k { display: inline-grid; place-items: center; min-width: 26px; height: 26px
 }
 /* 375-class phones: 2px off each row-1 button, so references like "Revelation 22:21" still fit */
 @media (max-width: 389px) {
-  .gnav-left .ib, .ib.search-open { width: 32px; }
+  .gnav-left .ib, #btn-account { width: 32px; }
+  .gnav { column-gap: 4px; }
 }
 /* short screens (a phone on its side, 844×390): the stage fills the screen below the top bar and its head keeps to
    one row (no subtitle or legend), so the graph, map and arcs keep a usable canvas */
@@ -1593,12 +1612,12 @@ body.mode-side.drawer-open dialog > .resume, body.mode-side.drawer-open dialog >
   .group .cell[aria-current="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
   .seg-ind { border: 2px solid Highlight; }
   .sw[aria-checked="true"] { outline: 2px solid Highlight; }
-  .chip, .btn, .pill-select, .toggle, .pill-tog { border: 1px solid ButtonText; }
+  .chip, .btn, .pill-select, .toggle, .pill-tog, .gnav-text, .gnav-books { border: 1px solid ButtonText; }
   .hero-title .chnum { background: none; color: CanvasText; -webkit-text-fill-color: CanvasText; }
   .tools button[aria-pressed="true"], .toggle[aria-pressed="true"], .pill-tog[aria-pressed="true"], .pill-seg > button[aria-checked="true"] { outline: 2px solid Highlight; }
   .pin { forced-color-adjust: none; }
   .verse:focus-visible, .menu button:focus-visible, .menu a:focus-visible, input[type=range]:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
-  .search:focus-within, .field:focus-within, .editor:focus-within, .tokens:focus-within, .mini-search:focus-within, .frow input:focus, .pill-select:focus-within { outline: 2px solid Highlight; }
+  .search.typing, .field:focus-within, .editor:focus-within, .tokens:focus-within, .mini-search:focus-within, .frow input:focus, .pill-select:focus-within { outline: 2px solid Highlight; }
   .lib-book::after { background: Highlight; width: calc(var(--p, 0) * (100% - 20px)); right: auto; }
   /* colour is the information: swatches, highlight dots and OT/NT dots keep their colour, with an edge */
   .sw:not(.sw-none), .hdot, .t-dot, .pgroup h4 i, .tip .tm i, .key i, .bm-sw, .lib-legend i { forced-color-adjust: none; }
@@ -1615,11 +1634,7 @@ body.mode-side.drawer-open dialog > .resume, body.mode-side.drawer-open dialog >
   .drawer, .menu, .toast, .resume, .tip, .stage, dialog.modal { border: 1px solid CanvasText; }
   .drawer, .menu, .toast, .resume, .tip { background: Canvas; }
 }
-/* the narrow Parallel pill hides its label with transparent ink, which forced colours would repaint */
-@media (forced-colors: active) and (max-width: 1499px) {
-  .pill-select.par select { forced-color-adjust: none; }
-  .pill-select.par select option, .pill-select.par select optgroup { color: CanvasText; background-color: Canvas; }
-}
+
 
 /* =====================================================================
    18. Reduced transparency: solid materials instead of glass
