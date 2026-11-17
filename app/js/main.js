@@ -6,7 +6,7 @@ import * as reader from './reader.js';
 import * as drawer from './drawer.js';
 import * as viz from './viz.js';
 import { initAuth, initAccountUI, renderAccountButton, openAuth, openProfile, signOut } from './account.js';
-import { closeDialog, showDialog, menuOpen as uiMenuOpen, relTime } from './ui.js';
+import { closeDialog, showDialog, menuOpen as uiMenuOpen, relTime, openMenu } from './ui.js';
 
 // Optional modules, loaded in parallel with the rest: a missing or broken library.js, tracker.js, art.js, links.js, marks.js
 // or memory.js must never stop the reader (every call goes through modCall).
@@ -141,6 +141,11 @@ const A = {
   /** A typed or linked reference ('John 3:16–18'): true when it resolved and opened. */
   goReference(text) { const r = parseReference(String(text || '')); if (r) { openRef(r); return true; } toast(`Couldn’t find “${text}”.`); return false; },
   openSettings() { openSettings(); },
+  /** The top bar's avatar menu (account.js): the book picker, the theme and the shortcuts sheet. */
+  openPicker() { openPicker(); },
+  toggleTheme() { toggleTheme(); },
+  openHelp() { openHelp(); },
+  isDark() { return resolvedTheme() === 'dark'; },
   /** Home's Welcome: Sign in, or Create a profile (the sign-up form, Name focused). */
   openAuth(mode) { openAuth(mode === 'signup' ? 'signup' : 'signin'); },
   /** Home (the wordmark, h): byKey moves focus to its heading. */
@@ -240,7 +245,8 @@ function updateBar() {
   // become enabled), hand focus to the partner (or the reference), then disable the one that had it
   const ae = document.activeElement, pair = NAV_PAIR[ae?.id];
   Object.entries(off).forEach(([id, v]) => { if (id !== ae?.id) $('#' + id).disabled = v; });
-  if (pair && off[ae.id]) (off[pair] ? $('#cur-ref') : $('#' + pair))?.focus({ preventScroll: true });
+  const partner = pair ? $('#' + pair) : null; // off screen (Forward on a phone, a disabled Back): the book chevron instead
+  if (pair && off[ae.id]) (off[pair] || !partner?.getClientRects().length ? $('#cur-ref') : partner)?.focus({ preventScroll: true });
   if (pair) ae.disabled = off[ae.id];
   $('#btn-orig').setAttribute('aria-pressed', String(!!state.showOrig));
   $$('[data-panel-btn]').forEach(b => b.setAttribute('aria-pressed', String(!state.home && b.dataset.panelBtn === state.panel))); // Home hides the stage
@@ -248,6 +254,21 @@ function updateBar() {
   // the parallel is another translation (and, hosted, never the owner's ESV or NLT for anyone else)
   $$('#tr2 option').forEach(o => { o.disabled = !!o.value && (o.value === state.tr || (ownerOnlyKeys() && trInfo(o.value).kind === 'api')); });
   $('#tr2').closest('.pill-select')?.classList.toggle('on', !!state.tr2);
+  // the Text button says what is being read: 'BSB', 'BSB + KJV', a dot while Hebrew and Greek show
+  const tb = $('#btn-text');
+  if (tb) {
+    const a = trInfo(state.tr).abbr, b = state.tr2 ? trInfo(state.tr2).abbr : '';
+    $('.tx-a', tb).textContent = a; $('.tx-b', tb).textContent = b ? ` + ${b}` : '';
+    tb.classList.toggle('has-par', !!b); tb.classList.toggle('has-orig', !!state.showOrig);
+    tb.setAttribute('aria-label', `Text: ${a}${b ? ` and ${b}` : ''}${state.showOrig ? ', Hebrew and Greek on' : ''}`);
+  }
+}
+/** The Text menu: the translation, the parallel and Hebrew and Greek, the bar's own controls shown in a popover. */
+function openTextMenu() {
+  const rows = $('#text-rows'), store = $('#gnav-store'); if (!rows || !store) return;
+  openMenu($('#btn-text'), rows, { label: 'Text', className: 'text-menu', dialog: true, sticky: true,
+    // a tap that focused a select would open its picker at once on a phone: there, the toggle takes focus
+    focus: matchMedia('(pointer: coarse)').matches ? '#btn-orig' : '#tr', onClose: () => store.append(rows) });
 }
 function updateHash() { if (state.home) return; const h = `#${state.book}/${state.chapter}${state.selected ? '/' + state.selected : ''}`; if (location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h); }
 /** `#b/c[/v]` → {b, c, v} clamped to the Bible (v 0 = no verse: '#43/3/0' is John 3), or null for any other hash. */
@@ -1020,6 +1041,7 @@ async function runSearch(qRaw) {
     const seq = ++searchSeq;
     // the Search tab would keep the last query's results beside another chapter: show this passage's own tab
     if (state.drawerTab === 'search') state.drawerTab = ref.v ? 'xref' : 'context';
+    const si = $('#search'); if (si) { si.value = ''; $('#search-form')?.classList.remove('has-value'); si.blur(); } // arrived: the field shows the place again
     openRef(ref); if (ref.v) A.select(ref.v, { open: false });
     // focus the verse (or the chapter) unless the sheet took over or focus has moved on
     readerP.then(() => {
@@ -1065,17 +1087,9 @@ async function showTopic(name) {
 }
 
 // ------------------------------------------------------------ top bar
-/** Below 1180px the search field collapses to .search-open (styles.css sec. 15); .searching shows it as an overlay. */
-const SEARCH_ICON = typeof matchMedia !== 'undefined' ? matchMedia('(max-width: 1179px)') : { matches: false, addEventListener() {} };
+/** On a phone the focused field opens over the whole first row (.searching, styles.css sec. 15). */
+const SEARCH_ICON = typeof matchMedia !== 'undefined' ? matchMedia('(max-width: 699px)') : { matches: false, addEventListener() {} };
 let lastY = 0, scrollRaf = 0;
-/** The tool strip (.gnav-right) scrolls sideways when it does not fit: fade only the edge that hides tools.
- *  Called from its scroll events and a ResizeObserver, where layout is already current. */
-function syncBarEdges() {
-  const r = document.querySelector('#topbar .gnav-right'); if (!r) return;
-  const max = r.scrollWidth - r.clientWidth, x = Math.abs(r.scrollLeft);
-  r.classList.toggle('ov-l', max > 1 && x > 1);
-  r.classList.toggle('ov-r', max > 1 && x < max - 1);
-}
 function onScroll() {
   if (scrollRaf) return;
   scrollRaf = requestAnimationFrame(() => {
@@ -1085,7 +1099,9 @@ function onScroll() {
     const max = document.documentElement.scrollHeight - innerHeight;
     const pr = $('#progress'); if (pr) pr.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max).toFixed(4) : 0})`;
     if (innerWidth < 700 && !bar.classList.contains('searching') && !document.body.classList.contains('sheet-modal')) {
-      if (y > 160 && y > lastY + 2 && !bar.contains(document.activeElement)) bar.classList.add('hide');
+      // never while the Text or avatar menu is open: their controls sit under <body>, not in the bar
+      const barMenu = !!bar.querySelector('#btn-text[aria-expanded="true"], #btn-account[aria-expanded="true"]');
+      if (y > 160 && y > lastY + 2 && !barMenu && !bar.contains(document.activeElement)) bar.classList.add('hide');
       else if (y < lastY - 2 || y <= 8) bar.classList.remove('hide');
     } else bar.classList.remove('hide');
     lastY = y;
@@ -1114,7 +1130,7 @@ function fillTranslationSelects() {
   const api = group(off ? 'Available to the site owner' : 'With API key', g('api'));
   const lic = group('Licensed', g('licensed')); // NIV, NKJV and NASB through API.Bible: every reader, guests included
   $('#tr').innerHTML = group('Bundled', g('bundled')) + lic + api + group('Opens a website', g('external')) + hist;
-  $('#tr2').innerHTML = '<option value="">Parallel</option>' + group('Bundled', g('bundled')) + lic + api + hist;
+  $('#tr2').innerHTML = '<option value="">None</option>' + group('Bundled', g('bundled')) + lic + api + hist;
   // About's credits name each historic text with its credit line (a condition of the CC BY-SA ones); nothing before they are built
   const cr = $('#credits-historic');
   if (cr) cr.innerHTML = state.translations.filter(t => t.kind === 'bundled' && old(t) && trCreditHtml(t.id)).map(t => `${trCreditHtml(t.id)} · `).join('');
@@ -1161,7 +1177,8 @@ function bindChrome() {
   $('#btn-next').addEventListener('click', () => A.step(1));
   $('#btn-back').addEventListener('click', () => { const h = state.history.pop(); if (!h) return; state.future.push({ b: state.book, c: state.chapter, v: state.selected }); A.navigate(h.b, h.c, h.v, { noHistory: true }); });
   $('#btn-fwd').addEventListener('click', () => { const f = state.future.pop(); if (!f) return; state.history.push({ b: state.book, c: state.chapter, v: state.selected }); A.navigate(f.b, f.c, f.v, { noHistory: true }); });
-  $('#cur-ref').addEventListener('click', openPicker); $('#btn-pick').addEventListener('click', openPicker);
+  $('#cur-ref').addEventListener('click', () => { $('#topbar').classList.remove('searching'); openPicker(); }); $('#btn-pick').addEventListener('click', openPicker);
+  $('#btn-text')?.addEventListener('click', openTextMenu);
   $('#btn-orig').addEventListener('click', toggleOrig);
   $$('[data-panel-btn]').forEach(b => b.addEventListener('click', () => A.showPanel(b.dataset.panelBtn)));
   $('#btn-drawer').addEventListener('click', () => A.toggleDrawer());
@@ -1184,33 +1201,17 @@ function bindChrome() {
   const sf = $('#search-form'), si = $('#search'), bar = $('#topbar');
   sf.addEventListener('submit', e => { e.preventDefault(); runSearch(si.value); });
   si.addEventListener('input', () => sf.classList.toggle('has-value', !!si.value));
-  $('.search-open')?.addEventListener('click', openSearchField);
+  si.addEventListener('focus', () => { if (SEARCH_ICON.matches) bar.classList.add('searching'); });
   $('#search-form .cancel')?.addEventListener('click', () => { bar.classList.remove('searching'); si.blur(); });
   // focus left the search form (a verse, the page): the overlay gives the bar back; the query stays for next time
+  si.addEventListener('focus', () => sf.classList.add('typing'));
+  si.addEventListener('blur', () => sf.classList.remove('typing'));
   si.addEventListener('blur', () => setTimeout(() => { if (!sf.contains(document.activeElement)) bar.classList.remove('searching'); }, 150));
   bar.addEventListener('focusin', () => bar.classList.remove('hide'));
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
   try { SEARCH_ICON.addEventListener('change', () => { if (!SEARCH_ICON.matches) bar.classList.remove('searching'); }); } catch (e) { /* old Safari */ }
-  const strip = $('.gnav-right', bar);
-  if (strip) {
-    strip.addEventListener('scroll', syncBarEdges, { passive: true });
-    // a mouse wheel scrolls the strip sideways while it has tools out of view; at either end (or when it all fits)
-    // the page scrolls as usual. Sideways swipes, Shift+wheel and pinch zoom (ctrl) keep their own behaviour.
-    strip.addEventListener('wheel', e => {
-      if (e.ctrlKey || e.shiftKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
-      const max = strip.scrollWidth - strip.clientWidth; if (max <= 1) return;
-      const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? strip.clientWidth : 1), x = strip.scrollLeft;
-      if ((d > 0 && x >= max - 1) || (d < 0 && x <= 1)) return;
-      strip.scrollLeft = Math.max(0, Math.min(max, x + d));
-      e.preventDefault();
-    }, { passive: false });
-    // the strip and each tool in it: a pill that changes width or the account button appearing also counts
-    if ('ResizeObserver' in window) { const ro = new ResizeObserver(syncBarEdges); [strip, ...strip.children].forEach(x => ro.observe(x)); }
-    else window.addEventListener('resize', syncBarEdges, { passive: true });
-    syncBarEdges();
-  }
   onLayoutChange(onLayoutChange2);
   window.addEventListener('resize', onLayoutChange2);
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { vizCall('refreshTheme'); syncThemeBtn(); }); } catch (e) { /* old Safari */ }

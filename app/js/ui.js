@@ -72,7 +72,7 @@ export const menuOpen = () => !!menuEl;
  * Opening again on the same anchor toggles the menu closed (returns null).
  * Inside an open modal dialog the menu is placed in that dialog (the rest of the page is inert).
  */
-export function openMenu(anchor, html, { label = '', className = '', onClick, onKeydown, onClose, focus, dialog = false } = {}) {
+export function openMenu(anchor, html, { label = '', className = '', onClick, onKeydown, onClose, focus, dialog = false, sticky = false } = {}) {
   if (menuEl && menuEl._opener === anchor) { closeMenu(); return null; }
   closeMenu(false);
   const m = document.createElement('div');
@@ -80,8 +80,8 @@ export function openMenu(anchor, html, { label = '', className = '', onClick, on
   // dialog: a popover editor (fields and swatches with a small action menu inside), where Tab moves between controls
   m.setAttribute('role', dialog ? 'dialog' : 'menu');
   if (label) m.setAttribute('aria-label', label);
-  m.innerHTML = html;
-  m._opener = anchor; m._onClose = onClose;
+  if (html instanceof Node) m.append(html); else m.innerHTML = html; // a node: live controls shown in the menu (the top bar's Text menu)
+  m._opener = anchor; m._onClose = onClose; m._sticky = !!sticky; // sticky: its anchor is fixed (the top bar), so a page scroll leaves it open
   const host = (anchor && anchor.closest && anchor.closest('dialog[open]')) || document.body;
   host.appendChild(m);
   menuEl = m;
@@ -89,7 +89,7 @@ export function openMenu(anchor, html, { label = '', className = '', onClick, on
   if (host !== document.body) host.addEventListener('close', () => { if (menuEl === m) closeMenu(false); }, { once: true });
   if (anchor) anchor.setAttribute('aria-expanded', 'true');
   placeMenu(m, anchor);
-  const first = (focus && m.querySelector(focus)) || m.querySelector('[role=menuitem]:not([disabled]), [role=menuitemradio], [role=radio], input, button');
+  const first = (focus && m.querySelector(focus)) || m.querySelector('[role=menuitem]:not([disabled]), [role=menuitemradio], [role=radio], input, select, button');
   first?.focus({ preventScroll: true });
   m.addEventListener('click', e => { if (typeof onClick === 'function') onClick(e, m); });
   m.addEventListener('keydown', e => {
@@ -97,13 +97,13 @@ export function openMenu(anchor, html, { label = '', className = '', onClick, on
     if (e.defaultPrevented) return;
     const items = $$('[role=menuitem]:not([disabled])', m).filter(x => !x.hidden);
     const i = items.indexOf(document.activeElement);
-    const inField = e.target.matches && e.target.matches('input, textarea');
+    const inField = e.target.matches && e.target.matches('input, textarea, select');
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(); return; }
     if (e.key === 'Tab') {
       e.preventDefault(); e.stopPropagation();
       if (!dialog) { closeMenu(); return; }
       // Tab cycles through the popover: the field, the checked swatch, then each action
-      const stops = $$('input, [role=radio][tabindex="0"], [role=menuitem]:not([disabled]), button:not([role]):not([disabled])', m).filter(x => !x.hidden && x.offsetParent !== null);
+      const stops = $$('input, select, [role=radio][tabindex="0"], [role=menuitem]:not([disabled]), button:not([role]):not([disabled])', m).filter(x => !x.hidden && x.offsetParent !== null);
       const k = stops.indexOf(document.activeElement);
       stops[(k + (e.shiftKey ? -1 : 1) + stops.length) % stops.length]?.focus();
       return;
@@ -164,6 +164,8 @@ if (typeof document !== 'undefined') {
     if (!(box instanceof Node) || m.contains(box) || !(m._opener && box.contains(m._opener))) return;
     const ae = document.activeElement;
     if (ae && m.contains(ae) && ae.matches('input, textarea')) { if (m._opener.isConnected) placeMenu(m, m._opener); return; }
+    // the Text menu: choosing a translation redraws the page (which scrolls it) under a bar that has not moved
+    if (m._sticky && m._opener.isConnected && m._opener.getClientRects().length && !m._opener.closest('.hide')) { placeMenu(m, m._opener); return; }
     closeMenu(!!(ae && m.contains(ae)));
   }, { capture: true, passive: true });
 }
