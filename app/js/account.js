@@ -281,6 +281,7 @@ export function initAccountUI(actions) {
   A = actions;
   ['btn-account', 'lib-account'].forEach(id => document.getElementById(id)?.addEventListener('click', e => {
     const b = e.currentTarget;
+    if (id === 'btn-account') { openBarMenu(b); return; } // the top bar's: Library, settings and the account
     if (!state.auth.signedIn) { openAuth('signin'); return; }
     openAccountMenu(b);
   }));
@@ -297,25 +298,26 @@ export function renderAccountButton() {
   const a = state.auth;
   ['btn-account', 'lib-account'].forEach(id => {
     const b = document.getElementById(id); if (!b) return;
-    const show = !!(a.known && a.server);
-    b.hidden = !show;
-    if (!show) return;
+    const show = !!(a.known && a.server), bar = id === 'btn-account';
+    // the top bar's is always there (its menu holds Library and Settings too); the Library's only with an account server
+    b.hidden = !bar && !show;
+    if (!bar && !show) return;
     b.classList.toggle('lost', !!(a.signedIn && a.lost));
     if (a.signedIn && a.user) {
       const name = a.user.name || a.user.email || 'Profile';
       const html = `<span class="acct-av" aria-hidden="true">${esc(initialsOf(a.user))}</span>`;
       if (b.innerHTML !== html) b.innerHTML = html;
-      b.setAttribute('aria-label', a.lost ? `Signed out of ${name}. Sign in again` : `Profile: ${name}`);
+      b.setAttribute('aria-label', a.lost ? `Signed out of ${name}. Sign in again` : bar ? `Profile and menu: ${name}` : `Profile: ${name}`);
       b.title = a.lost ? `Signed out of ${name}` : `${name} (${a.user.email || ''})`;
       b.setAttribute('aria-haspopup', 'menu');
       if (b.getAttribute('aria-expanded') !== 'true') b.setAttribute('aria-expanded', 'false');
     } else {
       const html = icon('person');
       if (b.innerHTML !== html) b.innerHTML = html;
-      b.setAttribute('aria-label', 'Sign in');
-      b.title = 'Sign in';
-      b.setAttribute('aria-haspopup', 'dialog');
-      b.removeAttribute('aria-expanded');
+      b.setAttribute('aria-label', bar ? 'Library, settings and more' : 'Sign in');
+      b.title = bar ? 'Library, settings and more' : 'Sign in';
+      b.setAttribute('aria-haspopup', bar ? 'menu' : 'dialog');
+      if (!bar) b.removeAttribute('aria-expanded'); else if (b.getAttribute('aria-expanded') !== 'true') b.setAttribute('aria-expanded', 'false');
     }
   });
 }
@@ -336,6 +338,38 @@ function popButton() {
   setTimeout(() => b.classList.remove('pop'), 700);
 }
 
+/**
+ * The top bar's menu: Library, Browse books, the theme, Settings and Keyboard shortcuts for everyone, then the account
+ * (Sign in; signed in, the profile and Sign out). One place for what used to be five buttons in the bar.
+ */
+function openBarMenu(anchor) {
+  const a = state.auth, u = a.signedIn ? a.user : null, acct = !!(a.known && a.server);
+  const it = (what, label, ic, key = '') => `<button type="button" role="menuitem" data-bar="${what}">${label}${key ? `<kbd>${key}</kbd>` : ''}${icon(ic)}</button>`;
+  const dark = !!A?.isDark?.();
+  const head = u ? `<div class="acct-head" role="presentation"><span class="acct-av lg" aria-hidden="true">${esc(initialsOf(u))}</span><span><b>${esc(u.name)}</b><small>${esc(a.lost ? 'Signed out' : u.email)}</small></span></div><hr>` : '';
+  const general = it('library', 'Library', 'library', 'L') + it('pick', 'Browse books', 'books') + '<hr>'
+    + it('theme', dark ? 'Light mode' : 'Dark mode', dark ? 'sun' : 'moon', 'T') + it('settings', 'Settings', 'gear') + it('help', 'Keyboard shortcuts', 'help', '?');
+  const account = !acct ? '' : '<hr>' + (!u ? it('signin', 'Sign in', 'person')
+    : a.lost ? it('signin', 'Sign in again', 'person') + it('guest', 'Continue as a guest', 'signout')
+      : it('profile', 'Profile and data', 'person') + it('signout', 'Sign out', 'signout'));
+  openMenu(anchor, head + general + account, {
+    label: 'Menu', className: 'acct-menu bar-menu',
+    onClick: e => {
+      const b = e.target.closest('[data-bar]'); if (!b) return;
+      const what = b.dataset.bar;
+      closeMenu(true); // focus back on the button, so a dialog opened next returns there
+      if (what === 'library') { if (!document.getElementById('library')?.open) A?.openLibrary?.(); }
+      else if (what === 'pick') A?.openPicker?.();
+      else if (what === 'theme') A?.toggleTheme?.();
+      else if (what === 'settings') A?.openSettings?.();
+      else if (what === 'help') A?.openHelp?.();
+      else if (what === 'profile') openProfile();
+      else if (what === 'signout') signOut();
+      else if (what === 'signin') openAuth('signin', u ? { email: u.email, reason: 'lost' } : undefined);
+      else if (what === 'guest') continueAsGuest();
+    },
+  });
+}
 export function openAccountMenu(anchor) {
   const a = state.auth, u = a.user;
   if (!u) { openAuth('signin'); return; }
