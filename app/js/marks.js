@@ -2,7 +2,7 @@
 // follows links.js (a dirty map per scope, a debounced and keepalive flush with compare-and-set bases, conflicts,
 // cross-tab sync). This module also anchors marks in the text (§2.1), draws them with the CSS Custom Highlight API
 // (spans where it is missing), and owns the selection bubble and the comment card (§3.2) and the margin popover (§3.3).
-import { state, bookOf, refLabel, esc, api, lsGet, lsSet, lsKey, DRY, broadcast, onBroadcast, cut, wellFormed, scrollBehavior, setSaveStatus, pendingNotes, registerSaver, trInfo, readOnlyGuest, guestBlocked, signInRequired, lsDel, markableTr } from './store.js';
+import { state, bookOf, refLabel, esc, api, lsGet, lsSet, lsKey, DRY, broadcast, onBroadcast, cut, wellFormed, scrollBehavior, setSaveStatus, pendingNotes, registerSaver, trInfo, readOnlyGuest, guestBlocked, signInRequired, lsDel, markableTr, isHistoric, isPartialTr } from './store.js';
 import { icon } from './icons.js';
 import * as ui from './ui.js';
 import { matchQuote } from './xmatch.js';
@@ -1111,7 +1111,10 @@ async function copyPending() {
 }
 
 /** The comment card's heading: Comment or Edit comment, the verses, and their translation when it is not the reader's. */
-const cardRef = (d, m) => `${m && m.note ? 'Edit comment' : 'Comment'} · ${markLabel(d)}${d.tr !== (readerEl()?.dataset.tr || state.tr) ? ` · ${trInfo(d.tr).abbr}` : ''}`;
+// editing a mark made in another translation (drawn here as its whole verses): the card names that mark's words and
+// translation, which are what the comment is saved with, never the verse it was opened from
+const cardSrc = (d, m) => (m && m.tr !== d.tr ? m : d);
+const cardRef = (d, m) => { const s = cardSrc(d, m); return `${m && m.note ? 'Edit comment' : 'Comment'} · ${markLabel(s)}${s.tr !== (readerEl()?.dataset.tr || state.tr) ? ` · ${trInfo(s.tr).abbr}` : ''}`; };
 /** The open card's heading again (the reader changed translation under it): text only, the typed words untouched. */
 function refreshCardRef() {
   const el = cardEl()?.querySelector('#mc-ref'); if (!el || !pending) return;
@@ -1120,7 +1123,7 @@ function refreshCardRef() {
 }
 function cardHtml(p, m) {
   const color = card.color, d = p.draft;
-  const quote = d.quote.replace(/\s+/g, ' ').trim();
+  const quote = cardSrc(d, m).quote.replace(/\s+/g, ' ').trim();
   const sw = ['', ...COLORS].map(c => `<button type="button" role="radio" class="mc-sw${c ? '' : ' none'}" data-mc-color="${c}" aria-checked="${c === color}" tabindex="${c === color ? 0 : -1}" aria-label="${c ? cap(c) : 'No colour'}" title="${c ? cap(c) : 'No colour: a dotted underline'}"><i>${c ? '' : icon('slash')}</i></button>`).join('');
   return `<p class="mc-ref" id="mc-ref">${esc(cardRef(d, m))}</p>`
     + `<blockquote class="mc-quote"${color ? ` data-mk-color="${color}"` : ''}>“${esc(quote.length > 400 ? quote.slice(0, 400) : quote)}”</blockquote>`
@@ -1292,6 +1295,18 @@ const verseList = m => { const s = parseRef(m.start), e = parseRef(m.end); retur
  * translation when it is not the reader's and 'Text moved' when its words are not found. menu: the popover's card
  * (the quote flashes the words; a ⋯ menu), else the Notes tab's (Show in text, Edit, Delete).
  */
+/**
+ * A mark drawn nowhere because the text on screen has no row with words for its verse. A historic or partial text
+ * may give those words under a neighbouring number (reader.js omittedHtml says the same), so it is not said to leave
+ * the verse out.
+ */
+function otherChip(m) {
+  const root = readerEl(), shown = [root?.dataset.tr || state.tr, root?.dataset.tr2].filter(Boolean);
+  const loose = shown.find(t => isHistoric(t) || isPartialTr(t));
+  return loose
+    ? `<span class="mk-moved" title="${esc(`The ${trInfo(loose).abbr} has no separate verse here: this text does not have it, or gives its words under a neighbouring verse number (made in the ${trInfo(m.tr).abbr}).`)}">No separate verse here</span>`
+    : `<span class="mk-moved" title="${esc(`This translation leaves out the verse it was made in (${trInfo(m.tr).abbr}).`)}">Not in this translation</span>`;
+}
 export function markCardHtml(m, { menu = false } = {}) {
   const s = parseRef(m.start), e = parseRef(m.end); if (!s || !e) return '';
   const label = markLabel(m), st = markState(m.id), what = m.note ? 'comment' : 'highlight';
@@ -1304,7 +1319,7 @@ export function markCardHtml(m, { menu = false } = {}) {
     m.tr !== (readerEl()?.dataset.tr || state.tr) ? `<abbr title="Made in the ${esc(trInfo(m.tr).name)}">${esc(trInfo(m.tr).abbr)}</abbr>` : '',
     st === 'moved' ? '<span class="mk-moved" title="These words aren’t in the verse as it reads now, so they aren’t highlighted.">Text moved</span>' : '',
     st === 'verse' && !trOnScreen(m.tr) ? `<span class="mk-moved" title="${esc(`${what === 'comment' ? 'Made' : 'Highlighted'} in the ${trInfo(m.tr).name}. The words differ here, so the whole verse is shown.`)}">Whole verse</span>` : '',
-    st === 'other' ? `<span class="mk-moved" title="${esc(`This translation leaves out the verse it was made in (${trInfo(m.tr).abbr}).`)}">Not in this translation</span>` : '',
+    st === 'other' ? otherChip(m) : '',
   ].filter(Boolean).join('<span aria-hidden="true"> · </span>');
   const note = m.note ? `<div class="md mk-note" data-mk-note>${mdHtml(m.note)}</div><button class="link mk-more" type="button" data-mk-more aria-expanded="false" hidden>More</button>` : '';
   if (menu) {

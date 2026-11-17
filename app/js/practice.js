@@ -3,12 +3,12 @@
 // recordPractice, then the end of the practice or the quiet Written on the heart moment. The schedule is memsched.js's;
 // the verse's place in line and its labels come from memory.js (memoryDue, memoryWhen, memoryGotIt, memoryIsUpnext),
 // never from memsched with a guessed flag. main.js bindDialogs closes it (Esc, Close, Done, the backdrop).
-import { esc, smart, trInfo, DRY, isHistoric, isPartialTr } from './store.js';
+import { esc, smart, trInfo, DRY, isHistoric, isPartialTr, hasBook } from './store.js';
 import { showDialog, setRadio, placeInd, moveInd, radioKeys, localDay } from './ui.js';
 import { icon } from './icons.js';
 import { fumsView } from './reader.js';
 import * as S from './memsched.js';
-import { getMemory, memoryText, memoryLabel, memoryDue, memoryWhen, memoryGotIt, memoryIsUpnext, recordPractice, setMemoryTranslation, memoryTrUsable } from './memory.js';
+import { getMemory, memoryText, memoryLabel, memoryDue, memoryWhen, memoryGotIt, memoryIsUpnext, recordPractice, setMemoryTranslation, memoryTrUsable, learnableIn, notLearnableSaid } from './memory.js';
 
 const STEPS = ['read', 'fade', 'letters', 'recall'];
 const NAMES = { read: 'Read', fade: 'Fade', letters: 'First letters', recall: 'Recall' };
@@ -211,8 +211,11 @@ function render() {
     : `Shown in the KJV: the ${ab} isn’t available right now.`;
   const fb = meta && t.fallback ? `<p class="mz-fb">${icon('info')}<span>${fbMsg}</span></p>` : '';
   // the reader shows another translation (its own, after any fallback): offer to learn the verse in that one
-  const on = shownTr(), tl = on && p.phase === 'step' && on !== p.entry.tr && memoryTrUsable(on)
-    ? `<p class="mz-trl">Learning in the ${ab}. <button type="button" data-act="learn-in" data-tr="${esc(on)}">Learn in ${esc(trInfo(on).abbr)}</button></p>` : '';
+  // (never one that lacks the verse's book; a chapter or verse it lacks inside a book it has is found on the click,
+  // and then said here in place of the button)
+  const on = shownTr(), pr = /^(\d+)\./.exec(p.entry.ref || ''), offer = on && p.phase === 'step' && on !== p.entry.tr && memoryTrUsable(on) && (!pr || hasBook(on, +pr[1]));
+  const tl = !offer ? '' : p.noLearn && p.noLearn.tr === on ? `<p class="mz-trl">${esc(p.noLearn.msg)}</p>`
+    : `<p class="mz-trl">Learning in the ${ab}. <button type="button" data-act="learn-in" data-tr="${esc(on)}">Learn in ${esc(trInfo(on).abbr)}</button></p>`;
   // a historic text's credit comes ready as markup, its licence and source as links (store.js trCreditHtml)
   const cr = meta && t.credit && (t.credit.html || t.credit.copyright) ? `<p class="copyright mz-copy">${t.credit.html || esc(t.credit.copyright)}</p>` : '';
   x.meta.innerHTML = fb + tl + cr;
@@ -269,9 +272,10 @@ function onClick(e) {
 async function learnIn(tr) {
   const p = P; if (!p || p.phase !== 'step' || !tr) return;
   // never switch to a translation that would only show the KJV instead (one that leaves the verse out, or is offline)
-  const t = await memoryText({ ...p.entry, tr }).catch(() => null);
+  const L = await learnableIn(p.entry, tr);
   if (P !== p || p.phase !== 'step') return;
-  if (!t || t.fallback) { say(t && t.omitted ? `The ${trInfo(tr).abbr} leaves this verse out.` : `The ${trInfo(tr).abbr} isn’t available right now.`); return; }
+  // refused: said where the button was (and to a screen reader), the verse staying in its translation
+  if (!L.ok) { const msg = notLearnableSaid(L.why, tr, memoryLabel(p.entry)); p.noLearn = { tr, msg }; render(); say(msg); return; }
   p.trSwitch = true; // onChanged leaves the reload to this
   const x = setMemoryTranslation(p.id, tr); p.trSwitch = false; if (!x || P !== p) return;
   clearPeeks();

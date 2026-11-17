@@ -543,8 +543,8 @@ export function memorize({ b, c, v, ve = 0, tr = 'kjv' } = {}) {
     const want = markableTr(tr) ? tr : 'kjv', go = { label: 'Practise', run: () => { practise(have.id); } };
     const hp = parseRef(have.ref), hl = hp ? refLabel(hp.b, hp.c, hp.v, hp.w > hp.v ? hp.w : 0) : label; // the passage it is in
     const learnIn = async () => { // never to a translation that leaves the verse out (practice would show the KJV)
-      const t = await memoryText({ ...have, tr: want }).catch(() => null), ab = trInfo(want).abbr;
-      if (!t || t.fallback) { toast(t && t.omitted ? `The ${ab} leaves ${hl} out, so it stays in the ${trInfo(have.tr).abbr}.` : `The ${ab} isn’t available right now. Try again later.`); return; }
+      const L = await learnableIn(have, want), ab = trInfo(want).abbr;
+      if (!L.ok) { toast(notLearnableSaid(L.why, want, hl, have.tr)); return; }
       if (setMemoryTranslation(have.id, want)) toast(dry(`You’re learning ${hl} in the ${ab} now.`), { label: 'Practise', run: () => { practise(have.id); } });
     };
     if (have.tr === want) toast(`${hl} is already one of your memory verses.`, go);
@@ -561,6 +561,26 @@ export function memorize({ b, c, v, ve = 0, tr = 'kjv' } = {}) {
   if (o.current && o.current.id === x.id) toast(dry(`${label} is your memory verse now.`), { label: 'Practise now', run: () => { practise(x.id); } });
   else toast(dry(`Added ${label} to your memory verses, ${PLACE[o.upnext.findIndex(e => e.id === x.id)] || 'next in line'}.`), { label: 'Show', run: showMemory });
   return x;
+}
+/**
+ * Whether a memory verse can be learned in `tr` here: every one of its verses is there, never the KJV in their place
+ * (a book, chapter or verse that text lacks) and never a passage cut short by a partial text (practice would then
+ * quietly lose verses). → { ok: true, t } or { ok: false, why: 'absent' | 'omitted' | 'part' | 'unavailable' }
+ */
+export async function learnableIn(entry, tr) {
+  const t = await memoryText({ ...entry, tr }).catch(() => null), p = parseRef(entry && entry.ref);
+  if (!t) return { ok: false, why: 'unavailable' };
+  if (t.fallback) return { ok: false, why: t.absent ? 'absent' : t.omitted ? 'omitted' : 'unavailable' };
+  if (isPartialTr(tr) && p && (t.verses || []).length < p.w - p.v + 1) return { ok: false, why: 'part' };
+  return { ok: true, t };
+}
+/** Why a memory verse stays in its translation (learnableIn's why), as a sentence: `label` names the verses. */
+export function notLearnableSaid(why, tr, label, stays = '') {
+  const ab = trInfo(tr).abbr, keep = stays ? `, so it stays in the ${trInfo(stays).abbr}` : '';
+  return why === 'absent' ? `The ${ab} text here doesn’t have ${label}${keep}.`
+    : why === 'omitted' ? `The ${ab} leaves ${label} out${keep}.`
+    : why === 'part' ? `The ${ab} doesn’t have all of ${label}${keep}.`
+    : `The ${ab} isn’t available right now. Try again later.`;
 }
 /**
  * Learn a memory verse in another translation: its translation changes, its place, steps, due day and heart kept (one

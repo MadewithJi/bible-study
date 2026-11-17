@@ -238,8 +238,7 @@ const bookmarkTarget = () => ({ b: state.book, c: state.chapter, v: state.drawer
 function renderMemorizeBtn() {
   const btn = document.getElementById('btn-memorize'); if (!btn) return;
   const b = state.book, c = state.chapter, v = state.selected || 0;
-  const row = `#reader .verses > .verse[data-v="${v}"]`; // the main column's text: memorizeSelected memorizes in its translation
-  const omitted = !!document.querySelector(`${row} > .vtext.omitted, ${row} > .vcols > :first-child .vtext.omitted`);
+  const omitted = rowOmitted(v); // the main column's text: memorizeSelected memorizes in its translation
   // a memory verse (in any translation, or a passage holding it) keeps its Practise where this translation leaves it out
   const have = !!(mem && v && memHolding(b, c, v)), name = refLabel(b, c, v);
   const hide = !mem || !v || state.drawerTab === 'search' || (omitted && !have);
@@ -272,14 +271,20 @@ function fitTitle() {
   }
   if (s) s.style.position = pos;
 }
+/** Whether the main column leaves verse v out (an omitted row). */
+function rowOmitted(v) {
+  const row = `#reader .verses > .verse[data-v="${v}"]`;
+  return !!document.querySelector(`${row} > .vtext.omitted, ${row} > .vcols > :first-child .vtext.omitted`);
+}
 function memorizeSelected() {
   const btn = document.getElementById('btn-memorize'), b = state.book, c = state.chapter, v = state.selected || 0;
   if (!mem || !v) return;
   const have = memHolding(b, c, v);
   // in the translation on screen (reader.js sets #reader's data-tr after any fallback), not only the chosen one
   const tr = document.querySelector('#reader')?.dataset.tr || state.tr;
-  // learned in another translation: memorize() says which, with Practise and Learn in
-  if (have && have.tr === tr) { safe(mem.practise, have.id, { returnFocus: btn }); return; }
+  // learned in another translation: memorize() says which, with Practise and Learn in; where the text on screen
+  // leaves this verse out, there is nothing to learn it in, so straight to its practice
+  if (have && (have.tr === tr || rowOmitted(v))) { safe(mem.practise, have.id, { returnFocus: btn }); return; }
   if (safe(mem.memorize, { b, c, v, tr })) A.flash([v], { scroll: false });
 }
 /** The memory verse holding b.c.v (memory.js memoryCovering; findByRef with a memory.js from before it), or null. */
