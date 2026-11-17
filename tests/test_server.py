@@ -110,7 +110,10 @@ HOSTING_ENV = ("PORT", "HOST", "BS_DATA_DIR", "BS_HOSTED", "BS_ALLOWED_HOSTS", "
                "BS_OWNER_EMAILS", "BS_PROXY_SECRET", "BS_OWNER_SETUP_TOKEN", "RAILWAY_VOLUME_MOUNT_PATH", "BS_SIGNUP",
                "BS_TURNSTILE_SITEKEY", "BS_TURNSTILE_SECRET", "BS_TURNSTILE_VERIFY_URL", "BS_MAX_USERS",
                "BS_PROFILE_QUOTA_MB", "BS_MIN_FREE_MB", "BS_DONATE_URL",
-               "BS_APIBIBLE_KEY", "BS_APIBIBLE_URL", "BS_APIBIBLE_BIBLES", "BS_APIBIBLE_MONTHLY")  # never a real key
+               "BS_APIBIBLE_KEY", "BS_APIBIBLE_URL", "BS_APIBIBLE_BIBLES", "BS_APIBIBLE_MONTHLY",  # never a real key
+               "BS_RESEND_KEY", "BS_RESEND_URL", "BS_DEVOTIONAL_FROM", "BS_DEVOTIONAL_REPLY_TO", "BS_DEVOTIONAL_SITE",
+               "BS_DEVOTIONAL_AUTHOR", "BS_DEVOTIONAL_TZ", "BS_DEVOTIONAL_COMPILE", "BS_DEVOTIONAL_SEND", "BS_DEVOTIONAL_MAX",
+               "BS_ANTHROPIC_KEY", "BS_ANTHROPIC_URL", "BS_ANTHROPIC_MODEL", "BS_DEVOTIONAL_ADDRESS", "BS_DEVOTIONAL_TEST")
 
 
 def server_env(extra=None):
@@ -415,7 +418,7 @@ def setUpModule():
 def tearDownModule():
     if H:
         H.cleanup()
-    for fake in (FakeTurnstile, FakeApiBible):
+    for fake in (FakeTurnstile, FakeApiBible, FakeResend, FakeClaude):
         if fake.server:
             fake.server.shutdown()
             fake.server.server_close()
@@ -3636,7 +3639,7 @@ class FakeTurnstile(http.server.BaseHTTPRequestHandler):
         if tok == "slow":
             time.sleep(8)
         ok = {"success": True, "challenge_ts": "2026-10-15T12:00:00Z", "hostname": self.host, "action": "signup", "cdata": ""}
-        out = {"pass": ok, "slow": ok, "pass-own-host": dict(ok, hostname="127.0.0.1"),
+        out = {"pass": ok, "slow": ok, "pass-own-host": dict(ok, hostname="127.0.0.1"), "pass-devo": dict(ok, action="devotional"),
                "wrong-action": dict(ok, action="login"), "wrong-host": dict(ok, hostname="evil.example.test"),
                "no-host": {k: v for k, v in ok.items() if k != "hostname"}}.get(tok)
         if form.get("secret") != self.secret:
@@ -4612,6 +4615,7 @@ class T25_Release1Fixes(Base):
                                 {"source": "/support", "destination": DONATE, "permanent": False}])
         self.assertTrue(all(set(r) <= {"source", "destination", "permanent", "has", "missing"} for r in v["redirects"]))
         self.assertEqual(v["rewrites"], [{"source": "/privacy", "destination": "/privacy.html"},  # the privacy page (ios-brief §3)
+                                         {"source": "/weeklydevotional", "destination": "/weeklydevotional.html"},  # devotional brief §5
                                          {"source": "/favicon.ico", "destination": "/icons/favicon-32.png"},  # crawlers that ask for it (seo brief)
                                          {"source": "/api/:path*", "destination": "https://api-production-7fa2.up.railway.app/api/:path*"}])
         noindex = [h for h in v["headers"] if any(c.get("type") == "host" for c in h.get("has", []))]
@@ -6314,6 +6318,804 @@ class T32_BookIntros(unittest.TestCase):
         self.assertEqual(sum(1 for p in range(1, 151) if ps[str(p)].get("w")), 90, "plus Heman, Ethan, Moses, Solomon 2")
 
 
+# ======================================================================= weekly devotional (devotional brief §8)
+class FakeResend(http.server.BaseHTTPRequestHandler):
+    """Resend faked on 127.0.0.1: every POST is kept in `seen` as {"path", "auth", "idem", "body"}. `fail_once` holds
+    statuses to answer first (each popped once, with Retry-After: 0)."""
+    server, seen, fail_once = None, [], []
+    key = "re_test_" + secrets.token_hex(12)
+
+    @classmethod
+    def url(cls):
+        if cls.server is None:
+            cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), cls)
+            cls.server.daemon_threads = True
+            threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        return f"http://127.0.0.1:{cls.server.server_address[1]}"
+
+    @classmethod
+    def mails(cls, start=0, path="/emails"):
+        return [m for m in cls.seen[start:] if m["path"] == path and m["status"] == 200]
+
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except ValueError:
+            body = None
+        status = 200
+        if FakeResend.fail_once:
+            status = FakeResend.fail_once.pop(0)
+        elif self.headers.get("Authorization") != "Bearer " + self.key:
+            status = 401
+        elif self.path not in ("/emails", "/emails/batch") or body is None:
+            status = 422
+        FakeResend.seen.append({"path": self.path, "auth": self.headers.get("Authorization"), "idem": self.headers.get("Idempotency-Key"),
+                                "body": body, "status": status})
+        out = ({"data": [{"id": f"fake-{i}"} for i in range(len(body or []))]} if self.path == "/emails/batch" else {"id": "fake-1"}) \
+            if status == 200 else {"statusCode": status, "name": "error", "message": "no"}
+        data = json.dumps(out).encode()
+        try:
+            self.send_response(status)
+            if status in (429, 500, 503):
+                self.send_header("Retry-After", "0")
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except OSError:
+            pass
+
+
+class FakeClaude(http.server.BaseHTTPRequestHandler):
+    """The Claude API faked on 127.0.0.1: POST /v1/messages is kept in `seen` as {"headers", "body"}; `mode` says what
+    comes back ("good": a draft with one stray ref and a verse-looking sentence; "garbage": not JSON)."""
+    server, seen, mode = None, [], "good"
+    key = "sk-ant-test-" + secrets.token_hex(12)
+    model = "claude-test-model"
+    draft = {"subject": "Weekly devotional · 14 November", "title": "Loved <em>first</em>",
+             "opening": "I kept coming back to one word this week.",
+             "sections": [{"heading": "John 3", "refs": ["43.3.16", "66.22.21"],
+                           "body": "And the reader said unto himself, this is the week it landed.", "quotes": []},
+                          {"heading": "Romans 5", "refs": ["45.5.8"], "body": "The order of it matters to me.", "quotes": []}],
+             "closing": "The giving comes first.", "question": "Where did you see it this week?"}
+
+    @classmethod
+    def url(cls):
+        if cls.server is None:
+            cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), cls)
+            cls.server.daemon_threads = True
+            threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        return f"http://127.0.0.1:{cls.server.server_address[1]}"
+
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except ValueError:
+            body = None
+        FakeClaude.seen.append({"headers": {k.lower(): v for k, v in self.headers.items()}, "body": body})
+        if self.headers.get("x-api-key") != self.key or self.path != "/v1/messages":
+            out, status = {"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}}, 401
+        else:
+            text = json.dumps(self.draft) if self.mode == "good" else "not json {"
+            out, status = {"id": "msg_fake", "type": "message", "role": "assistant", "model": (body or {}).get("model"),
+                           "stop_reason": "end_turn", "content": [{"type": "text", "text": text}],
+                           "usage": {"input_tokens": 1, "output_tokens": 1}}, 200
+        data = json.dumps(out).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+
+def esc_html(s):
+    """html.escape(s, quote=True), as the renderer escapes verse words."""
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")
+
+
+def html_words(h):
+    """The words of an email, tags gone, entities resolved and whitespace folded: the key verse is set in two
+    elements (its first clause large, the rest in gold), so the words are checked, not the markup."""
+    import html as _html
+    return re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", h))).strip()
+
+
+def bsb_verse(book, chapter, verse):
+    """The BSB words of one verse, read from the published file (never typed into a test)."""
+    with open(os.path.join(REPO, "app", "data", "bibles", "bsb", f"{book:02d}.json"), encoding="utf-8") as f:
+        return json.load(f)[str(chapter)][verse - 1]
+
+
+def write_devo_profile(pdir, now_in, now_out, day_in):
+    """The author's week on disk: notes, a BSB highlight, two links and a study inside the window (now_in), one note,
+    one mark, one link and one study outside it (now_out)."""
+    words = bsb_verse(62, 4, 10)
+    notes = {"version": 1, "refs": {
+        "43.3.16": {"text": "Loved <b>first</b> & then given. See [[Romans 5:8]].", "highlight": "", "tags": ["love"], "videos": [],
+                    "created": now_in, "updated": now_in},
+        "45.5.8": {"text": "The order of it matters to me.", "highlight": "", "tags": [], "videos": [], "created": now_in, "updated": now_in + 1000},
+        "43.3": {"text": "A chapter note on John 3.", "highlight": "", "tags": [], "videos": [], "created": now_in, "updated": now_in + 2000},
+        "62.4.19": {"text": "Out of the window.", "highlight": "", "tags": [], "videos": [], "created": now_out, "updated": now_out}},
+        "studies": [{"id": "st_0123456789ab", "title": "Loved first", "intro": "The giving comes first.", "order": "studied",
+                     "entries": [{"key": "43.3.16"}, {"key": "45.5.8"}], "created": now_in, "updated": now_in},
+                    {"id": "st_0123456789ac", "title": "Old study", "intro": "", "order": "studied", "entries": [],
+                     "created": now_out, "updated": now_out}],
+        "themes": {"accepted": [], "renamed": {}, "merged": {}, "removed": []}, "rev": 3, "deleted": {}}
+    marks = {"version": 1, "rev": 1, "marks": {
+        "mk_0123456789ab": {"id": "mk_0123456789ab", "tr": "bsb", "start": "62.4.10", "so": 0, "end": "62.4.10", "eo": min(40, len(words)),
+                            "quote": words[:min(40, len(words))], "pre": "", "suf": "", "color": "yellow", "note": "the direction matters",
+                            "created": now_in, "updated": now_in},
+        "mk_0123456789ac": {"id": "mk_0123456789ac", "tr": "esv", "start": "45.5.8", "so": 0, "end": "45.5.8", "eo": 5, "quote": "x",
+                            "pre": "", "suf": "", "color": "yellow", "note": "", "created": now_out, "updated": now_out}}, "deleted": {}}
+    links = {"version": 1, "rev": 1, "links": {
+        "ln_0123456789ab": {"id": "ln_0123456789ab", "from": "43.3.16", "to": "45.5.8", "type": "fulfils", "label": "",
+                            "note": "the gift precedes the response", "color": "blue", "tags": [], "dir": "to", "created": now_in, "updated": now_in},
+        "ln_0123456789ac": {"id": "ln_0123456789ac", "from": "45.5.8", "to": "23.53.5", "type": "echoes", "label": "", "note": "",
+                            "color": "blue", "tags": [], "dir": "to", "created": now_in + 5, "updated": now_in + 5},
+        "ln_0123456789ad": {"id": "ln_0123456789ad", "from": "1.1.1", "to": "43.1.1", "type": "related", "label": "", "note": "old",
+                            "color": "blue", "tags": [], "dir": "both", "created": now_out, "updated": now_in}}, "deleted": {}}
+    library = {"version": 1, "rev": 2, "created": now_out, "updated": now_in, "bookmarks": [], "lastPosition": None,
+               "chapters": {"43.3": {"firstRead": now_out, "lastRead": now_in + 10, "visits": 4, "seconds": 900, "studied": [16],
+                                     "read": True, "readAt": now_in, "manual": False, "manualAt": None},
+                            "45.5": {"firstRead": now_in, "lastRead": now_in, "visits": 1, "seconds": 300, "studied": [],
+                                     "read": False, "readAt": None, "manual": False, "manualAt": None}},
+               "days": {day_in: {"s": 3600, "v": 2, "r": 1, "n": 2, "o": 3}},
+               "activity": [{"t": now_in, "type": "chapter.open", "ref": "43.3"}], "appliedBatches": [], "imports": []}
+    memory = {"version": 1, "rev": 1, "memory": {
+        "mv_0123456789ab": {"id": "mv_0123456789ab", "ref": "62.4.19", "tr": "bsb", "pos": 0, "step": 0, "due": "", "heart": "",
+                            "last": 0, "created": now_in, "updated": now_in}}, "deleted": {}}
+    for name, doc in (("notes", notes), ("marks", marks), ("links", links), ("library", library), ("memory", memory)):
+        put_raw(os.path.join(pdir, name + ".json"), json.dumps(doc).encode("utf-8"))
+
+
+HEX32 = re.compile(r"[0-9a-f]{32}")
+
+
+class T33_Devotional(Base):
+    """The weekly devotional (devotional brief §8): the page and config, double opt-in sign-up against a fake Resend,
+    owner-only admin, compiling a week laid out and stitched (fake Claude), approving and sending in batches, the
+    scheduler's tick and the review link; nothing secret or no address ever on disk in the clear or in the log."""
+    restart = False
+    LA = "America/Los_Angeles"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = os.path.join(H.tmp, "devo-data")
+        os.makedirs(cls.data, exist_ok=True)
+        cls.owner_email, cls.owner_pw = H.account("devo-owner", "Devotional: the author")
+        cls.member_email, cls.member_pw = H.account("devo-member", "Devotional: an ordinary profile")
+        cls.base_env = FakeTurnstile.env(**{
+            "BS_HOSTED": "1", "BS_OWNER_EMAILS": cls.owner_email, "BS_ALLOWED_ORIGINS": "https://site.example.test",
+            "BS_DEVOTIONAL_SITE": "https://site.example.test", "BS_DEVOTIONAL_TZ": cls.LA, "BS_DEVOTIONAL_COMPILE": "off",
+            "BS_DEVOTIONAL_SEND": "off", "BS_DEVOTIONAL_TEST": "1", "BS_DEVOTIONAL_ADDRESS": "Bible Lantern, PO Box 1, Example City",
+            "BS_DEVOTIONAL_FROM": "Bible Lantern <devotional@site.example.test>", "BS_DEVOTIONAL_REPLY_TO": "hello@site.example.test"})
+        cls.mail_env = dict(cls.base_env, BS_RESEND_KEY=FakeResend.key, BS_RESEND_URL=FakeResend.url())
+        H.tokens.update({FakeResend.key, FakeClaude.key})
+        H.restart("--data-dir", cls.data, env=cls.base_env)
+        cls.owner, cls.member = HostedClient(), HostedClient()
+        cls.week = "2026-11-14"  # the fixture week: Sunday 8 to Saturday 14 November 2026, Los Angeles
+
+    @classmethod
+    def tearDownClass(cls):
+        H.restart()
+
+    def restart(self, **extra):
+        H.restart("--data-dir", self.data, env=dict(self.mail_env, **extra))
+
+    def la_ms(self, y, m, d, hh=12, mm=0):
+        tz = datetime.timezone.utc
+        try:
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(self.LA)
+        except Exception:
+            self.fail("zoneinfo is needed")
+        return int(datetime.datetime(y, m, d, hh, mm, tzinfo=tz).timestamp() * 1000)
+
+    def seed_week(self, uid, y, m, d):
+        """The author's profile with the week's items on the given day (noon, local) and the rest a month earlier."""
+        pdir = os.path.join(self.data, "profiles", uid)
+        write_devo_profile(pdir, self.la_ms(y, m, d), self.la_ms(y, m, d) - 30 * 86400 * 1000, f"{y:04d}-{m:02d}-{d:02d}")
+
+    def subscribe(self, email, token="pass-devo", client=None):
+        body = {"email": email}
+        if token is not None:
+            body["turnstileToken"] = token
+        return (client or HostedClient()).req("POST", "/api/devotional/subscribe", body)
+
+    def confirm_token(self, mail):
+        m = re.search(r"https://site\.example\.test/api/devotional/confirm\?t=([0-9a-f]{32})", mail["body"]["html"])
+        self.assertIsNotNone(m, "the confirmation mail carries a link to BS_DEVOTIONAL_SITE")
+        self.assertIn(m.group(0), mail["body"]["text"], "the text part has the same link")
+        H.tokens.add(m.group(1))
+        return m.group(1)
+
+    def issue(self, issue_id):
+        r = self.owner.req("GET", f"/api/devotional/issues/{issue_id}")
+        self.assertEqual(r.status, 200, r)
+        return r.json["issue"]
+
+    def test_a0_settings_and_their_warnings(self):
+        """Brief §1: every BS_DEVOTIONAL_*/BS_RESEND_*/BS_ANTHROPIC_* variable is read, a bad value is ignored with a
+        'Warning: VAR: ignored …' line that never shows a key or an address, and the author defaults to the first owner."""
+        import contextlib, warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ResourceWarning)
+            import serve  # noqa: E402 (starts nothing)
+        self.addCleanup(serve.configure_hosting, {})
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            serve.configure_hosting({"BS_RESEND_KEY": FakeResend.key, "BS_RESEND_URL": "http://127.0.0.1:9/", "BS_DEVOTIONAL_FROM": "Ji <ji@example.test>",
+                                     "BS_DEVOTIONAL_REPLY_TO": "Reply@Example.test", "BS_DEVOTIONAL_SITE": "https://example.test/",
+                                     "BS_DEVOTIONAL_AUTHOR": "Author@Example.test", "BS_DEVOTIONAL_TZ": "Europe/London",
+                                     "BS_DEVOTIONAL_COMPILE": " Fri 21:30 ", "BS_DEVOTIONAL_SEND": "now", "BS_DEVOTIONAL_MAX": "500",
+                                     "BS_ANTHROPIC_KEY": FakeClaude.key, "BS_ANTHROPIC_URL": "http://127.0.0.1:9", "BS_ANTHROPIC_MODEL": "claude-x-1",
+                                     "BS_DEVOTIONAL_ADDRESS": " 1 Lantern Row \t", "BS_DEVOTIONAL_TEST": "1"})
+        self.assertEqual((serve.RESEND_KEY, serve.RESEND_URL, serve.DEVO_FROM, serve.DEVO_REPLY_TO, serve.DEVO_SITE),
+                         (FakeResend.key, "http://127.0.0.1:9", "Ji <ji@example.test>", "reply@example.test", "https://example.test"))
+        self.assertEqual((serve.DEVO_AUTHOR, serve.DEVO_TZ_NAME, serve.DEVO_COMPILE, serve.DEVO_SEND, serve.DEVO_MAX),
+                         ("author@example.test", "Europe/London", "fri 21:30", "now", 500))
+        self.assertEqual((serve.ANTHROPIC_KEY, serve.ANTHROPIC_URL, serve.ANTHROPIC_MODEL, serve.DEVO_ADDRESS, serve.DEVO_TEST),
+                         (FakeClaude.key, "http://127.0.0.1:9", "claude-x-1", "1 Lantern Row", True))
+        self.assertEqual(err.getvalue(), "")
+        with contextlib.redirect_stderr(err):
+            serve.configure_hosting({"BS_OWNER_EMAILS": "first@example.test, second@example.test", "BS_RESEND_KEY": "re_bad key",
+                                     "BS_RESEND_URL": "ftp://x", "BS_DEVOTIONAL_FROM": "no brackets <", "BS_DEVOTIONAL_REPLY_TO": "nope",
+                                     "BS_DEVOTIONAL_SITE": "example.test", "BS_DEVOTIONAL_AUTHOR": "not-an-address", "BS_DEVOTIONAL_TZ": "Mars/Olympus",
+                                     "BS_DEVOTIONAL_COMPILE": "now", "BS_DEVOTIONAL_SEND": "sat 25:00", "BS_DEVOTIONAL_MAX": "0",
+                                     "BS_ANTHROPIC_KEY": "sk-ant bad", "BS_ANTHROPIC_URL": "x", "BS_ANTHROPIC_MODEL": "claude opus"})
+        self.assertEqual((serve.RESEND_KEY, serve.RESEND_URL, serve.DEVO_FROM, serve.DEVO_REPLY_TO, serve.DEVO_SITE),
+                         ("", serve.RESEND_DEFAULT_URL, serve.DEVO_FROM_DEFAULT, serve.DEVO_REPLY_TO_DEFAULT, serve.DEVO_SITE_DEFAULT))
+        self.assertEqual((serve.DEVO_AUTHOR, serve.DEVO_TZ_NAME, serve.DEVO_COMPILE, serve.DEVO_SEND, serve.DEVO_MAX),
+                         ("first@example.test", "America/Los_Angeles", "sat 06:00", "sun 07:00", 20000), "the author falls back to the first owner")
+        self.assertEqual((serve.ANTHROPIC_KEY, serve.ANTHROPIC_URL, serve.ANTHROPIC_MODEL), ("", serve.ANTHROPIC_DEFAULT_URL, "claude-opus-5-5"))
+        out = err.getvalue()
+        for var in ("BS_RESEND_KEY: ignored a value that is not valid", "BS_RESEND_URL: ignored ftp://x", "BS_DEVOTIONAL_FROM: ignored",
+                    "BS_DEVOTIONAL_REPLY_TO: ignored an address that is not valid", "BS_DEVOTIONAL_SITE: ignored example.test",
+                    "BS_DEVOTIONAL_AUTHOR: ignored an address that is not valid", "BS_DEVOTIONAL_TZ: ignored Mars/Olympus",
+                    "BS_DEVOTIONAL_COMPILE: ignored now", "BS_DEVOTIONAL_SEND: ignored sat 25:00", "BS_DEVOTIONAL_MAX: ignored 0",
+                    "BS_ANTHROPIC_KEY: ignored a value that is not valid", "BS_ANTHROPIC_URL: ignored x", "BS_ANTHROPIC_MODEL: ignored claude opus"):
+            self.assertIn(f"Warning: {var}", out)
+        for secret in ("re_bad", "sk-ant bad", "not-an-address", "nope", "@example.test"):
+            self.assertNotIn(secret, out, "no key or address in a warning")
+
+    def test_a1_page_config_and_owner_only_without_a_mail_key(self):
+        r = HostedClient().req("GET", "/weeklydevotional")
+        self.assertEqual((r.status, r.headers.get("Content-Type", "").split(";")[0]), (200, "text/html"), "served like /privacy")
+        self.assertIn(b"devo-turnstile", r.raw)
+        c = HostedClient().req("GET", "/api/devotional/config", headers={"Origin": "https://evil.example.test", "Sec-Fetch-Site": "cross-site"})
+        self.assertEqual(c.status, 200, "public, no scope, no CSRF on a GET")
+        self.assertEqual((c.json["open"], c.json["turnstile"], c.json["from"]), (False, {"siteKey": "fake-site-key"}, "Sunday"))
+        self.assertIn("sample", c.json)
+        r = self.subscribe(f"closed-{RUN}@example.test")
+        self.assertErr(r, 503, "not_open")
+        self.assertEqual(r.json["message"], "Sign-ups open soon.")
+        # the owner takes the claim; a member is an ordinary profile
+        r = self.owner.signup(self.owner_email, self.owner_pw, turnstileToken="pass")
+        self.assertEqual(r.status, 201, r)
+        self.owner_uid = type(self).owner_uid = r.json["user"]["uid"]
+        r = self.member.signup(self.member_email, self.member_pw, turnstileToken="pass")
+        self.assertEqual(r.status, 201, r)
+        for path in ("/api/devotional/admin", "/api/devotional/subscribers.csv", f"/api/devotional/issues/{self.week}",
+                     f"/api/devotional/issues/{self.week}/html"):
+            self.assertErr(self.member.req("GET", path), 404, "not_found", )
+            self.assertErr(HostedClient().req("GET", path), 404, "not_found")
+        for path in ("/api/devotional/compile", f"/api/devotional/issues/{self.week}/approve", "/api/devotional/tick"):
+            self.assertErr(self.member.req("POST", path, {}, scoped=True), 404, "not_found")
+        a = self.owner.req("GET", "/api/devotional/admin")
+        self.assertEqual(a.status, 200, a)
+        self.assertEqual(a.json["author"], {"present": True, "uid": self.owner_uid}, "the author is the owner claim's profile")
+        self.assertEqual((a.json["open"], a.json["ai"], a.json["issues"], a.json["subscribers"]), (False, False, [], {"confirmed": 0, "pending": 0}))
+        self.assertEqual(a.json["schedule"], {"tz": self.LA, "compile": "off", "send": "off", "nextCompile": None, "nextSend": None})
+        self.assertNotIn(self.owner_email, json.dumps(a.json), "no address in the admin answer")
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {}, scoped=True).status, 200, "the test-only tick exists with BS_DEVOTIONAL_TEST=1")
+
+    def test_b1_subscribe_confirm_unsubscribe(self):
+        self.restart()
+        s1, s2, s3, s4 = (f"devo-s{i}-{RUN}@example.test" for i in (1, 2, 3, 4))
+        self.assertEqual(HostedClient().req("GET", "/api/devotional/config").json["open"], True)
+        self.assertErr(self.subscribe("not an email"), 400, "bad_email", field="email")
+        self.assertErr(self.subscribe(s1, token=None), 403, "bot_check_failed")
+        self.assertErr(self.subscribe(s1, token="pass"), 403, "bot_check_failed")
+        start = len(FakeResend.seen)
+        r = self.subscribe(s1)
+        self.assertEqual((r.status, r.json), (202, {"ok": True}), r)
+        mails = FakeResend.mails(start)
+        self.assertEqual(len(mails), 1, "one confirmation mail")
+        self.assertEqual((mails[0]["body"]["to"], mails[0]["body"]["from"], mails[0]["auth"]),
+                         ([s1], "Bible Lantern <devotional@site.example.test>", "Bearer " + FakeResend.key))
+        self.assertEqual(mails[0]["body"]["reply_to"], "hello@site.example.test")
+        self.assertIn("Confirm", mails[0]["body"]["subject"])
+        t1 = self.confirm_token(mails[0])
+        subs = read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))
+        rec = next(iter(subs["subs"].values()))
+        self.assertEqual((rec["email"], rec["status"], rec["token"]), (s1, "pending", hashlib.sha256(t1.encode()).hexdigest()), "stored hashed")
+        self.assertEqual(stat.S_IMODE(os.stat(os.path.join(self.data, "devotional", "subscribers.json")).st_mode), 0o600)
+        self.assertEqual(stat.S_IMODE(os.stat(os.path.join(self.data, "devotional")).st_mode), 0o700)
+        r = HostedClient().req("GET", f"/api/devotional/confirm?t={t1}")
+        self.assertEqual((r.status, r.headers.get("Content-Type", "").split(";")[0]), (200, "text/html"), r)
+        self.assertIn("on the list", r.raw.decode("utf-8"))
+        r = HostedClient().req("GET", f"/api/devotional/confirm?t={t1}")
+        self.assertEqual(r.status, 404, "the link is used up")
+        self.assertIn("This link has expired", r.raw.decode("utf-8"))
+        self.assertEqual(HostedClient().req("GET", "/api/devotional/confirm?t=zz").status, 404)
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s1).status, 202, "a confirmed address: the same answer")
+        self.assertEqual(FakeResend.mails(start), [], "and no mail")
+        # s2: pending, unsubscribed by its link (GET), then back with a new confirmation
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s2).status, 202)
+        t2 = self.confirm_token(FakeResend.mails(start)[0])
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s2).status, 202, "pending again within the hour")
+        self.assertEqual(FakeResend.mails(start), [], "no second confirmation within the hour")
+        r = HostedClient().req("GET", f"/api/devotional/unsubscribe?t={t2}")
+        self.assertEqual(r.status, 200, r)
+        self.assertIn("unsubscribed", r.raw.decode("utf-8"))
+        self.assertEqual(HostedClient().req("GET", f"/api/devotional/unsubscribe?t={t2}").status, 404, "used up")
+        status = {rec["email"]: rec["status"] for rec in read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))["subs"].values()}
+        self.assertEqual((status[s1], status[s2]), ("confirmed", "unsubscribed"))
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s2).status, 202)
+        self.assertEqual(len(FakeResend.mails(start)), 1, "an unsubscribed address gets a fresh confirmation")
+        t2b = self.confirm_token(FakeResend.mails(start)[0])
+        self.assertNotEqual(t2, t2b)
+        status = {rec["email"]: rec["status"] for rec in read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))["subs"].values()}
+        self.assertEqual(status[s2], "pending")
+        # s3: the one-click POST (RFC 8058) a mail client sends, with no Origin and a form body
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s3).status, 202)
+        t3 = self.confirm_token(FakeResend.mails(start)[0])
+        st, _, body = raw_req("POST", f"/api/devotional/unsubscribe?t={t3}", b"List-Unsubscribe=One-Click",
+                              headers={"Content-Type": "application/x-www-form-urlencoded"})
+        self.assertEqual(st, 200, body[:200])
+        self.assertIn(b"unsubscribed", body)
+        # s4: confirmed too (the send test wants two)
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s4).status, 202)
+        self.assertEqual(HostedClient().req("GET", f"/api/devotional/confirm?t={self.confirm_token(FakeResend.mails(start)[0])}").status, 200)
+        a = self.owner.req("GET", "/api/devotional/admin").json
+        self.assertEqual(a["subscribers"], {"confirmed": 2, "pending": 1})
+        csv = self.owner.req("GET", "/api/devotional/subscribers.csv")
+        self.assertEqual((csv.status, csv.headers.get("Content-Type")), (200, "text/csv; charset=utf-8"))
+        self.assertEqual(csv.raw.decode("utf-8").splitlines()[0], "email,status,created,confirmed")
+        self.assertEqual(sorted(ln.split(",")[0].strip('"') for ln in csv.raw.decode("utf-8").splitlines()[1:]), sorted([s1, s4]))
+        # the hourly allowance per visitor and address: ten tries, the eleventh waits
+        limit = f"devo-limit-{RUN}@example.test"
+        c = HostedClient(ip="203.0.113.77")
+        for i in range(10):
+            self.assertEqual(self.subscribe(limit, client=c).status, 202, i)
+        r = self.subscribe(limit, client=c)
+        self.assertErr(r, 429, "rate_limited")
+        self.assertIn("retryAfter", r.json)
+        self.assertEqual(self.subscribe(s4, client=c).status, 202, "another address from the same visitor is its own key")
+
+    def test_b2_full_list_answers_every_address_alike(self):
+        """Past BS_DEVOTIONAL_MAX the answer is 503 list_full for a confirmed, a pending and an unknown address alike,
+        so the status code never says whether an address is on the list (brief §2.1: no enumeration)."""
+        subs = read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))["subs"].values()
+        confirmed = next(r["email"] for r in subs if r["status"] == "confirmed")
+        pending = next(r["email"] for r in subs if r["status"] == "pending")
+        self.restart(BS_DEVOTIONAL_MAX="1")
+        try:
+            self.assertEqual(HostedClient().req("GET", "/api/devotional/config").json["open"], False, "two confirmed, room for one")
+            start = len(FakeResend.seen)
+            for email in (confirmed, pending, f"devo-unknown-{RUN}@example.test", f"devo-unknown-2-{RUN}@example.test"):
+                r = self.subscribe(email)
+                self.assertErr(r, 503, "list_full")
+            self.assertEqual(len(FakeResend.seen), start, "and no mail")
+            self.assertErr(self.subscribe("not an email"), 400, "bad_email", field="email")
+        finally:
+            self.restart()
+        self.assertEqual(HostedClient().req("GET", "/api/devotional/config").json["open"], True)
+
+    def test_c1_compile_laid_out(self):
+        self.seed_week(self.owner_uid, 2026, 11, 10)
+        john = bsb_verse(43, 3, 16)
+        self.assertErr(self.owner.req("POST", "/api/devotional/compile", {"week": "nope"}, scoped=True), 400, "bad_request")
+        start = len(FakeResend.seen)
+        r = self.owner.req("POST", "/api/devotional/compile", {"week": self.week}, scoped=True, timeout=120)
+        self.assertEqual(r.status, 200, r)
+        it = r.json["issue"]
+        self.assertEqual((it["id"], it["status"], it["compiledBy"], it["stitched"], it["week"]),
+                         (self.week, "draft", "owner", False, {"from": "2026-11-08", "to": self.week}))
+        self.assertEqual(it["source"]["notes"], ["43.3", "43.3.16", "45.5.8"], "exactly the in-window notes, Bible order")
+        self.assertEqual((it["source"]["marks"], it["source"]["links"], it["source"]["studies"]),
+                         (["mk_0123456789ab"], ["ln_0123456789ab", "ln_0123456789ac"], ["st_0123456789ab"]))
+        self.assertEqual(it["source"]["chapters"], ["45.5", "43.3"])
+        self.assertEqual(it["source"]["counts"], {"notes": 3, "marks": 1, "links": 2, "studies": 1, "chapters": 2, "minutes": 60})
+        self.assertEqual((it["draft"]["stitched"], it["draft"]["title"], it["draft"]["subject"]), (False, "Loved first", "Weekly devotional · 14 November"))
+        self.assertNotIn("tokenHash", json.dumps(it), "the review token's hash stays on the server")
+        html = it["html"]
+        self.assertIn(john.strip(), html_words(html), "the BSB words, from the server's file")
+        self.assertEqual(html_words(html).count(john.strip()), 1, "the key verse once: at full volume, not again as section I's block")
+        self.assertEqual(it["text"].count(john.strip()), 1)
+        self.assertIn(esc_html(bsb_verse(45, 5, 8)), html, "a section's verse block")
+        self.assertIn("· BSB", html)
+        self.assertIn("Loved &lt;b&gt;first&lt;/b&gt; &amp; then given.", html, "Ji's note, escaped")
+        self.assertIn("__BS_UNSUBSCRIBE_TOKEN__", html, "the per-recipient placeholder")
+        self.assertIn("PO Box 1", html, "the postal line")
+        self.assertNotIn("@example.test", html)
+        self.assertIsNone(HEX32.search(html), "no token in the draft")
+        self.assertIsNone(HEX32.search(json.dumps(it)))
+        self.assertIn("utm_source=devotional&amp;utm_medium=email#43/3/16", html)
+        self.assertIn(f"> {john}\n— John 3:16 · BSB", it["text"], "the text twin quotes it too")
+        mails = FakeResend.mails(start)
+        self.assertEqual(len(mails), 1, "the preview went to the author")
+        self.assertEqual((mails[0]["body"]["to"], mails[0]["body"]["subject"]), ([self.owner_email], "Review: Weekly devotional · 14 November"))
+        self.assertRegex(mails[0]["body"]["text"], r"https://site\.example\.test/api/devotional/review\?t=[0-9a-f]{32}")
+        H.tokens.add(re.search(r"review\?t=([0-9a-f]{32})", mails[0]["body"]["text"]).group(1))
+        h = self.owner.req("GET", f"/api/devotional/issues/{self.week}/html")
+        self.assertEqual((h.status, h.headers.get("Content-Type")), (200, "text/html; charset=utf-8"))
+        self.assertIn(john.strip(), html_words(h.raw.decode("utf-8")))
+        self.assertNotIn("__BS_UNSUBSCRIBE_TOKEN__", h.raw.decode("utf-8"), "the preview is personalised")
+        self.assertEqual(self.issue(self.week)["source"], it["source"])
+        self.assertEqual(self.owner.req("GET", "/api/devotional/issues/2026-01-03").status, 404)
+        self.assertEqual(self.owner.req("GET", "/api/devotional/issues/2026-13-03").status, 404, "not a day")
+        # the owner's edit: title and question, refs kept to the week's verses, rendered again
+        p = self.owner.req("PATCH", f"/api/devotional/issues/{self.week}",
+                           {"title": "Given <em>first</em>", "question": "Where did you see it?",
+                            "sections": [{"heading": "John 3", "refs": ["43.3.16", "66.22.21"], "body": "My own words.", "quotes": []}]}, scoped=True)
+        self.assertEqual(p.status, 200, p)
+        d = p.json["issue"]["draft"]
+        self.assertEqual((d["title"], d["question"], d["sections"][0]["refs"], d["stitched"]), ("Given <em>first</em>", "Where did you see it?", ["43.3.16"], False))
+        self.assertIn("Given <em style=", p.json["issue"]["html"])
+        self.assertIn("Where did you see it?", p.json["issue"]["html"])
+        self.assertErr(self.owner.req("PATCH", f"/api/devotional/issues/{self.week}", {"title": "x" * 200}, scoped=True), 400, "bad_issue")
+        self.assertErr(self.owner.req("PATCH", f"/api/devotional/issues/{self.week}", {}, scoped=True), 400, "bad_request")
+        # an empty week compiles to `empty` and the author is told; no review link
+        start = len(FakeResend.seen)
+        r = self.owner.req("POST", "/api/devotional/compile", {"week": "2026-10-03"}, scoped=True, timeout=120)
+        self.assertEqual((r.status, r.json["issue"]["status"]), (200, "empty"), r)
+        mails = FakeResend.mails(start)
+        self.assertEqual(len(mails), 1)
+        self.assertIn("nothing to send", mails[0]["body"]["subject"])
+        self.assertNotIn("review?t=", mails[0]["body"]["html"])
+        a = self.owner.req("GET", "/api/devotional/admin").json
+        self.assertEqual([(i["id"], i["status"]) for i in a["issues"]], [(self.week, "draft"), ("2026-10-03", "empty")], "newest first")
+        # a test mail goes to the owner's own address only
+        start = len(FakeResend.seen)
+        r = self.owner.req("POST", f"/api/devotional/issues/{self.week}/test", {}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        mails = FakeResend.mails(start)
+        self.assertEqual((len(mails), mails[0]["body"]["to"]), (1, [self.owner_email]))
+        self.assertTrue(mails[0]["body"]["subject"].startswith("[test] "), mails[0]["body"]["subject"])
+        self.assertNotIn("__BS_UNSUBSCRIBE_TOKEN__", mails[0]["body"]["html"])
+
+    def test_d1_compile_stitched(self):
+        self.restart(BS_ANTHROPIC_KEY=FakeClaude.key, BS_ANTHROPIC_URL=FakeClaude.url(), BS_ANTHROPIC_MODEL=FakeClaude.model)
+        self.assertTrue(self.owner.req("GET", "/api/devotional/admin").json["ai"])
+        john = bsb_verse(43, 3, 16).strip()
+        words = bsb_verse(62, 4, 10)[:40].strip()[:18].strip()  # inside the week's one highlight, as write_devo_profile made it
+        FakeClaude.mode, start = "good", len(FakeClaude.seen)
+        # the model may quote the reader's highlight (relabelled with its own reference) but never words of its own
+        # under a reference: those are dropped, with a warning
+        FakeClaude.draft["sections"][0]["quotes"] = [f"John 3:16 · “{words}”", "John 3:16 · “words the model made up about the world”",
+                                                    "“made-up words with no reference”"]
+        try:
+            r = self.owner.req("POST", "/api/devotional/compile", {"week": self.week}, scoped=True, timeout=120)
+        finally:
+            FakeClaude.draft["sections"][0]["quotes"] = []
+        self.assertEqual(r.status, 200, r)
+        it, d = r.json["issue"], r.json["issue"]["draft"]
+        self.assertEqual((it["stitched"], d["stitched"], d["model"]), (True, True, FakeClaude.model))
+        self.assertEqual([s["refs"] for s in d["sections"]], [["43.3.16"], ["45.5.8"]], "the stray Revelation ref is dropped")
+        self.assertEqual(d["warnings"], ["1 reference(s) not in the week's material were dropped",
+                                         "2 quote(s) not among the week's highlights were dropped"])
+        self.assertEqual(d["sections"][0]["quotes"], [f"1 John 4:10 · “{words}”"])
+        self.assertIn("My highlight · 1 John 4:10", it["html"])
+        self.assertNotIn("My highlight · John 3:16", it["html"], "no reference over words the model wrote")
+        self.assertNotIn("made up about the world", it["html"])
+        self.assertNotIn("made-up words", it["html"])
+        self.assertEqual(d["title"], "Loved <em>first</em>")
+        self.assertIn("And the reader said unto himself, this is the week it landed.", it["html"], "the model's own sentence is kept as text")
+        self.assertIn(john, html_words(it["html"]), "the verse words come from the server")
+        self.assertEqual(it["html"].count("66/22/21"), 0)
+        req = FakeClaude.seen[start]
+        self.assertEqual(len(FakeClaude.seen), start + 1, "one call")
+        self.assertEqual((req["headers"]["x-api-key"], req["headers"]["anthropic-version"]), (FakeClaude.key, "2023-06-01"))
+        self.assertEqual(req["body"]["model"], FakeClaude.model)
+        self.assertEqual(req["body"]["output_config"]["format"]["type"], "json_schema")
+        self.assertNotIn("thinking", req["body"])
+        self.assertIn("43.3.16", json.dumps(req["body"]["messages"]), "the material went to the model")
+        self.assertNotIn(self.owner_email, json.dumps(req["body"]))
+        FakeClaude.mode = "garbage"
+        r = self.owner.req("POST", "/api/devotional/compile", {"week": self.week}, scoped=True, timeout=120)
+        self.assertEqual(r.status, 200, r)
+        d = r.json["issue"]["draft"]
+        self.assertEqual((r.json["issue"]["stitched"], d["stitched"], d["title"]), (False, False, "Loved first"), "the fallback")
+        self.assertEqual(len(d["warnings"]), 1)
+        self.assertTrue(d["warnings"][0].startswith("stitch failed: "), d["warnings"])
+        self.assertNotIn(FakeClaude.key, json.dumps(d["warnings"]))
+        FakeClaude.mode = "good"
+
+    def test_e1_approve_and_send(self):
+        self.restart(BS_DEVOTIONAL_SEND="now")
+        subs = read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))["subs"]
+        confirmed = sorted(r["email"] for r in subs.values() if r["status"] == "confirmed")
+        self.assertEqual(len(confirmed), 2)
+        self.assertEqual(sorted({r["status"] for r in subs.values()}), ["confirmed", "pending", "unsubscribed"])
+        before = {sid: r["token"] for sid, r in subs.items()}
+        self.assertErr(self.owner.req("POST", f"/api/devotional/issues/{self.week}/send-now", {}, scoped=True), 409, "bad_state")
+        self.assertErr(self.owner.req("POST", "/api/devotional/issues/2026-10-03/approve", {}, scoped=True), 409, "bad_state")
+        FakeResend.fail_once[:] = [500]  # the first batch call fails once; the client tries again
+        start = len(FakeResend.seen)
+        r = self.owner.req("POST", f"/api/devotional/issues/{self.week}/approve", {}, scoped=True)
+        self.assertEqual(r.status, 200, r)
+        self.assertEqual(r.json["issue"]["status"], "approved")
+        self.assertLessEqual(r.json["issue"]["send"]["due"], now_ms() + 1000, "BS_DEVOTIONAL_SEND=now: due at once")
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {}, scoped=True).status, 200)
+        it = self.issue(self.week)
+        self.assertEqual((it["status"], it["send"]["sent"], it["send"]["failed"], sorted(it["send"]["done"])), ("sent", 2, 0, sorted(sid for sid, r in subs.items() if r["status"] == "confirmed")))
+        self.assertIsNotNone(it["send"]["finishedAt"])
+        batches = [m for m in FakeResend.seen[start:] if m["path"] == "/emails/batch"]
+        self.assertEqual([m["status"] for m in batches], [500, 200], "one batch, tried twice")
+        self.assertEqual(batches[0]["idem"], batches[1]["idem"])
+        self.assertRegex(batches[1]["idem"], rf"^{self.week}:[0-9a-f]{{64}}$", "the issue and the addresses: the same key whichever run builds it")
+        msgs = batches[1]["body"]
+        self.assertEqual(sorted(m["to"][0] for m in msgs), confirmed, "exactly the confirmed addresses")
+        toks = []
+        for m in msgs:
+            self.assertEqual(m["headers"]["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click")
+            t = re.fullmatch(r"<https://site\.example\.test/api/devotional/unsubscribe\?t=([0-9a-f]{32})>", m["headers"]["List-Unsubscribe"]).group(1)
+            toks.append(t)
+            H.tokens.add(t)
+            self.assertIn(f"unsubscribe?t={t}&amp;utm_source=devotional", m["html"], "the body's link is this reader's")
+            self.assertIn(f"unsubscribe?t={t}", m["text"])
+            self.assertNotIn("__BS_UNSUBSCRIBE_TOKEN__", m["html"])
+            self.assertEqual((m["from"], m["reply_to"], m["subject"]), ("Bible Lantern <devotional@site.example.test>", "hello@site.example.test", "Weekly devotional · 14 November"))
+        self.assertEqual(len(set(toks)), 2, "each reader has their own token")
+        type(self).issue_tokens = {m["to"][0]: t for m, t in zip(msgs, toks)}  # e2 checks they still work after the next issue
+        after = read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))["subs"]
+        self.assertEqual({sid: r["token"] for sid, r in after.items()}, before, "a send rotates nothing: the unsubscribe token is derived, not stored")
+        blob = json.dumps(after)
+        for t in toks:
+            self.assertNotIn(t, blob)
+            self.assertNotIn(hashlib.sha256(t.encode()).hexdigest(), blob)
+        self.assertEqual(stat.S_IMODE(os.stat(os.path.join(self.data, "devotional", ".secret")).st_mode), 0o600, "the install secret they derive from")
+        self.assertEqual((it["send"]["runs"], it["send"]["rejected"], [sorted(b["sids"]) for b in it["send"]["batches"]]),
+                         (1, {}, [sorted(it["send"]["done"])]), "the batch plan is written to the issue")
+        sent_mail = [m for m in FakeResend.mails(start) if m["body"]["to"] == [self.owner_email]]
+        self.assertEqual(len(sent_mail), 1)
+        self.assertIn("Sent to 2 readers", sent_mail[0]["body"]["subject"])
+        n = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {}, scoped=True).status, 200)
+        self.assertEqual(len(FakeResend.seen), n, "a second tick sends nothing more")
+        self.assertEqual(self.issue(self.week)["send"]["sent"], 2)
+        self.assertErr(self.owner.req("POST", f"/api/devotional/issues/{self.week}/skip", {}, scoped=True), 409, "bad_state")
+        self.assertErr(self.owner.req("POST", "/api/devotional/compile", {"week": self.week}, scoped=True), 409, "issue_locked")
+        self.assertErr(self.owner.req("PATCH", f"/api/devotional/issues/{self.week}", {"title": "x"}, scoped=True), 409, "bad_state")
+        r = HostedClient().req("GET", f"/api/devotional/unsubscribe?t={toks[0]}")
+        self.assertEqual(r.status, 200, "the link in a sent issue works")
+        self.assertEqual(self.owner.req("GET", "/api/devotional/admin").json["subscribers"]["confirmed"], 1)
+        r = HostedClient().req("GET", f"/api/devotional/unsubscribe?t={toks[0]}")
+        self.assertEqual(r.status, 200, "a second click on the same link says the same thing again")
+        self.assertIn("unsubscribed", r.raw.decode("utf-8"))
+        self.assertEqual(self.owner.req("GET", "/api/devotional/admin").json["subscribers"]["confirmed"], 1)
+        row = self.owner.req("GET", "/api/devotional/admin").json["issues"][0]
+        self.assertEqual((row["id"], row["status"], row["send"]["sent"]), (self.week, "sent", 2))
+
+    def test_e2_links_outlive_the_issue_and_failed_batches_end(self):
+        """The unsubscribe link of an earlier issue still works after the next one is sent (the token is the
+        reader's, not the send's). A batch Resend refuses (422) is sent again in halves, so one bad address costs
+        its own message only; a batch that fails otherwise (401) ends the run, the scheduler resumes it ten minutes
+        later and not before, and after DEVO_SEND_RUNS runs the issue is closed as sent with the rest counted failed,
+        so nothing loops for ever and the author always hears."""
+        self.restart(BS_DEVOTIONAL_SEND="now")
+        subs = read_json_file(os.path.join(self.data, "devotional", "subscribers.json"))["subs"]
+        stayed = [r["email"] for r in subs.values() if r["status"] == "confirmed"]
+        self.assertEqual(len(stayed), 1, "e1 unsubscribed one of the two")
+        old_token = self.issue_tokens[stayed[0]]
+        s5 = f"devo-s5-{RUN}@example.test"
+        start = len(FakeResend.seen)
+        self.assertEqual(self.subscribe(s5).status, 202)
+        self.assertEqual(HostedClient().req("GET", f"/api/devotional/confirm?t={self.confirm_token(FakeResend.mails(start)[0])}").status, 200)
+        # a second issue: Resend refuses the batch of two once (422); each reader then gets their own message
+        self.seed_week(self.owner_uid, 2026, 11, 25)  # Wednesday of the week ending Saturday 28 November
+        week2 = "2026-11-28"
+        self.assertEqual(self.owner.req("POST", "/api/devotional/compile", {"week": week2}, scoped=True, timeout=120).status, 200)
+        FakeResend.fail_once[:] = [422]
+        start = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", f"/api/devotional/issues/{week2}/approve", {}, scoped=True).status, 200)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {}, scoped=True).status, 200)
+        it = self.issue(week2)
+        self.assertEqual((it["status"], it["send"]["sent"], it["send"]["failed"], it["send"]["rejected"], it["send"]["runs"]), ("sent", 2, 0, {}, 1))
+        batches = [m for m in FakeResend.seen[start:] if m["path"] == "/emails/batch"]
+        self.assertEqual([(m["status"], len(m["body"])) for m in batches], [(422, 2), (200, 1), (200, 1)], "refused whole, then in halves")
+        self.assertEqual(len({m["idem"] for m in batches}), 3)
+        for m in batches:
+            self.assertRegex(m["idem"], rf"^{week2}:[0-9a-f]{{64}}$")
+        sent_to = {m["body"][0]["to"][0]: m["body"][0]["headers"]["List-Unsubscribe"] for m in batches[1:]}
+        self.assertEqual(sorted(sent_to), sorted([stayed[0], s5]))
+        self.assertEqual(sent_to[stayed[0]], f"<https://site.example.test/api/devotional/unsubscribe?t={old_token}>",
+                         "the same token as in the first issue: the link in last week's email still works")
+        r = HostedClient().req("GET", f"/api/devotional/unsubscribe?t={old_token}")
+        self.assertEqual(r.status, 200, "the first issue's link, after the second issue went out")
+        self.assertEqual(self.owner.req("GET", "/api/devotional/admin").json["subscribers"]["confirmed"], 1)
+        st, _, body = raw_req("POST", f"/api/devotional/unsubscribe?t={old_token}", b"List-Unsubscribe=One-Click",
+                              headers={"Content-Type": "application/x-www-form-urlencoded"})
+        self.assertEqual((st, b"unsubscribed" in body), (200, True), "and the one-click header of that older email too")
+        # a third issue: the mail service refuses the key (401). The run stops, is resumed after ten minutes, not before
+        self.seed_week(self.owner_uid, 2026, 12, 2)
+        week3 = "2026-12-05"
+        self.assertEqual(self.owner.req("POST", "/api/devotional/compile", {"week": week3}, scoped=True, timeout=120).status, 200)
+        t0 = now_ms()
+        FakeResend.fail_once[:] = [401]
+        start = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", f"/api/devotional/issues/{week3}/approve", {}, scoped=True).status, 200)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": t0}, scoped=True).status, 200)
+        it = self.issue(week3)
+        self.assertEqual((it["status"], it["send"]["sent"], it["send"]["failed"], it["send"]["runs"]), ("sending", 0, 1, 1))
+        self.assertEqual([e["error"] for e in it["send"]["errors"]], ["resend 401"])
+        self.assertIsNotNone(it["send"]["finishedAt"], "the run recorded its end")
+        self.assertEqual([len(b["sids"]) for b in it["send"]["batches"]], [1], "the plan, kept for the next run")
+        n = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": t0 + 5 * 60 * 1000}, scoped=True).status, 200)
+        self.assertEqual(len(FakeResend.seen), n, "nothing within ten minutes")
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": t0 + 11 * 60 * 1000}, scoped=True).status, 200)
+        it = self.issue(week3)
+        self.assertEqual((it["status"], it["send"]["sent"], it["send"]["failed"], it["send"]["runs"]), ("sent", 1, 0, 2), "resumed and done")
+        self.assertEqual([m["status"] for m in FakeResend.seen[start:] if m["path"] == "/emails/batch"], [401, 200])
+        self.assertEqual(len([m for m in FakeResend.mails(start) if m["body"]["subject"].startswith("Sent to 1 reader")]), 1)
+        # a fourth issue the service refuses every time: six runs, then closed, the author told, no seventh
+        self.seed_week(self.owner_uid, 2026, 12, 9)
+        week4 = "2026-12-12"
+        self.assertEqual(self.owner.req("POST", "/api/devotional/compile", {"week": week4}, scoped=True, timeout=120).status, 200)
+        start = len(FakeResend.seen)
+        FakeResend.fail_once[:] = [401]
+        self.assertEqual(self.owner.req("POST", f"/api/devotional/issues/{week4}/approve", {}, scoped=True).status, 200)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": t0}, scoped=True).status, 200)
+        for run in range(2, 7):
+            self.assertEqual(self.issue(week4)["status"], "sending", run)
+            FakeResend.fail_once[:] = [401]
+            self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": t0 + run * 11 * 60 * 1000}, scoped=True).status, 200)
+        it = self.issue(week4)
+        self.assertEqual((it["status"], it["send"]["sent"], it["send"]["failed"], it["send"]["runs"], len(it["send"]["errors"])), ("sent", 0, 1, 6, 6))
+        self.assertEqual([m["status"] for m in FakeResend.seen[start:] if m["path"] == "/emails/batch"], [401] * 6)
+        self.assertEqual(len([m for m in FakeResend.mails(start) if m["body"]["subject"].startswith("Sent to 0 readers")]), 1)
+        n = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": t0 + 7 * 11 * 60 * 1000}, scoped=True).status, 200)
+        self.assertEqual(len(FakeResend.seen), n, "closed: no seventh run")
+        self.assertEqual([(i["id"], i["status"]) for i in self.owner.req("GET", "/api/devotional/admin").json["issues"][:3]],
+                         [(week4, "sent"), (week3, "sent"), (week2, "sent")])
+
+    def test_f1_schedule_tick_and_review_link(self):
+        self.restart(BS_DEVOTIONAL_COMPILE="sat 06:00")
+        self.seed_week(self.owner_uid, 2026, 11, 18)  # Wednesday of the week ending Saturday 21 November
+        week = "2026-11-21"
+        sat = self.la_ms(2026, 11, 21, 6, 1)
+        a = self.owner.req("GET", "/api/devotional/admin").json
+        self.assertEqual(a["schedule"]["compile"], "sat 06:00")
+        self.assertIsNotNone(a["schedule"]["nextCompile"])
+        start = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": sat}, scoped=True, timeout=120).status, 200)
+        it = self.issue(week)
+        self.assertEqual((it["status"], it["compiledBy"], it["week"]["from"]), ("draft", "schedule", "2026-11-15"))
+        self.assertEqual(it["source"]["counts"]["notes"], 3)
+        mails = [m for m in FakeResend.mails(start) if m["body"]["subject"].startswith("Review: Weekly devotional · 21 November")]
+        self.assertEqual(len(mails), 1, "the preview went to the author once")
+        self.assertEqual(mails[0]["body"]["to"], [self.owner_email])
+        tok = re.search(r"https://site\.example\.test/api/devotional/review\?t=([0-9a-f]{32})", mails[0]["body"]["text"]).group(1)
+        H.tokens.add(tok)
+        self.assertEqual(self.owner.req("GET", "/api/devotional/admin").json["subscribers"]["pending"], 0, "pending sign-ups older than 7 days were dropped")
+        n = len(FakeResend.seen)
+        self.assertEqual(self.owner.req("POST", "/api/devotional/tick", {"now": sat + 60 * 1000}, scoped=True, timeout=120).status, 200)
+        self.assertEqual(self.issue(week)["created"], it["created"], "a second tick does not compile again")
+        self.assertEqual(len([m for m in FakeResend.seen[n:] if m["body"] and m["body"].get("subject", "").endswith("21 November")]), 0)
+        # the review link works without signing in
+        g = HostedClient()
+        r = g.req("GET", f"/api/devotional/review?t={tok}")
+        self.assertEqual((r.status, r.headers.get("Content-Type")), (200, "text/html; charset=utf-8"), r)
+        page = r.raw.decode("utf-8")
+        self.assertIn("Review this issue", page)
+        self.assertIn("15–21 November 2026", page)
+        self.assertIn(f'name="t" value="{tok}"', page)
+        self.assertEqual(r.headers.get("Referrer-Policy"), "no-referrer")
+        v = g.req("GET", f"/api/devotional/review?t={tok}&view=issue")
+        self.assertEqual(v.status, 200)
+        self.assertIn(bsb_verse(43, 3, 16).strip(), html_words(v.raw.decode("utf-8")))
+        self.assertEqual(v.headers.get("X-Frame-Options"), "SAMEORIGIN", "framed by the review page, nowhere else")
+        self.assertEqual(g.req("GET", "/api/devotional/review?t=" + "0" * 32).status, 404)
+        self.assertErr(g.req("POST", "/api/devotional/review", {"t": tok, "action": "burn"}), 400, "bad_request")
+        # the page's buttons post a form, and every answer is a page: a test that went, one that could not, a
+        # button that is not known, a link that has expired
+        form = {"Content-Type": "application/x-www-form-urlencoded"}
+        start = len(FakeResend.seen)
+        st, hdrs, page = raw_req("POST", "/api/devotional/review", urllib.parse.urlencode({"t": tok, "action": "test"}).encode(), headers=form)
+        self.assertEqual((st, hdrs.get("content-type", "").split(";")[0]), (200, "text/html"), page[:300])
+        self.assertIn(b"A test is on its way", page)
+        mails = FakeResend.mails(start)
+        self.assertEqual((len(mails), mails[0]["body"]["to"]), (1, [self.owner_email]), "the test went to the author")
+        self.assertTrue(mails[0]["body"]["subject"].startswith("[test] "), mails[0]["body"]["subject"])
+        FakeResend.fail_once[:] = [500, 500, 500]
+        self.assertErr(g.req("POST", "/api/devotional/review", {"t": tok, "action": "test"}), 503, "mail_unavailable")
+        FakeResend.fail_once[:] = [500, 500, 500]
+        st, hdrs, page = raw_req("POST", "/api/devotional/review", urllib.parse.urlencode({"t": tok, "action": "test"}).encode(), headers=form)
+        self.assertEqual((st, hdrs.get("content-type", "").split(";")[0]), (503, "text/html"), "a page, not JSON, when the mail did not leave")
+        self.assertIn(b"The test could not be sent", page)
+        self.assertEqual(FakeResend.fail_once, [], "the client tried three times")
+        st, hdrs, page = raw_req("POST", "/api/devotional/review", urllib.parse.urlencode({"t": tok, "action": "burn"}).encode(), headers=form)
+        self.assertEqual((st, hdrs.get("content-type", "").split(";")[0]), (400, "text/html"))
+        self.assertEqual(self.issue(week)["status"], "draft", "nothing above changed the issue")
+        r = g.req("POST", "/api/devotional/review", {"t": tok, "action": "approve"})
+        self.assertEqual((r.status, r.json["issue"]["status"]), (200, "approved"), r)
+        self.assertEqual(r.json["issue"]["send"]["due"], 0, "BS_DEVOTIONAL_SEND=off: only Send now sends it")
+        self.assertEqual(g.req("GET", f"/api/devotional/review?t={tok}").status, 404, "the link dies once the issue leaves draft")
+        self.assertErr(g.req("POST", "/api/devotional/review", {"t": tok, "action": "skip"}), 404, "bad_token")
+        st, hdrs, page = raw_req("POST", "/api/devotional/review", urllib.parse.urlencode({"t": tok, "action": "approve"}).encode(), headers=form)
+        self.assertEqual((st, hdrs.get("content-type", "").split(";")[0]), (404, "text/html"), "a stale page's button: the expired-link page")
+        self.assertIn(b"This link has expired", page)
+        self.assertEqual(self.issue(week)["status"], "approved")
+
+    def test_g1_local_mode_any_signed_in_profile(self):
+        H.restart("--data-dir", self.data, env={"BS_DEVOTIONAL_TEST": "1", "BS_DEVOTIONAL_TZ": self.LA})
+        self.assertErr(HostedClient().req("GET", "/api/devotional/admin"), 404, "not_found")
+        c = HostedClient().req("GET", "/api/devotional/config").json
+        self.assertEqual((c["open"], c["turnstile"]), (False, None))
+        self.assertErr(self.subscribe("local-" + RUN + "@example.test"), 503, "not_open")
+        a = self.member.req("GET", "/api/devotional/admin")
+        self.assertEqual(a.status, 200, "locally any signed-in profile")
+        self.assertEqual(a.json["author"], {"present": True, "uid": self.member.scope}, "locally the signed-in profile is the author")
+        self.assertErr(self.owner.req("POST", "/api/devotional/compile", {"week": self.week}, scoped=True), 409, "issue_locked")
+        r = self.owner.req("POST", "/api/devotional/compile", {"week": "2026-09-05"}, scoped=True, timeout=120)
+        self.assertEqual((r.status, r.json["issue"]["status"]), (200, "empty"), "no mail key: compiled, nothing mailed")
+        self.assertErr(self.owner.req("POST", "/api/devotional/issues/2026-11-21/send-now", {}, scoped=True), 503, "not_open")
+        self.assertEqual(self.owner.req("POST", "/api/devotional/issues/2026-11-21/skip", {}, scoped=True).json["issue"]["status"], "skipped")
+
+    def test_g2_local_review_test_goes_to_the_profile_that_compiled(self):
+        """Locally there is no owner claim: the review page's Send me a test goes to the profile that compiled the
+        issue (kept on the issue), not to nobody (503 not_open) as before."""
+        H.restart("--data-dir", self.data, env={"BS_DEVOTIONAL_TEST": "1", "BS_DEVOTIONAL_TZ": self.LA, "BS_RESEND_KEY": FakeResend.key,
+                                                "BS_RESEND_URL": FakeResend.url(), "BS_DEVOTIONAL_SITE": "https://site.example.test"})
+        self.seed_week(self.owner_uid, 2026, 12, 16)
+        week = "2026-12-19"
+        start = len(FakeResend.seen)
+        r = self.owner.req("POST", "/api/devotional/compile", {"week": week}, scoped=True, timeout=120)
+        self.assertEqual((r.status, r.json["issue"]["status"], r.json["issue"]["author"]), (200, "draft", self.owner_uid), r)
+        preview = [m for m in FakeResend.mails(start) if m["body"]["subject"].startswith("Review: ")]
+        self.assertEqual((len(preview), preview[0]["body"]["to"]), (1, [self.owner_email]))
+        tok = re.search(r"review\?t=([0-9a-f]{32})", preview[0]["body"]["text"]).group(1)
+        H.tokens.add(tok)
+        start = len(FakeResend.seen)
+        st, hdrs, page = raw_req("POST", "/api/devotional/review", urllib.parse.urlencode({"t": tok, "action": "test"}).encode(),
+                                 headers={"Content-Type": "application/x-www-form-urlencoded"})
+        self.assertEqual((st, hdrs.get("content-type", "").split(";")[0]), (200, "text/html"), page[:300])
+        self.assertIn(b"A test is on its way", page)
+        mails = FakeResend.mails(start)
+        self.assertEqual((len(mails), mails[0]["body"]["to"]), (1, [self.owner_email]), "to the profile that compiled it")
+        self.assertTrue(mails[0]["body"]["subject"].startswith("[test] "))
+
+    def test_z1_nothing_secret_on_disk(self):
+        H.stop()
+        H.start("--data-dir", self.data, env={k: v for k, v in self.base_env.items() if k != "BS_DEVOTIONAL_TEST"})  # no tick route then
+        self.assertErr(self.owner.req("POST", "/api/devotional/tick", {}, scoped=True), 404, "not_found")
+        H.stop()
+        keys = [FakeResend.key, FakeClaude.key] + [t for t in H.tokens if HEX32.fullmatch(t)]
+        self.assertGreater(len(keys), 8)
+        for root, _, files in os.walk(self.data):
+            for fn in files:
+                with open(os.path.join(root, fn), "rb") as f:
+                    blob = f.read()
+                for k in keys:
+                    self.assertNotIn(k.encode(), blob, f"{k[:6]}… found in {os.path.relpath(os.path.join(root, fn), self.data)}")
+        with open(H.log_path, "rb") as f:
+            log = f.read().decode("utf-8", "replace")
+        self.assertIn("[devotional]", log)
+        self.assertNotIn(FakeResend.key, log)
+        self.assertNotIn(FakeClaude.key, log)
+        self.assertNotIn("@example.test", log)
+        self.assertNotIn("Traceback", log)
+        self.assertNotRegex(log, r"t=[0-9a-f]{32}", "a confirm, unsubscribe or review link's token never reaches the access log")
+        self.assertIn("confirm?t=[token]", log)
+
+
 class T99_Hygiene(Base):
     restart = False
 
@@ -6353,33 +7155,6 @@ class T99_Hygiene(Base):
         self.assertNotIn("@example.test", log, "no email address is ever logged")
         self.assertNotIn("Traceback", log, "no unhandled server errors")
 
-
-class T33_BootSavers(unittest.TestCase):
-    """main.js boot(): the savers (tracker, links, marks, memory) start exactly once, whenever the server answers.
-    They used to start under `if (landed)` before the first paint or `if (!landed)` after it, each reading 'landed'
-    afresh: an answer arriving while the chapter was drawn (seen every time under headless virtual time, rendering
-    the promo film) matched neither, so the selection bubble, links, tracker and memory never came up."""
-
-    @classmethod
-    def setUpClass(cls):
-        with open(os.path.join(REPO, "app", "js", "main.js"), encoding="utf-8") as f:
-            src = f.read()
-        start = src.index("async function boot()")
-        cls.boot = src[start:src.index("\n}\n", start)]
-
-    def test_savers_start_once_whatever_the_order(self):
-        b = self.boot
-        m = re.search(r"const initSavers = \(\) => \{ if \((\w+)\) return; \1 = true; ", b)
-        self.assertIsNotNone(m, "initSavers guards itself so a second call does nothing")
-        self.assertIn(f"let {m.group(1)} = false;", b)
-        snap = re.search(r"const (\w+) = landed;\n\s*if \(\1\) initSavers\(\);", b)
-        self.assertIsNotNone(snap, "the early start keys on a snapshot of 'landed' taken before the first paint")
-        early = snap.group(1)
-        late = re.search(r"if \(!" + early + r"\) \{[^}]*?await authP; initSavers\(\);", b)
-        self.assertIsNotNone(late, "the late branch runs exactly when the early start did not, from the same snapshot")
-        self.assertLess(snap.end(), late.start())
-        self.assertEqual(b.count("initSavers()"), 2, "started only from these two places")
-        self.assertNotRegex(b, r"if \(!?landed\) (\{|initSavers)", "no branch re-reads 'landed' after the awaits")
 
 if __name__ == "__main__":
     unittest.main(verbosity=int(os.environ.get("BS_TEST_VERBOSITY", "1")) if "-v" not in sys.argv else 2)

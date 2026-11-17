@@ -153,6 +153,7 @@ function coloHtml() {
       <p class="colo-b">${hic('lantern', 'mark')}<span>${esc(BRAND.name)}</span></p>
       <blockquote class="colo-m"><p>${esc(BRAND.motto)}</p><footer><cite>${esc(BRAND.mottoRef)}</cite></footer></blockquote>
       <p class="colo-g"><a href="${DONATE_URL}" target="_blank" rel="noopener">${icon('heart')}<span>Help bring Bible Lantern to more people</span></a></p>
+      <p class="colo-g"><a href="/weeklydevotional"><span>Weekly devotional</span></a></p>
       <p class="colo-c" id="hm-credit"></p>
       <p class="colo-d">${esc(BRAND.domain)}</p>
     </div>

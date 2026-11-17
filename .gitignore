@@ -24,3 +24,6 @@ app/mock/social/
 
 # Logo explorations (sources + renders)
 .design/logo/out/
+
+# scratch data directories of local devotional checks
+.design/devotional-mock/data-*/

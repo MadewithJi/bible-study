@@ -55,6 +55,7 @@ Book numbers, New Testament: 40 Matthew, 41 Mark, 42 Luke, 43 John, 44 Acts, 45 
 
 - [Bible Lantern](https://www.biblelantern.com/): the app. A first visit opens Home, which shows what is there.
 - [Privacy](https://www.biblelantern.com/privacy): what Bible Lantern keeps, where, and why. No advertising and no tracking across other sites.
+- [Weekly devotional](https://www.biblelantern.com/weeklydevotional): a free weekly email compiled from one week of close reading on Bible Lantern, in the writer’s own notes, with the verses quoted word for word from the BSB. Sign up at https://www.biblelantern.com/weeklydevotional.
 
 ## Optional
 
