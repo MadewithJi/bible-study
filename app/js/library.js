@@ -669,24 +669,27 @@ export function openBookmarkMenu(anchor, bookmark) {
   return m;
 }
 function closeMenuSafe(restore) { if (fn('closeMenu')) ui.closeMenu(restore); }
-/** The memory verse a verse bookmark is (that verse, or a passage starting there, as the gutter's badge), or null. */
-const memOfBm = bm => (mem && bm && bm.v ? mem.findByRef(`${bm.b}.${bm.c}.${bm.v}`) || mem.memoryFor(bm.b, bm.c, bm.v) : null);
-/** The bookmark menu's Memorize this verse (memorize-brief §4), in the reader's translation; Practise when it is one. */
+/** The memory verse a verse bookmark is in (that verse, or a passage holding it: memory.js memoryCovering), or null. */
+const memOfBm = bm => (mem && bm && bm.v ? (typeof mem.memoryCovering === 'function' ? mem.memoryCovering(bm.b, bm.c, bm.v) : mem.findByRef(`${bm.b}.${bm.c}.${bm.v}`) || mem.memoryFor(bm.b, bm.c, bm.v)) : null);
+/** The bookmark menu's Memorize this verse (memorize-brief §4). */
 function memorizeBm(bm, anchor) {
   if (!mem) return;
-  const have = memOfBm(bm);
-  // the Library may redraw the row under the practice: its ⋯ again, by the bookmark's id
-  if (have) mem.practise(have.id, { returnFocus: () => (anchor.isConnected ? anchor : $(`#library-body li[data-bm="${cssEsc(bm.id)}"] [data-bm-menu]`)) });
-  else memorizeBmIn(bm);
+  memorizeBmIn(bm, anchor); // the Library may redraw the row under the practice: its ⋯ again, by the bookmark's id
 }
-/** A historic text that lacks this verse (a book, chapter or verse it does not have) is memorized in the KJV instead. */
-async function memorizeBmIn(bm) {
+/**
+ * Memorize the bookmarked verse in the reader's translation, or in the KJV when a historic text lacks it (a book,
+ * chapter or verse it does not have); Practise when it is already a memory verse in that translation (learned in
+ * another: memorize() says which and offers Learn in).
+ */
+async function memorizeBmIn(bm, anchor) {
   let tr = state.tr;
   if (S.isPartialTr(tr)) {
     const t = await mem.memoryText({ ref: `${bm.b}.${bm.c}.${bm.v}`, tr }).catch(() => null);
     if (!t || t.tr !== tr) tr = 'kjv';
   }
-  mem.memorize({ b: bm.b, c: bm.c, v: bm.v, tr });
+  const have = memOfBm(bm);
+  if (have && have.tr === tr) mem.practise(have.id, { returnFocus: () => (anchor.isConnected ? anchor : $(`#library-body li[data-bm="${cssEsc(bm.id)}"] [data-bm-menu]`)) });
+  else mem.memorize({ b: bm.b, c: bm.c, v: bm.v, tr });
 }
 
 // ------------------------------------------------------------ read marks

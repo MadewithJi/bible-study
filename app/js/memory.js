@@ -2,7 +2,7 @@
 // and those written on the heart; the schedule is memsched.js's. The data layer follows marks.js (a dirty map per scope,
 // a debounced and keepalive flush with compare-and-set bases, conflicts, cross-tab sync, the browser mirror); the
 // practice (practice.js) and the Library's Memory view are loaded when a toast's button first needs them.
-import { state, bookOf, refLabel, api, lsGet, lsSet, lsKey, lsDel, DRY, broadcast, onBroadcast, setSaveStatus, pendingNotes, registerSaver, readOnlyGuest, guestBlocked, signInRequired, data, isPassageTr, LICENSED_IDS, COPYRIGHT, markableTr, hasBook, isPartialTr, trCreditHtml } from './store.js';
+import { state, bookOf, refLabel, api, lsGet, lsSet, lsKey, lsDel, DRY, broadcast, onBroadcast, setSaveStatus, pendingNotes, registerSaver, readOnlyGuest, guestBlocked, signInRequired, data, isPassageTr, LICENSED_IDS, COPYRIGHT, markableTr, hasBook, isPartialTr, trCreditHtml, trInfo } from './store.js';
 import { localDay } from './ui.js';
 import * as S from './memsched.js';
 
@@ -114,6 +114,19 @@ export function findByRef(ref) {
   for (const x of memory.byId.values()) if (x.ref === ref) return x;
   return null;
 }
+/**
+ * The memory verse that holds verse b.c.v, in any translation ('Is this verse memorized?'): the verse itself, else one
+ * starting there (memoryFor's choice), else a passage around it (43.3.16-18 holds 43.3.17), the first in line. Or null.
+ */
+export function memoryCovering(b, c, v) {
+  b = +b; c = +c; v = +v; if (!b || !c || !v) return null;
+  const own = findByRef(`${b}.${c}.${v}`) || memoryFor(b, c, v); if (own) return own;
+  const hold = []; for (const x of memory.byId.values()) { const p = parseRef(x.ref); if (p && p.b === b && p.c === c && p.v <= v && v <= p.w) hold.push(x); }
+  if (hold.length < 2) return hold[0] || null;
+  const o = organizedMemory(), order = [o.current, ...o.upnext, ...o.heart].filter(Boolean).map(x => x.id);
+  const at = x => { const i = order.indexOf(x.id); return i < 0 ? order.length : i; };
+  return hold.sort((x, y) => at(x) - at(y))[0];
+}
 /** The memory verse whose first verse is b.c.v (the gutter's badge): the one being learned first, else the newest heart. */
 export function memoryFor(b, c, v) {
   const ids = byStart.get(`${b}.${c}.${v}`); if (!ids) return null;
@@ -144,6 +157,8 @@ function trUsable(tr) {
   const t = (state.translations || []).find(x => x.id === tr);
   return !!t && t.kind !== 'external' && (t.kind !== 'api' || !!(state.apiKeys && state.apiKeys[tr]));
 }
+/** Whether a practice can show a verse in this translation here (memoryText's own test): practice.js's Learn in. */
+export const memoryTrUsable = tr => markableTr(tr) && (tr === 'kjv' || trUsable(tr));
 async function chapterVerses(tr, b, c) {
   if (isPassageTr(tr)) return data.passage(tr, b, c);
   const bk = await data.bible(tr, b);
@@ -523,8 +538,19 @@ export function memorize({ b, c, v, ve = 0, tr = 'kjv' } = {}) {
   if (w - v + 1 > MAX_VERSES) { toast(`A memory verse can be up to ${MAX_VERSES} verses long. Select fewer verses.`); return null; }
   const p = parseRef(refOf(b, c, v, w)); if (!p) return null;
   const ref = refOf(p.b, p.c, p.v, p.w), label = refLabel(p.b, p.c, p.v, p.w > p.v ? p.w : 0);
-  const have = findByRef(ref);
-  if (have) { toast(`${label} is already one of your memory verses.`, { label: 'Practise', run: () => { practise(have.id); } }); return null; }
+  const have = findByRef(ref) || (p.w === p.v ? memoryCovering(p.b, p.c, p.v) : null);
+  if (have) {   // one entry per verse, whatever the translation: say which it is learned in, and offer to learn it in this one
+    const want = markableTr(tr) ? tr : 'kjv', go = { label: 'Practise', run: () => { practise(have.id); } };
+    const hp = parseRef(have.ref), hl = hp ? refLabel(hp.b, hp.c, hp.v, hp.w > hp.v ? hp.w : 0) : label; // the passage it is in
+    const learnIn = async () => { // never to a translation that leaves the verse out (practice would show the KJV)
+      const L = await learnableIn(have, want), ab = trInfo(want).abbr;
+      if (!L.ok) { toast(notLearnableSaid(L.why, want, hl, have.tr)); return; }
+      if (setMemoryTranslation(have.id, want)) toast(dry(`You’re learning ${hl} in the ${ab} now.`), { label: 'Practise', run: () => { practise(have.id); } });
+    };
+    if (have.tr === want) toast(`${hl} is already one of your memory verses.`, go);
+    else toast(`${hl} is already one of your memory verses, in the ${trInfo(have.tr).abbr}.`, [go, { label: `Learn in ${trInfo(want).abbr}`, run: learnIn }]);
+    return null;
+  }
   const list = memoryList(), day = today();
   if (S.organize(list, day).full) { toast(`Three verses are already teed up. Remove one to add ${label}.`, { label: 'Open Memory', run: showMemory }); return null; }
   const now = Date.now();
@@ -535,6 +561,35 @@ export function memorize({ b, c, v, ve = 0, tr = 'kjv' } = {}) {
   if (o.current && o.current.id === x.id) toast(dry(`${label} is your memory verse now.`), { label: 'Practise now', run: () => { practise(x.id); } });
   else toast(dry(`Added ${label} to your memory verses, ${PLACE[o.upnext.findIndex(e => e.id === x.id)] || 'next in line'}.`), { label: 'Show', run: showMemory });
   return x;
+}
+/**
+ * Whether a memory verse can be learned in `tr` here: every one of its verses is there, never the KJV in their place
+ * (a book, chapter or verse that text lacks) and never a passage cut short by a partial text (practice would then
+ * quietly lose verses). → { ok: true, t } or { ok: false, why: 'absent' | 'omitted' | 'part' | 'unavailable' }
+ */
+export async function learnableIn(entry, tr) {
+  const t = await memoryText({ ...entry, tr }).catch(() => null), p = parseRef(entry && entry.ref);
+  if (!t) return { ok: false, why: 'unavailable' };
+  if (t.fallback) return { ok: false, why: t.absent ? 'absent' : t.omitted ? 'omitted' : 'unavailable' };
+  if (isPartialTr(tr) && p && (t.verses || []).length < p.w - p.v + 1) return { ok: false, why: 'part' };
+  return { ok: true, t };
+}
+/** Why a memory verse stays in its translation (learnableIn's why), as a sentence: `label` names the verses. */
+export function notLearnableSaid(why, tr, label, stays = '') {
+  const ab = trInfo(tr).abbr, keep = stays ? `, so it stays in the ${trInfo(stays).abbr}` : '';
+  return why === 'absent' ? `The ${ab} text here doesn’t have ${label}${keep}.`
+    : why === 'omitted' ? `The ${ab} leaves ${label} out${keep}.`
+    : why === 'part' ? `The ${ab} doesn’t have all of ${label}${keep}.`
+    : `The ${ab} isn’t available right now. Try again later.`;
+}
+/**
+ * Learn a memory verse in another translation: its translation changes, its place, steps, due day and heart kept (one
+ * entry per verse, never one per translation). Returns the verse, or null (no such verse, a guest, an unknown tr).
+ */
+export function setMemoryTranslation(id, tr) {
+  if (guestBlocked() || !markableTr(tr)) return null;
+  const x = memory.byId.get(id); if (!x) return null;
+  return x.tr === tr ? x : change(id, { tr });
 }
 /** Make a teed-up verse the current one; the verse it displaces keeps its progress and is first in line. */
 export function makeCurrent(id) {
