@@ -266,7 +266,9 @@ function updateBar() {
 /** The Text menu: the translation, the parallel and Hebrew and Greek, the bar's own controls shown in a popover. */
 function openTextMenu() {
   const rows = $('#text-rows'), store = $('#gnav-store'); if (!rows || !store) return;
-  openMenu($('#btn-text'), rows, { label: 'Text', className: 'text-menu', dialog: true, sticky: true, focus: '#tr', onClose: () => store.append(rows) });
+  openMenu($('#btn-text'), rows, { label: 'Text', className: 'text-menu', dialog: true, sticky: true,
+    // a tap that focused a select would open its picker at once on a phone: there, the toggle takes focus
+    focus: matchMedia('(pointer: coarse)').matches ? '#btn-orig' : '#tr', onClose: () => store.append(rows) });
 }
 function updateHash() { if (state.home) return; const h = `#${state.book}/${state.chapter}${state.selected ? '/' + state.selected : ''}`; if (location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h); }
 /** `#b/c[/v]` → {b, c, v} clamped to the Bible (v 0 = no verse: '#43/3/0' is John 3), or null for any other hash. */
@@ -1097,7 +1099,9 @@ function onScroll() {
     const max = document.documentElement.scrollHeight - innerHeight;
     const pr = $('#progress'); if (pr) pr.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max).toFixed(4) : 0})`;
     if (innerWidth < 700 && !bar.classList.contains('searching') && !document.body.classList.contains('sheet-modal')) {
-      if (y > 160 && y > lastY + 2 && !bar.contains(document.activeElement)) bar.classList.add('hide');
+      // never while the Text or avatar menu is open: their controls sit under <body>, not in the bar
+      const barMenu = !!bar.querySelector('#btn-text[aria-expanded="true"], #btn-account[aria-expanded="true"]');
+      if (y > 160 && y > lastY + 2 && !barMenu && !bar.contains(document.activeElement)) bar.classList.add('hide');
       else if (y < lastY - 2 || y <= 8) bar.classList.remove('hide');
     } else bar.classList.remove('hide');
     lastY = y;
@@ -1193,6 +1197,8 @@ function bindChrome() {
   si.addEventListener('focus', () => { if (SEARCH_ICON.matches) bar.classList.add('searching'); });
   $('#search-form .cancel')?.addEventListener('click', () => { bar.classList.remove('searching'); si.blur(); });
   // focus left the search form (a verse, the page): the overlay gives the bar back; the query stays for next time
+  si.addEventListener('focus', () => sf.classList.add('typing'));
+  si.addEventListener('blur', () => sf.classList.remove('typing'));
   si.addEventListener('blur', () => setTimeout(() => { if (!sf.contains(document.activeElement)) bar.classList.remove('searching'); }, 150));
   bar.addEventListener('focusin', () => bar.classList.remove('hide'));
 
