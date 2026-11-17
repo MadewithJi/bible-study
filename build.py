@@ -11,8 +11,14 @@ Sources (all free licences, see README):
   Strong's       openscriptures/strongs (CC BY-SA)
   Context        Theographic Bible Metadata: people/places/events/Easton (CC BY-SA 4.0)
 
+Historic texts (pinned open transcriptions, see the HISTORIC table):
+  KJV 1611       Freely-Given-org/OpenBibleData KJB-1611 USFM (public domain; transcription CC0)
+  Tyndale 1530   English Wikisource "Bible (Tyndale)" Genesis-Deuteronomy (public domain; CC BY-SA 4.0)
+  Vaticanus      CNTR transcriptions, class 1/03.txt (CC BY-SA 4.0, Alan Bunning)
+
 Usage:
   python3 build.py --raw raw/ --xref src/cross_references.txt --topics src/topics/
+  python3 build.py --only kjv1611,tyndale,codexb [--out DIR] [--raw DIR]   (just these, plus their meta.json entries)
 Missing raw files are downloaded automatically.
 """
 import argparse, json, os, re, sys, urllib.request, collections, shutil, math, unicodedata, difflib
@@ -359,6 +365,285 @@ def build_bsb(raw, out, counts):
             n = max(list(bk.get(c, {}).keys()) + [counts[i][c-1]])
             chapters[str(c)] = [bk.get(c, {}).get(v, "") for v in range(1, n + 1)]
         dump(os.path.join(out, "bibles", "bsb", f"{i+1:02d}.json"), chapters)
+
+# ---------------------------------------------------------------- historic texts
+# Three historic texts, read beside the modern ones: the 1611 King James in its first-edition spelling,
+# Tyndale's 1530 Pentateuch and the Greek New Testament of Codex Vaticanus. Each comes from an open
+# transcription pinned to one commit or revision, so a rebuild gives the same bytes until the pin is moved
+# on purpose (the files land under app/data/bibles/, which the Scripture lock guards). Every change made to
+# the source's text is listed in the entry's credit, which the reader shows as the text's credit line.
+# Shape is the KJV's: bibles/<id>/NN.json = {"<chapter>": [verse 1, …]}, padded with "" to the KJV count,
+# extra verses appended; only the books a text has get a file. `python3 build.py --only kjv1611,tyndale`
+# builds just these, never the KJV, BSB, STEP data, cross references or context.
+HIST_UA = {"User-Agent": "BibleLanternBuild/1.0 (open-source Bible study site; static data build)"}
+OBD_COMMIT = "e40913d4fcb1f435e6bfb145d811b695ea92eeae"     # Freely-Given-org/OpenBibleData, HEAD on 2026-11-16
+OBD_URL = "https://raw.githubusercontent.com/Freely-Given-org/OpenBibleData/" + OBD_COMMIT + "/Bibles/EnglishTranslations/KJB-1611/{name}"
+CNTR_COMMIT = "ce4025ee726da5a618631e2ddb5270c5b8843504"    # last commit touching class 1/03.txt (2026-10-01)
+CNTR_URL = "https://raw.githubusercontent.com/Center-for-New-Testament-Restoration/transcriptions/" + CNTR_COMMIT + "/class%201/03.txt"
+CNTR_SHA256 = "1c429a30439f1aab096d85eaf94eb82d05947c66f1fdf01fabcf9f5ad2c31829"
+# English Wikisource "Bible (Tyndale)": the current revision of each book on 2026-11-16 (API prop=revisions),
+# with MediaWiki's sha1 of that revision's wikitext, checked after download.
+TYNDALE_URL = "https://en.wikisource.org/w/index.php?oldid={rev}&action=raw"
+TYNDALE_REVS = {1: ("Genesis", 16449092, "0dcb7deb499664c1784a126763cc3be8994dcbd7"),        # 2026-11-08
+                2: ("Exodus", 16449511, "717a00d71471b52cb7ee7e9fb619ff0047e8bec7"),         # 2026-11-08
+                3: ("Leviticus", 2969183, "568e8e16450fdf15ebb69ff21f99a1bc24d894e2"),       # 2011-06-19
+                4: ("Numbers", 16449544, "963c474818ebd5f58d972950e2a490cb5ed9723b"),        # 2026-11-08
+                5: ("Deuteronomy", 16449555, "53fbe037507995cdda7f1b019dc556ce3345812f")}    # 2026-11-08
+CODEXB_BOOKS = list(range(40, 54)) + list(range(58, 66))    # Matthew–2 Thessalonians, Hebrews (to 9:14), James–Jude
+
+HISTORIC = [
+ {"id": "kjv1611", "abbr": "KJV 1611", "name": "King James Bible, 1611 first edition (original spelling)", "lang": "en",
+  "books": list(range(1, 67)), "licence": "Public domain (transcription CC0, Freely-Given.org)",
+  "source": "https://github.com/Freely-Given-org/OpenBibleData/tree/" + OBD_COMMIT + "/Bibles/EnglishTranslations/KJB-1611",
+  "credit": "King James Bible, 1611 first edition (‘He’ printing). Public domain. Transcription from Freely-Given.org Open Bible Data "
+            "(KJB-1611, CC0 1.0), github.com/Freely-Given-org/OpenBibleData, commit e40913d. Original spelling in roman type; long s not "
+            "reproduced. The 66 books only: the Apocrypha printed in 1611 is not included. Verse text only: the marginal notes, "
+            "cross-references (with the transcriber’s modern notes on them), chapter summaries, headings (such as Psalm 119’s letters), "
+            "Psalm titles, epistle subscriptions and paragraph marks are left out, supplied words are in plain type, the abbreviations yᵉ and yᵗ are shown with a raised letter, "
+            "and five stray marks of the transcription (four } and one *, in Exodus 29-30 and 2 Kings 5:19) are removed. In the United Kingdom the Authorized Version is subject to Crown rights."},
+ {"id": "tyndale", "abbr": "Tyndale 1530", "name": "Tyndale Pentateuch (1530), original spelling", "lang": "en",
+  "books": [1, 2, 3, 4, 5], "licence": "Public domain (Wikisource transcription, CC BY-SA 4.0)",
+  "source": "https://en.wikisource.org/wiki/Bible_(Tyndale)",
+  "credit": "William Tyndale, The Pentateuch (1530), original spelling. Public domain. Transcription from English Wikisource, "
+            "‘Bible (Tyndale)’ (https://en.wikisource.org/wiki/Bible_(Tyndale)), revisions current on 16 November 2026, CC BY-SA 4.0 "
+            "(https://creativecommons.org/licenses/by-sa/4.0/); this adapted text is likewise CC BY-SA 4.0. Verse numbers are not "
+            "Tyndale’s: they were added in J. I. Mombert’s 1884 reprint to match the King James Version, and a verse boundary can be "
+            "off by a clause. Exodus 40:14 and Numbers 7:22 are empty in the "
+            "transcription, and the words of Genesis 9:29 and Leviticus 27:18 stand at the end of the verse before. A simplified e-text "
+            "descended from Mombert’s 1884 reprint, not a diplomatic transcription: the abbreviation marks, long s, virgules and "
+            "ampersand sign of the 1530 print are not reproduced."},
+ {"id": "codexb", "abbr": "Vaticanus", "name": "Codex Vaticanus (B, 03), Greek New Testament", "lang": "grc",
+  "books": CODEXB_BOOKS, "coverage": "Matthew to 2 Thessalonians, Hebrews 1:1 to 9:14 and James to Jude", "licence": "CC BY-SA 4.0 (Alan Bunning, Center for New Testament Restoration)",
+  "source": "https://github.com/Center-for-New-Testament-Restoration/transcriptions/blob/" + CNTR_COMMIT + "/class%201/03.txt",
+  "credit": "Codex Vaticanus (03) Greek New Testament transcription. Copyright © 2020-2026 by Alan Bunning, Center for New Testament "
+            "Restoration (https://github.com/Center-for-New-Testament-Restoration/transcriptions, commit ce4025e). Licensed under "
+            "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Adapted for Bible Lantern: the first hand’s text is shown, "
+            "not the later corrections, and the scribe’s cancelled first copy of Romans 4:4-5 is left out; manuscript line, column and "
+            "page marks, damage marks and the transcriber’s numbers removed; letters the transcriber marks as damaged or lost shown as "
+            "plain letters, and first-hand letters that can no longer be read shown as dots in square brackets; nomina sacra kept "
+            "abbreviated with an overline, and the stroke for a final nu kept as an overline; final sigma (ς) restored at word ends; word "
+            "division is the transcriber’s (the manuscript has none). Verses follow the King James numbering: Philippians 1:16 and 1:17, "
+            "which the manuscript has in the other order, stand in that order, the words of Acts 19:41 and 2 Corinthians 13:13 stand at "
+            "the end of the verse before, and 3 John has a 15th verse. Verses the manuscript does not have, such as Mark 16:9-20, John 7:53-8:11 and Acts 8:37, are "
+            "left empty. 1-2 Timothy, Titus, Philemon and Revelation are not in the "
+            "manuscript’s New Testament, Hebrews ends at 9:14, and the manuscript’s Old Testament is not included. This adapted text is "
+            "likewise released under CC BY-SA 4.0."},
+]
+HIST_BY_ID = {t["id"]: t for t in HISTORIC}
+
+def fetch_pinned(url, path, check=None):
+    """Download once into the raw dir (reused when present); `check(bytes)` → error message or None."""
+    if not (os.path.exists(path) and os.path.getsize(path) > 0):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        print(f"  downloading {url} ...", flush=True)
+        data = urllib.request.urlopen(urllib.request.Request(url, headers=HIST_UA), timeout=120).read()
+        with open(path + ".part", "wb") as f: f.write(data)
+        os.replace(path + ".part", path)
+    data = open(path, "rb").read()
+    err = check(data) if check else None
+    if err: raise SystemExit(f"{path}: {err} (delete it to download again, or move the pin in build.py on purpose)")
+    return data.decode("utf-8")
+
+def kjv_counts(out):
+    """Verses per chapter of the bundled KJV (the app's skeleton), from the output's KJV or else the repo's."""
+    for d in (os.path.join(out, "bibles", "kjv"), os.path.join(HERE, "app", "data", "bibles", "kjv")):
+        if os.path.exists(os.path.join(d, "66.json")):
+            counts = []
+            for i in range(66):
+                bk = json.load(open(os.path.join(d, f"{i+1:02d}.json"), encoding="utf-8"))
+                counts.append([len(bk[str(c)]) for c in range(1, len(bk) + 1)])
+            return counts
+    raise SystemExit("no bundled KJV found to take the verse counts from")
+
+# KJV 1611 (USFM). A verse is one \v line; the other lines are titles, chapter labels and summaries, Psalm titles,
+# Psalm 119's letters and epistle subscriptions, all left out. An unknown line or marker stops the build, so a
+# change of source cannot slip through silently.
+K1611_SKIP = re.compile(r"^(?:\\(?:id|usfm|ide|h|toc\d|mt\d|ie|cl|iex|d|qa|pi\d?|p)\b.*|)$")
+K1611_RAISED = {"e": "ᵉ", "t": "ᵗ"}   # y\sup e\sup* → yᵉ, y\sup t\sup* → yᵗ: a raised letter, as printed; letters unchanged
+
+def kjv1611_text(s):
+    # a note set between two letters with no space either side stood between two words: a space stays in its place
+    s = re.sub(r"(?<=\w)(?:\\f .*?\\f\*|\\x .*?\\x\*)(?=\w)", " ", s)
+    s = re.sub(r"\\f .*?\\f\*|\\x .*?\\x\*", "", s)      # marginal notes, cross references (and OBD's modern \xta notes inside them)
+    s = re.sub(r"y\\sup ([et])\\sup\*", lambda m: "y" + K1611_RAISED[m.group(1)], s)
+    s = re.sub(r"\\\+?(?:add|nd|em|bd) |\\\+?(?:add|nd|em|bd)\*", "", s)   # supplied words, LORD, emphasis: keep the words
+    if "\\" in s: raise SystemExit(f"KJV 1611: unknown USFM marker in {s[:120]!r}")
+    s = s.replace("¶", "").replace("}", "")              # paragraph marks; the four stray } after LORD in Exod 29:42, 29:46 (two), 30:8
+    s = re.sub(r"^\s*\*", "", s)                          # the stray * opening 2 Kgs 5:19
+    return re.sub(r"\s+", " ", s).strip()
+
+def build_kjv1611(raw):
+    d = os.path.join(raw, "historic", "kjv1611-" + OBD_COMMIT[:7])
+    books = {}
+    for i in range(66):
+        name = f"{i + 1 if i < 39 else i + 2:02d}_{USFM_CODES[i]}_KJB-1611.USFM"   # OBD numbers the NT from 41
+        src = fetch_pinned(OBD_URL.format(name=name), os.path.join(d, name))
+        if not src.startswith("\\id " + USFM_CODES[i]): raise SystemExit(f"KJV 1611: {name} is not {USFM_CODES[i]}")
+        bk, c = {}, 0
+        for ln in src.split("\n"):
+            m = re.match(r"\\c (\d+)\s*$", ln)
+            if m: c = int(m.group(1)); bk[c] = {}; continue
+            m = re.match(r"\\v (\d+) (.*)$", ln)
+            if m and c:
+                v = int(m.group(1))
+                if v in bk[c]: raise SystemExit(f"KJV 1611: {name} {c}:{v} twice")
+                bk[c][v] = kjv1611_text(m.group(2)); continue
+            if not K1611_SKIP.match(ln): raise SystemExit(f"KJV 1611: unexpected line in {name}: {ln[:120]!r}")
+        books[i] = bk
+    return books
+
+# Tyndale (Wikisource wikitext). One verse per line, {{verse|chapter=C|verse=V}} <section begin="C:V"/>text<section end="C:V"/>.
+# Seven verses are irregular in the pinned revisions and are handled one by one: three are plain "24. text" lines (the
+# number is dropped), two templates are empty (kept "", nothing is invented) and two have no marker because their words
+# end the verse before (kept "" too; the words are not split off by guesswork). Any other irregularity stops the build.
+TYNDALE_VERSE = re.compile(r'\{\{verse\|chapter=(\d+)\|verse=(\d+)\}\}\s*<section begin="(\d+):(\d+)"/>(.*?)<section end="\3:\4"/>')
+TYNDALE_SKIP = re.compile(r"^(?:\{\{header|\s*\|.*|\}\}|==Chapter \d+==|\{\{chapter\|\d+\}\}|\{\{other versions\|[^}]*\}\}|\s*)$")
+TYNDALE_PLAIN = {(1, 22, 24), (2, 21, 36), (3, 14, 57)}
+TYNDALE_EMPTY = {(2, 40, 14), (4, 7, 22)}
+TYNDALE_MERGED = {(1, 9, 29), (3, 27, 18)}
+
+def build_tyndale(raw, counts):
+    import hashlib
+    books, plain, empty = {}, set(), set()
+    for b, (title, rev, sha1) in TYNDALE_REVS.items():
+        src = fetch_pinned(TYNDALE_URL.format(rev=rev), os.path.join(raw, "historic", "tyndale", f"{title}-{rev}.wiki"),
+                           lambda data, s=sha1: None if hashlib.sha1(data).hexdigest() == s else "not the pinned revision (sha1 differs)")
+        bk, c = {}, 0
+        for ln in src.split("\n"):
+            m = re.match(r"\{\{chapter\|(\d+)\}\}$", ln)
+            if m: c = int(m.group(1)); bk[c] = {}; continue
+            m = TYNDALE_VERSE.search(ln)
+            if m:
+                vc, v = int(m.group(1)), int(m.group(2))
+                if (vc, v) != (int(m.group(3)), int(m.group(4))) or vc != c or v in bk[c]:
+                    raise SystemExit(f"Tyndale: {title} {vc}:{v} out of place")
+                bk[c][v] = re.sub(r"\s+", " ", m.group(5)).strip()
+                if not bk[c][v]: empty.add((b, c, v))
+                continue
+            m = re.match(r"^(\d+)[.,] (.+)$", ln)
+            if m and c:
+                v = int(m.group(1))
+                if v in bk[c]: raise SystemExit(f"Tyndale: {title} {c}:{v} twice")
+                bk[c][v] = re.sub(r"\s+", " ", m.group(2)).strip(); plain.add((b, c, v)); continue
+            if not TYNDALE_SKIP.match(ln): raise SystemExit(f"Tyndale: unexpected line in {title}: {ln[:120]!r}")
+        books[b - 1] = bk
+    missing = {(b + 1, c, v) for b, bk in books.items() for c in bk for v in range(1, counts[b][c - 1] + 1) if v not in bk[c]}
+    if (plain, empty, missing) != (TYNDALE_PLAIN, TYNDALE_EMPTY, TYNDALE_MERGED):
+        raise SystemExit(f"Tyndale: irregular verses changed: plain {sorted(plain)}, empty {sorted(empty)}, missing {sorted(missing)}")
+    return books
+
+# Codex Vaticanus (CNTR, Manuscript Encoding Specification; README.md and MES.g4 in the same repo). A line is
+# "BBCCCVVV text", or "BBCCCVVV -" for a verse the manuscript lacks. Shown: the first hand, x{first hand} {correction}
+# → first hand. Removed: page \, column | and line / breaks with the numbers they may carry, damage % and missing ^
+# marks (the letters stay), lacuna remnants & *, the numeral sign $ (its letters stay) and the alternate-verse mark ⋄N.
+# Kept as in the manuscript: nomina sacra (=ιυ) abbreviated, each letter under a combining overline U+0305; the
+# final-nu stroke ¯ as U+0305 over the letter it stands on; the kai ligature ϗ; the transcriber's word spaces.
+# An unreadable first-hand letter (U+FFFD) becomes a dot, a run of them in square brackets. Final sigma is restored
+# mechanically: σ ending a word becomes ς. Romans 4:4-5 is copied twice and the first copy cancelled (x{…} {}): for a
+# verse given twice, the earlier line takes the corrected (here empty) reading and the lines join in file order.
+CODEXB_TWICE = {(45, 4, 4), (45, 4, 5)}
+CODEXB_MOVE = {(47, 13, 13): (47, 13, 14)}   # the transcription's 13:12 holds KJV 13:12-13, so its 13:13 (the grace) is KJV 13:14
+CODEXB_OK = set("αβγδεζηθικλμνξοπρστυφχψωςϗ͵ []." + "̅")
+
+def codexb_text(s, first_hand=True):
+    s = re.sub(r"x\{([^{}]*)\} \{([^{}]*)\}", lambda m: m.group(1 if first_hand else 2), s)
+    s = re.sub(r"⋄\d+|[\\|/]\d*|[%^&*$]", "", s)
+    words = []
+    for w in s.split():
+        ns = w.startswith("=")
+        w = w.lstrip("=").replace("¯", "̅")
+        if ns: w = "".join(ch + "̅" for ch in w)
+        w = re.sub("�+", lambda m: "[" + "." * len(m.group(0)) + "]", w)
+        w = re.sub("σ(̅?)$", "ς\\1", w)
+        words.append(w)
+    out = " ".join(words)
+    if not set(out) <= CODEXB_OK: raise SystemExit(f"Vaticanus: unexpected characters {sorted(set(out) - CODEXB_OK)} in {s[:120]!r}")
+    return out
+
+def build_codexb(raw):
+    import hashlib
+    src = fetch_pinned(CNTR_URL, os.path.join(raw, "historic", "codexb-" + CNTR_COMMIT[:7], "03.txt"),
+                       lambda data: None if hashlib.sha256(data).hexdigest() == CNTR_SHA256 else "not the pinned file (sha256 differs)")
+    lines = collections.defaultdict(list)
+    for ln in src.split("\n"):
+        if not ln: continue
+        m = re.match(r"(\d\d)(\d\d\d)(\d\d\d) (.+)$", ln)
+        if not m: raise SystemExit(f"Vaticanus: unexpected line {ln[:80]!r}")
+        lines[(int(m.group(1)), int(m.group(2)), int(m.group(3)))].append(m.group(4))
+    twice = {k for k, v in lines.items() if len(v) > 1}
+    if twice != CODEXB_TWICE: raise SystemExit(f"Vaticanus: verses given twice changed: {sorted(twice)}")
+    if any(k in lines for k in CODEXB_MOVE.values()): raise SystemExit("Vaticanus: 2 Cor 13:14 now has its own line")
+    books = collections.defaultdict(lambda: collections.defaultdict(dict))
+    for (b, c, v), texts in lines.items():
+        parts = [codexb_text(t, first_hand=(k == len(texts) - 1)) for k, t in enumerate(texts) if t != "-"]
+        b, c, v = CODEXB_MOVE.get((b, c, v), (b, c, v))
+        books[b - 1][c][v] = " ".join(p for p in parts if p)
+    if sorted(b + 1 for b in books) != CODEXB_BOOKS: raise SystemExit(f"Vaticanus: books changed: {sorted(b + 1 for b in books)}")
+    return books
+
+HIST_BUILDERS = {"kjv1611": lambda raw, counts: build_kjv1611(raw), "tyndale": build_tyndale,
+                 "codexb": lambda raw, counts: build_codexb(raw)}
+
+def spans(vs):
+    """[1,2,3,7] → '1-3, 7'"""
+    out, s = [], None
+    for k, v in enumerate(vs):
+        if s is None: s = v
+        if k + 1 == len(vs) or vs[k + 1] != v + 1: out.append(f"{s}-{v}" if v > s else f"{s}"); s = None
+    return ", ".join(out)
+
+def write_historic(t, books, counts, out):
+    """bibles/<id>/NN.json for the books the text has, and the versification report against the KJV."""
+    if sorted(b + 1 for b in books) != t["books"]: raise SystemExit(f"{t['abbr']}: books {sorted(b + 1 for b in books)} ≠ table")
+    diff, empty, total, filled, extra = [], [], 0, 0, 0
+    for i in sorted(books):
+        bk, name = books[i], BOOKS[i][0]
+        if any(c > len(counts[i]) for c in bk): raise SystemExit(f"{t['abbr']}: {name} has a chapter the KJV lacks")
+        chapters = {}
+        for c in range(1, len(counts[i]) + 1):
+            src, kc = bk.get(c, {}), counts[i][c - 1]
+            n = max(list(src) + [kc])
+            verses = [unicodedata.normalize("NFC", src.get(v, "")) for v in range(1, n + 1)]
+            chapters[str(c)] = verses
+            have = max(src) if src else 0
+            if have != kc: diff.append(f"{name} {c}: {have} (KJV {kc})")
+            gaps = [v for v in range(1, n + 1) if not verses[v - 1]]
+            if gaps: empty.append(f"{name} {c}:{spans(gaps)}" if src else f"{name} {c} (whole chapter, {kc} verses)")
+            total += n; filled += n - len(gaps); extra += max(0, n - kc)
+        dump(os.path.join(out, "bibles", t["id"], f"{i+1:02d}.json"), chapters)
+    print(f"  {t['abbr']}: {len(books)} books, {total} verse slots, {filled} with text, {total - filled} empty, {extra} beyond the KJV count")
+    print(f"    chapters whose verse count differs from the KJV ({len(diff)}): " + ("; ".join(diff) or "none"))
+    print(f"    empty verses: " + ("; ".join(empty) or "none"))
+
+def hist_entry(t):
+    return {"id": t["id"], "name": t["name"], "abbr": t["abbr"], "kind": "bundled", "group": "historic", "lang": t["lang"],
+            "books": t["books"], **({"coverage": t["coverage"]} if t.get("coverage") else {}),
+            "licence": t["licence"], "credit": t["credit"], "source": t["source"]}
+
+def build_historic(ids, raw, out, counts):
+    for tid in ids:
+        t = HIST_BY_ID[tid]
+        print(f"{t['abbr']} ...")
+        write_historic(t, HIST_BUILDERS[tid](raw, counts), counts, out)
+    return [hist_entry(HIST_BY_ID[tid]) for tid in ids]
+
+def with_historic(translations, entries):
+    """The translations list with these historic entries in place: replaced by id, otherwise added after the bundled
+    texts; historic entries always in HISTORIC's order, so --only builds in any order give the same meta.json."""
+    new = {e["id"]: e for e in entries}
+    hist = [new.get(e["id"], e) for e in translations if e.get("id") in HIST_BY_ID] + [e for e in entries if e["id"] not in {x.get("id") for x in translations}]
+    hist.sort(key=lambda e: [t["id"] for t in HISTORIC].index(e["id"]))
+    rest = [e for e in translations if e.get("id") not in HIST_BY_ID]
+    at = max([k + 1 for k, e in enumerate(rest) if e.get("kind") == "bundled"] + [0])
+    return rest[:at] + hist + rest[at:]
+
+def merge_meta_translations(out, entries):
+    """--only: write the built texts' entries into <out>/meta.json, leaving everything else in it as it was."""
+    path = os.path.join(out, "meta.json")
+    meta = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
+    if not meta: print(f"  no meta.json in {out}: writing one with the translations list only")
+    meta["translations"] = with_historic(meta.get("translations", []), entries)
+    dump(path, meta)
 
 # ---------------------------------------------------------------- cross refs
 REF_RE = re.compile(r"^([1-3]?[A-Za-z]+)\.(\d+)\.(\d+)$")
@@ -1411,11 +1696,22 @@ def main():
     ap.add_argument("--xref", default=os.path.join(HERE, "src", "cross_references.txt"))
     ap.add_argument("--topics", default=os.path.join(HERE, "src", "topics"))
     ap.add_argument("--intros", default=os.path.join(HERE, "src", "book_intros.json"))
-    ap.add_argument("--out", default=os.path.join(HERE, "app", "data"))
+    ap.add_argument("--out", default=os.path.join(HERE, "app", "data"), help="the data directory written (default app/data)")
+    ap.add_argument("--only", metavar="ID,ID", help="build just these historic texts (" + ", ".join(HIST_BY_ID) + ") and their "
+                    "meta.json entries; nothing else is rebuilt or downloaded")
     a = ap.parse_args()
+    if a.only is not None:
+        ids = [x.strip() for x in a.only.split(",") if x.strip()]
+        bad = [x for x in ids if x not in HIST_BY_ID]
+        if bad or not ids: ap.error(f"--only takes historic text ids: {', '.join(HIST_BY_ID)} (not {', '.join(bad) or 'nothing'})")
+        ids = [t["id"] for t in HISTORIC if t["id"] in ids]
+        entries = build_historic(ids, a.raw, a.out, kjv_counts(a.out))
+        merge_meta_translations(a.out, entries)
+        print("Done ->", a.out); return
     print("Ensuring raw sources ..."); ensure_raw(a.raw)
     print("KJV ..."); counts, kjv_redletter = build_kjv(a.raw, a.out)
     print("BSB ..."); build_bsb(a.raw, a.out, counts); build_bsb_redletter(a.out, kjv_redletter)
+    hist = build_historic([t["id"] for t in HISTORIC], a.raw, a.out, counts)
     print("Cross references ..."); xstats = build_xrefs(a.xref, a.out, counts)
     print("Topics ..."); build_topics(a.topics, a.out)
     print("Strong's ..."); build_strongs(a.raw, a.out)
@@ -1434,6 +1730,7 @@ def main():
                 {"id": "nkjv", "name": "New King James Version", "abbr": "NKJV", "kind": "external", "licence": "© Thomas Nelson — opens on BibleGateway"},
                 {"id": "lsb", "name": "Legacy Standard Bible", "abbr": "LSB", "kind": "external", "licence": "© Three Sixteen Publishing — opens on read.lsbible.org"},
             ]}
+    meta["translations"] = with_historic(meta["translations"], hist)   # the historic texts sit after KJV and BSB
     meta["divine"] = json.load(open(os.path.join(a.out, "context", "divine.json")))  # person ids that are God, not people
     dump(os.path.join(a.out, "meta.json"), meta)
     print("Done ->", a.out)

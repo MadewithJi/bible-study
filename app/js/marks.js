@@ -2,7 +2,7 @@
 // follows links.js (a dirty map per scope, a debounced and keepalive flush with compare-and-set bases, conflicts,
 // cross-tab sync). This module also anchors marks in the text (§2.1), draws them with the CSS Custom Highlight API
 // (spans where it is missing), and owns the selection bubble and the comment card (§3.2) and the margin popover (§3.3).
-import { state, bookOf, refLabel, esc, api, lsGet, lsSet, lsKey, DRY, broadcast, onBroadcast, cut, wellFormed, scrollBehavior, setSaveStatus, pendingNotes, registerSaver, trInfo, readOnlyGuest, guestBlocked, signInRequired, lsDel } from './store.js';
+import { state, bookOf, refLabel, esc, api, lsGet, lsSet, lsKey, DRY, broadcast, onBroadcast, cut, wellFormed, scrollBehavior, setSaveStatus, pendingNotes, registerSaver, trInfo, readOnlyGuest, guestBlocked, signInRequired, lsDel, markableTr } from './store.js';
 import { icon } from './icons.js';
 import * as ui from './ui.js';
 
@@ -22,7 +22,7 @@ export const marks = { loaded: false, scope: null, rev: 0, byId: new Map(), byVe
 
 /** Highlight colours (§1): the bookmark palette, with pink from the swatches. '' is a comment shown as a dotted underline. */
 export const COLORS = ['yellow', 'green', 'blue', 'pink', 'purple', 'orange'];
-const TRS = ['kjv', 'bsb', 'esv', 'nlt', 'niv', 'nkjv', 'nasb'];
+// the texts a mark may be made in: store.js markableTr (the seven accounts.py MARK_TRS began with, and every bundled text of meta.json)
 const MARKS_KEY = 'bs-marks-v1', DIRTY_KEY = 'bs-marks-dirty-v1';
 const ID_RX = /^mk_[0-9a-f]{12}$/;
 const REF_RX = /^(\d{1,2})\.(\d{1,3})\.(\d{1,3})$/;
@@ -105,7 +105,7 @@ function normMark(raw) {
   if (!quote.trim()) return null;
   const updated = num(raw.updated) || Date.now();
   return {
-    id: raw.id, tr: TRS.includes(raw.tr) ? raw.tr : 'kjv',
+    id: raw.id, tr: markableTr(raw.tr) ? raw.tr : 'kjv',
     start: `${s.b}.${s.c}.${s.v}`, so, end: `${e.b}.${e.c}.${e.v}`, eo,
     quote, pre: wellFormed(String(raw.pre ?? '').slice(-CTX_MAX)), suf: cut(raw.suf, CTX_MAX),
     color: COLORS.includes(raw.color) ? raw.color : '', note: typeof raw.note === 'string' ? raw.note : '',
@@ -625,7 +625,7 @@ function rangeToDraft(r) {
   // parallel columns: the one the selection starts in (else ends in), as the reader's copy handler
   const colOf = n => { const d = (n.nodeType === 1 ? n : n.parentElement)?.closest('.vcols > div'); return d ? (d.classList.contains('alt') ? 1 : 0) : -1; };
   let col = colOf(r.startContainer); if (col < 0) col = colOf(r.endContainer); if (col < 0) col = 0;
-  const tr = col ? root.dataset.tr2 : root.dataset.tr; if (!TRS.includes(tr)) return null;
+  const tr = col ? root.dataset.tr2 : root.dataset.tr; if (!markableTr(tr)) return null;
   const M = chapterModel(root, col), parts = [];
   for (const ve of box.querySelectorAll(':scope > .verse')) {
     if (!r.intersectsNode(ve)) continue;

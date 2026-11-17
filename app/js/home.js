@@ -2,7 +2,7 @@
 // Doré's engravings). Today for a profile, and for a guest when the app runs locally (local guests can save);
 // Welcome for a hosted site's guest. main.js imports this module the first time Home shows, then calls show(),
 // hide() and refresh(). The personal parts come from the app's own modules (getMods), never from sample data.
-import { state, data, bookOf, refLabel, esc, smart, clip, trInfo, yearLabel, DONATE_URL, PAUSE_MSG, signupPaused, DRY } from './store.js';
+import { state, data, bookOf, refLabel, esc, smart, clip, trInfo, yearLabel, DONATE_URL, PAUSE_MSG, signupPaused, DRY, isHistoric, trCreditHtml, trLang } from './store.js';
 import { icon } from './icons.js';
 import { relTime, dayLabel, localDay } from './ui.js';
 import { reviewLabel, STEPS } from './memsched.js';
@@ -359,7 +359,7 @@ function markIn(text, quote, cls) {
 }
 async function entryHtml(e) {
   const K = { note: [icon('note'), 'Note'], highlight: [hic('hl'), 'Highlight'], comment: [hic('comment'), 'Comment'], link: [icon('link'), 'Link'] }[e.kind];
-  let ref = `<a href="${hrefOf(e.b, e.c, e.v)}">${esc(refLabel(e.b, e.c, e.v, e.ve))}</a>`, verse = '', note = '';
+  let ref = `<a href="${hrefOf(e.b, e.c, e.v)}">${esc(refLabel(e.b, e.c, e.v, e.ve))}</a>`, verse = '', note = '', lang = '', credit = '';
   if (e.kind === 'link') {
     const L = getMods().lnk, l = e.link, T = (L.TYPES || []).find(x => x.id === l.type);
     const arrow = l.dir === 'both' ? '↔' : l.dir === 'from' ? '←' : '→', says = call(L, 'phrase', l, l.from) || 'is linked to';
@@ -371,6 +371,8 @@ async function entryHtml(e) {
     const m = e.mark, tr = m.tr === 'kjv' || m.tr === 'bsb' ? m.tr : '';
     verse = markIn(tr ? await verses(tr, e.b, e.c, e.v, e.ve) : '', m.quote, m.color ? `mk-${m.color}` : 'mk-note');
     if (String(m.note || '').trim()) note = esc(tidy(clip(plain(m.note), 280)));
+    // words of a historic text: in its language, with its own credit (a licence condition), never under the KJV's
+    if (isHistoric(m.tr)) { const lg = trLang(m.tr); if (lg && lg !== 'en') lang = ` lang="${esc(lg)}"`; credit = `<p class="e-n e-cr"><small>${esc(trInfo(m.tr).abbr)}. ${trCreditHtml(m.tr)}</small></p>`; }
   } else {
     const text = e.v ? await verses(textTr(), e.b, e.c, e.v) : '';
     verse = text ? (e.hl ? `<mark class="hl-${esc(e.hl)}">${scripture(text)}</mark>` : scripture(text)) : '';
@@ -378,7 +380,7 @@ async function entryHtml(e) {
   }
   const day = when(e.t);
   return `<li class="entry"><p class="e-k">${K[0]}${K[1]}${day ? ` <span aria-hidden="true">·</span> <time datetime="${new Date(e.t).toISOString()}">${esc(day)}</time>` : ''}</p>`
-    + `<h3 class="e-ref">${ref}</h3>${verse ? `<blockquote class="e-v">${verse}</blockquote>` : ''}${note ? `<p class="e-n">${note}</p>` : ''}</li>`;
+    + `<h3 class="e-ref">${ref}</h3>${verse ? `<blockquote class="e-v"${lang}>${verse}</blockquote>` : ''}${note ? `<p class="e-n">${note}</p>` : ''}${credit}</li>`;
 }
 async function renderStudy(my) {
   const rows = await Promise.all(recentItems().map(e => entryHtml(e).catch(err => { console.error(err); return ''; })));

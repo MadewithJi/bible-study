@@ -3,7 +3,7 @@
 // recordPractice, then the end of the practice or the quiet Written on the heart moment. The schedule is memsched.js's;
 // the verse's place in line and its labels come from memory.js (memoryDue, memoryWhen, memoryGotIt, memoryIsUpnext),
 // never from memsched with a guessed flag. main.js bindDialogs closes it (Esc, Close, Done, the backdrop).
-import { esc, smart, trInfo, DRY } from './store.js';
+import { esc, smart, trInfo, DRY, isHistoric, isPartialTr } from './store.js';
 import { showDialog, setRadio, placeInd, moveInd, radioKeys, localDay } from './ui.js';
 import { icon } from './icons.js';
 import { fumsView } from './reader.js';
@@ -204,10 +204,14 @@ function render() {
   // the copyright line and the KJV fallback, wherever the verse is shown
   const t = p.text, meta = t && ['step', 'check', 'heart'].includes(p.phase);
   const ab = esc(trInfo(p.entry.tr).abbr), fbMsg = t && t.omitted
-    ? (p.entry.tr === 'bsb' ? 'Shown in the KJV: the BSB leaves this verse out of its text.' : `Shown in the KJV: the ${ab} has no separate verse here.`)
+    ? (p.entry.tr === 'bsb' ? 'Shown in the KJV: the BSB leaves this verse out of its text.'
+      // memory.js absent: the text lacks the whole book or chapter; an empty verse in a chapter it has may sit under a
+      // neighbouring number in it, so that one is only 'no separate verse'
+      : t.absent && (isHistoric(p.entry.tr) || isPartialTr(p.entry.tr)) ? `Shown in the KJV: the ${ab} text here does not have this chapter.` : `Shown in the KJV: the ${ab} has no separate verse here.`)
     : `Shown in the KJV: the ${ab} isn’t available right now.`;
   const fb = meta && t.fallback ? `<p class="mz-fb">${icon('info')}<span>${fbMsg}</span></p>` : '';
-  const cr = meta && t.credit && t.credit.copyright ? `<p class="copyright mz-copy">${esc(t.credit.copyright)}</p>` : '';
+  // a historic text's credit comes ready as markup, its licence and source as links (store.js trCreditHtml)
+  const cr = meta && t.credit && (t.credit.html || t.credit.copyright) ? `<p class="copyright mz-copy">${t.credit.html || esc(t.credit.copyright)}</p>` : '';
   x.meta.innerHTML = fb + cr;
   x.meta.hidden = !(fb || cr);
 }

@@ -677,7 +677,16 @@ function memorizeBm(bm, anchor) {
   const have = memOfBm(bm);
   // the Library may redraw the row under the practice: its ⋯ again, by the bookmark's id
   if (have) mem.practise(have.id, { returnFocus: () => (anchor.isConnected ? anchor : $(`#library-body li[data-bm="${cssEsc(bm.id)}"] [data-bm-menu]`)) });
-  else mem.memorize({ b: bm.b, c: bm.c, v: bm.v, tr: state.tr });
+  else memorizeBmIn(bm);
+}
+/** A historic text that lacks this verse (a book, chapter or verse it does not have) is memorized in the KJV instead. */
+async function memorizeBmIn(bm) {
+  let tr = state.tr;
+  if (S.isPartialTr(tr)) {
+    const t = await mem.memoryText({ ref: `${bm.b}.${bm.c}.${bm.v}`, tr }).catch(() => null);
+    if (!t || t.tr !== tr) tr = 'kjv';
+  }
+  mem.memorize({ b: bm.b, c: bm.c, v: bm.v, tr });
 }
 
 // ------------------------------------------------------------ read marks
